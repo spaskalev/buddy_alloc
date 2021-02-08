@@ -18,6 +18,7 @@
 void test_bitset_basic() {
 	start_test;
 	unsigned char buf[4] = {0};
+	assert(bitset_size(8) == 1);
 	assert(bitset_test(buf, 0) == 0);
 	bitset_set(buf, 0);
 	assert(bitset_test(buf, 0) == 1);

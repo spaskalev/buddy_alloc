@@ -32,9 +32,6 @@ size_t bbm_sizeof(size_t memory_size) {
 		return 0; /* invalid */
 	}
 	size_t bat_order = bat_order_for_memory(memory_size);
-	if (bat_order < 1) {
-		return 0;
-	}
 	return sizeof(struct bbm) + bat_sizeof(bat_order);
 }
 
