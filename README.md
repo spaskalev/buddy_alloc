@@ -9,6 +9,24 @@ This project is licensed under the 0BSD license. See the LICENSE.md file for det
 
 This is a simple buddy memory allocator that might be suitable for use in applications that require predictable allocation and deallocation behavior. The allocator's metadata is kept separate from the arena and its size is a function of the arena's size.
 
+## Usage
+
+```
+	size_t arena_size = 65536;
+	/* You need space for the metadata and for the arena */
+	void *buddy_metadata = malloc(bbm_sizeof(arena_size));
+	void *buddy_arena = malloc(arena_size);
+	struct bbm *buddy = bbm_init(buddy_metadata, buddy_arena, arena_size);
+
+	/* Allocate using the buddy allocator */
+	void *data = bbm_malloc(buddy, 2048);
+	/* Free using the buddy allocator */
+	bbm_free(buddy, data);
+
+	free(buddy_metadata);
+	free(buddy_arena);
+```
+
 ## Design
 
 The allocator was designed with the following requirements in mind.
