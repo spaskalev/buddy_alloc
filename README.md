@@ -27,8 +27,12 @@ The following were not design goals
 
 ### Metadata
 
-The allocator uses a pair of bitset-backed boolean perfect binary trees to track allocations. The first binary tree leaf nodes represent the smallest-possible allocations and the tree is used to track a FREE or FULL state for any block. The second binary tree is used to track a NON-PARTIAL or PARTIAL state and its height is one less than the first tree since the smallest-possible allocations can only be fully-allocated. No other metadata is used and the trees are kept out of the managed arena. This allows for better cache performance in the arena as the cache is not loading allocator metadata when processing application data.
+The allocator uses a bitset-backed perfect binary tree to track allocations. The tree is fixed in size and remains outside of the main arena. This allows for better cache performance in the arena as the cache is not loading allocator metadata when processing application data.
 
 ### Allocation and deallocation
 
-Allocation will traverse the trees following the PARTIAL or FREE states until a block of the desired size is found and marked as FULL (or is not found and allocation fails). Afterwards the parent nodes' state is updated to account for the new use. Deallocation will find the smallest-possible block for the given address and traverse upwards until a FULL block is found. The full block is then set to FREE and the parent nodes' state is again updated to account for the new use. This algorithm ensures that the allocate and deallocate operations will perform a predictable number of operations based primarily on the size of the arena and not on the allocation state of the arena.
+The binary tree nodes are labeled with the largest allocation slot available under them. This allows allocation to happen with a limited number of operations. Allocations that cannot be satisfied are fast to fail. Once a free node of the desired size is found it is marked as used and the nodes leading to root of the tree are updated to account for any difference in the largest available size. Deallocation works in a similar way - the smallest used block size for the given address is found, marked as a free and the same node update as with allocation is used to update the tree. 
+
+### Space requirement
+
+The tree is stored in a bitset with each node using just enough bits to store the maximum allocation slot available under it. For leaf nodes this is a single bit. Other nodes sizes depend on the height of the tree.
