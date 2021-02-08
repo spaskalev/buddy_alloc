@@ -36,7 +36,7 @@ test: tests.out
 %.a: %.o
 	$(AR) rcs $@ $^
 
-tests.out: tests.a bitset.a bbt.a bbm.a bat.a
+tests.out: tests.a bitset.a bbm.a bat.a
 	$(CC) -static $(CFLAGS) $^ -o tests.out
 
 clean:
