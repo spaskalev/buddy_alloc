@@ -198,6 +198,22 @@ void test_bbm_free_coverage() {
 	bbm_free(bbm, data_buf+2048);
 }
 
+void test_bbm_demo() {
+	size_t arena_size = 65536;
+	/* You need space for the metadata and for the arena */
+	void *buddy_metadata = malloc(bbm_sizeof(arena_size));
+	void *buddy_arena = malloc(arena_size);
+	struct bbm *buddy = bbm_init(buddy_metadata, buddy_arena, arena_size);
+
+	/* Allocate using the buddy allocator */
+	void *data = bbm_malloc(buddy, 2048);
+	/* Free using the buddy allocator */
+	bbm_free(buddy, data);
+
+	free(buddy_metadata);
+	free(buddy_arena);
+}
+
 void test_bat_sizeof() {
 	start_test;
 	assert(bat_sizeof(0) == 0);
@@ -503,6 +519,8 @@ int main() {
 		test_bbm_malloc_basic_04();
 
 		test_bbm_free_coverage();
+
+		test_bbm_demo();
 	}
 	
 	{
