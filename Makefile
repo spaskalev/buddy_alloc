@@ -24,6 +24,13 @@ tests.out: tests.a bitset.a buddy_alloc.a buddy_alloc_tree.a
 	! grep  '#####:' *.gcov
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
 
+define DEP =
+$$(shell $(CC) -MM -MG $(1))
+	$(CC) $(CFLAGS) -c $(1) -o $$@
+endef
+
+$(foreach c_src,$(wildcard *.c),$(eval $(call DEP,$(c_src))))
+
 define static_clang_tidy
 	clang-tidy -checks='*,-llvm-header-guard,-llvm-include-order,-bugprone-assert-side-effect' -warnings-as-errors='*' $^ --
 endef
@@ -45,12 +52,6 @@ endef
 	$(static_ccpcheck)
 
 %.static_checks: %.static_clang_tidy %.static_ccpcheck
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c $^ -o $@
-
-%.o: %.c %.h
-	$(CC) $(CFLAGS) -c $^ -o $@
 
 %.a: %.o %.static_clang_tidy %.static_ccpcheck
 	$(AR) rcs $@ $*.o
