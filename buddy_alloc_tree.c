@@ -234,15 +234,29 @@ void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos) {
 		return;
 	}
 
-	/* TODO check for status before marking */
 	struct internal_position p = buddy_tree_internal_position(t, pos);
+	struct internal_position check = p;
+
+	_Bool used = 0;
+	while (check.local_offset) {
+		if (bitset_test(t->bits, check.bitset_location)) {
+			used = 1;
+			break;
+		}
+		check.bitset_location += 1;
+		check.local_offset -= 1;
+	}
+	if (used) {
+		/* Calling mark on a used position is likely a bug in caller */
+		return;
+	}
+
 	while (p.local_offset) {
 		if (p.propagation_depth & 1u) {
 			bitset_set(t->bits, p.bitset_location);
 		} else {
 			bitset_clear(t->bits, p.bitset_location);
 		}
-		/*bitset_set(t->bits, p.bitset_location);*/
 		p.bitset_location += 1;
 		p.local_offset -= 1;
 		p.propagation_depth >>= 1u;
@@ -256,9 +270,23 @@ void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
 		return;
 	}
 
-	/* TODO check for status before releasing */
-
 	struct internal_position p = buddy_tree_internal_position(t, pos);
+	struct internal_position check = p;
+
+	_Bool used = 0;
+	while (check.local_offset) {
+		if (bitset_test(t->bits, check.bitset_location)) {
+			used = 1;
+			break;
+		}
+		check.bitset_location += 1;
+		check.local_offset -= 1;
+	}
+	if (! used) {
+		/* Calling release on an unused position is likely a bug in caller */
+		return;
+	}
+
 	while (p.local_offset) {
 		bitset_clear(t->bits, p.bitset_location);
 		p.bitset_location += 1;
