@@ -15,11 +15,14 @@ AR=ar
 CFLAGS=-g -fstrict-aliasing -fstack-protector-all -pedantic -Wall -Wextra -Werror -Wfatal-errors --coverage
 LLVM_COV=$(shell compgen -c | grep llvm-cov | sort | head -n 1)
 ALL_SRC=$(wildcard *.c *.h)
+C_SRC=$(wildcard *.c)
+STATIC=$(subst .c,.static,$(C_SRC))
+OBJECTS=$(subst .c,.o,$(C_SRC))
 
-tests.out: tests.a bitset.a buddy_alloc.a buddy_alloc_tree.a
-	$(CC) -static $(CFLAGS) $^ -o tests.out
+tests.out: $(OBJECTS) $(STATIC)
+	$(CC) $(CFLAGS) $(OBJECTS) -o $@
 	rm -f *.gcda
-	./tests.out
+	./$@
 	$(LLVM_COV) gcov -b $(ALL_SRC) | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
 	! grep  '#####:' *.gcov
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
@@ -31,30 +34,14 @@ endef
 
 $(foreach c_src,$(wildcard *.c),$(eval $(call DEP,$(c_src))))
 
-define static_clang_tidy
-	clang-tidy -checks='*,-llvm-header-guard,-llvm-include-order,-bugprone-assert-side-effect' -warnings-as-errors='*' $^ --
-endef
-
 %.static_clang_tidy:  %.c
-	$(static_clang_tidy)
-
-%.static_clang_tidy:  %.c %.h
-	$(static_clang_tidy)
-
-define static_ccpcheck
-	cppcheck --error-exitcode=1 --quiet $^
-endef
+	clang-tidy -checks='*,-llvm-header-guard,-llvm-include-order,-bugprone-assert-side-effect' -warnings-as-errors='*' $^ --
 
 %.static_ccpcheck: %.c
-	$(static_ccpcheck)
+	cppcheck --error-exitcode=1 --quiet $^
 
-%.static_ccpcheck: %.c %.h
-	$(static_ccpcheck)
-
-%.static_checks: %.static_clang_tidy %.static_ccpcheck
-
-%.a: %.o %.static_clang_tidy %.static_ccpcheck
-	$(AR) rcs $@ $*.o
+%.static: %.static_clang_tidy %.static_ccpcheck
+	touch $@
 
 clean:
 	rm -f *.a *.o *.gcda *.gcno *.gcov tests.out
