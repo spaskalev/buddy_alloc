@@ -9,11 +9,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "tests.h"
+
 #include "bitset.h"
 #include "buddy_alloc_tree.h"
 #include "buddy_alloc.h"
-
-#define start_test printf("Running test: %s in %s:%d\n", __func__, __FILE__, __LINE__);
 
 void test_bitset_basic() {
 	start_test;
@@ -53,13 +53,13 @@ void test_bitset_range() {
 
 void test_buddy_init_null() {
 	start_test;
-    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)+1];
-    alignas(max_align_t) unsigned char data_buf[4096+1];
-    {
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)+1];
+	alignas(max_align_t) unsigned char data_buf[4096+1];
+	{
 		struct buddy *buddy = buddy_init(NULL, data_buf, 4096);
 		assert (buddy == NULL);
 	}
-    {
+	{
 		struct buddy *buddy = buddy_init(buddy_buf, NULL, 4096);
 		assert (buddy == NULL);
 	}
@@ -67,13 +67,13 @@ void test_buddy_init_null() {
 
 void test_buddy_misalignment() {
 	start_test;
-    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)+1];
-    alignas(max_align_t) unsigned char data_buf[4096+1];
-    {
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)+1];
+	alignas(max_align_t) unsigned char data_buf[4096+1];
+	{
 		struct buddy *buddy = buddy_init(buddy_buf+1, data_buf, 4096);
 		assert (buddy == NULL);
 	}
-    {
+	{
 		struct buddy *buddy = buddy_init(buddy_buf, data_buf+1, 4096);
 		assert (buddy == NULL);
 	}
@@ -81,14 +81,14 @@ void test_buddy_misalignment() {
 
 void test_buddy_invalid_datasize() {
 	start_test;
-    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
-    {
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
+	{
 		assert(buddy_sizeof(0) == 0);
 		assert(buddy_sizeof(BUDDY_ALIGN-1) == 0);
 		assert(buddy_sizeof(BUDDY_ALIGN+1) == 0);
 	}
-    {
+	{
 		struct buddy *buddy = buddy_init(buddy_buf, data_buf, 0);
 		assert (buddy == NULL);
 	}
@@ -96,9 +96,9 @@ void test_buddy_invalid_datasize() {
 
 void test_buddy_init() {
 	start_test;
-    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
-    {
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
+	{
 		struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 		assert (buddy != NULL);
 	}
@@ -111,8 +111,8 @@ void test_buddy_malloc_null() {
 
 void test_buddy_malloc_zero() {
 	start_test;
-    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert (buddy != NULL);
 	assert(buddy_malloc(buddy, 0) == NULL);
@@ -120,8 +120,8 @@ void test_buddy_malloc_zero() {
 
 void test_buddy_malloc_larger() {
 	start_test;
-    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert (buddy != NULL);
 	assert(buddy_malloc(buddy, 8192) == NULL);
@@ -129,8 +129,8 @@ void test_buddy_malloc_larger() {
 
 void test_buddy_malloc_basic_01() {
 	start_test;
-    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(1024)];
-    alignas(max_align_t) unsigned char data_buf[1024];
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(1024)];
+	alignas(max_align_t) unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1024);
 	assert (buddy != NULL);
 	assert(buddy_malloc(buddy, 1024) == data_buf);
@@ -142,8 +142,8 @@ void test_buddy_malloc_basic_01() {
 
 void test_buddy_malloc_basic_02() {
 	start_test;
-    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert (buddy != NULL);
 	assert(buddy_malloc(buddy, 2048) == data_buf);
@@ -158,8 +158,8 @@ void test_buddy_malloc_basic_02() {
 
 void test_buddy_malloc_basic_03() {
 	start_test;
-    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert (buddy != NULL);
 	assert(buddy_malloc(buddy, 1024) == data_buf);
@@ -177,8 +177,8 @@ void test_buddy_malloc_basic_03() {
 
 void test_buddy_malloc_basic_04() {
 	start_test;
-    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert (buddy != NULL);
 	assert(buddy_malloc(buddy, 64) == data_buf);
@@ -187,8 +187,8 @@ void test_buddy_malloc_basic_04() {
 
 void test_buddy_free_coverage() {
 	start_test;
-    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf+1024, 1024);
 	assert (buddy != NULL);
 	buddy_free(NULL, NULL);
@@ -497,7 +497,7 @@ void test_buddy_tree_find_free_02() {
 }
 
 int main() {
-    {
+	{
 		test_bitset_basic();
 		test_bitset_range();
 	}

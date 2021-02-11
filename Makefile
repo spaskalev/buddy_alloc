@@ -32,19 +32,19 @@ $$(shell $(CC) -MM -MG $(1))
 	$(CC) $(CFLAGS) -c $(1) -o $$@
 endef
 
-$(foreach c_src,$(wildcard *.c),$(eval $(call DEP,$(c_src))))
+$(foreach src,$(wildcard *.c),$(eval $(call DEP,$(src))))
 
-%.static_clang_tidy:  %.c
+%.static_clang_tidy:  %.c %.h
 	clang-tidy -checks='*,-llvm-header-guard,-llvm-include-order,-bugprone-assert-side-effect' -warnings-as-errors='*' $^ --
 
-%.static_ccpcheck: %.c
+%.static_ccpcheck: %.c %.h
 	cppcheck --error-exitcode=1 --quiet $^
 
 %.static: %.static_clang_tidy %.static_ccpcheck
 	touch $@
 
 clean:
-	rm -f *.a *.o *.gcda *.gcno *.gcov tests.out
+	rm -f *.a *.o *.gcda *.gcno *.gcov *.static tests.out
 
 # Mark clean as phony
 .PHONY: clean
