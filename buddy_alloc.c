@@ -12,30 +12,30 @@
 #include <stddef.h>
 #include <stdint.h>
 
-struct bbm {
+struct buddy {
 	unsigned char *main;
 	size_t memory_size;
-	alignas(max_align_t) unsigned char bat[];
+	alignas(max_align_t) unsigned char buddy_tree[];
 };
 
-static size_t bat_order_for_memory(size_t memory_size);
-static size_t depth_for_size(struct bbm *bbm, size_t requested_size);
-static size_t size_for_depth(struct bbm *bbm, size_t depth);
+static size_t buddy_tree_order_for_memory(size_t memory_size);
+static size_t depth_for_size(struct buddy *buddy, size_t requested_size);
+static size_t size_for_depth(struct buddy *buddy, size_t depth);
 
-static struct bat *bat(struct bbm *bbm);
+static struct buddy_tree *buddy_tree(struct buddy *buddy);
 
-size_t bbm_sizeof(size_t memory_size) {
-	if ((memory_size % BBM_ALIGN) != 0) {
+size_t buddy_sizeof(size_t memory_size) {
+	if ((memory_size % BUDDY_ALIGN) != 0) {
 		return 0; /* invalid */
 	}
 	if (memory_size == 0) {
 		return 0; /* invalid */
 	}
-	size_t bat_order = bat_order_for_memory(memory_size);
-	return sizeof(struct bbm) + bat_sizeof(bat_order);
+	size_t buddy_tree_order = buddy_tree_order_for_memory(memory_size);
+	return sizeof(struct buddy) + buddy_tree_sizeof(buddy_tree_order);
 }
 
-struct bbm *bbm_init(unsigned char *at, unsigned char *main, size_t memory_size) {
+struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_size) {
 	if ((at == NULL) || (main == NULL)) {
 		return NULL;
 	}
@@ -47,93 +47,93 @@ struct bbm *bbm_init(unsigned char *at, unsigned char *main, size_t memory_size)
 	if (main_alignment != 0) {
 		return NULL;
 	}
-	size_t size = bbm_sizeof(memory_size);
+	size_t size = buddy_sizeof(memory_size);
 	if (size == 0) {
 		return NULL;
 	}
-	size_t bat_order = bat_order_for_memory(memory_size);
+	size_t buddy_tree_order = buddy_tree_order_for_memory(memory_size);
 
-	/* TODO check for overlap between bbm metadata and main block */
-	struct bbm *bbm = (struct bbm *) at;
-	bbm->main = main;
-	bbm->memory_size = memory_size;
-	bat_init(bbm->bat, bat_order);
-	return bbm;
+	/* TODO check for overlap between buddy metadata and main block */
+	struct buddy *buddy = (struct buddy *) at;
+	buddy->main = main;
+	buddy->memory_size = memory_size;
+	buddy_tree_init(buddy->buddy_tree, buddy_tree_order);
+	return buddy;
 }
 
-static size_t bat_order_for_memory(size_t memory_size) {
-	size_t blocks = memory_size / BBM_ALIGN;
-	size_t bat_order = 1;
+static size_t buddy_tree_order_for_memory(size_t memory_size) {
+	size_t blocks = memory_size / BUDDY_ALIGN;
+	size_t buddy_tree_order = 1;
 	while (blocks >>= 1u) {
-		bat_order++;
+		buddy_tree_order++;
 	}
-	return bat_order;
+	return buddy_tree_order;
 }
 
-void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
-	if (bbm == NULL) {
+void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
+	if (buddy == NULL) {
 		return NULL;
 	}
 	if (requested_size == 0) {
 		return NULL;
 	}
-	if (requested_size > bbm->memory_size) {
+	if (requested_size > buddy->memory_size) {
 		return NULL;
 	}
 
-	size_t target_depth = depth_for_size(bbm, requested_size);
-	bat_pos pos = bat_find_free(bat(bbm), target_depth);
+	size_t target_depth = depth_for_size(buddy, requested_size);
+	buddy_tree_pos pos = buddy_tree_find_free(buddy_tree(buddy), target_depth);
 
-	if (! bat_valid(bat(bbm), pos)) {
+	if (! buddy_tree_valid(buddy_tree(buddy), pos)) {
 		return NULL; /* no slot found */
 	}
 
 	/* Allocate the slot */
-	bat_mark(bat(bbm), pos);
+	buddy_tree_mark(buddy_tree(buddy), pos);
 
 	/* Find and return the actual memory address */
-	size_t block_size = size_for_depth(bbm, target_depth);
-	size_t addr = block_size * bat_index(bat(bbm), pos);
-	return (bbm->main + addr);
+	size_t block_size = size_for_depth(buddy, target_depth);
+	size_t addr = block_size * buddy_tree_index(buddy_tree(buddy), pos);
+	return (buddy->main + addr);
 }
 
-void bbm_free(struct bbm *bbm, void *ptr) {
-	if (bbm == NULL) {
+void buddy_free(struct buddy *buddy, void *ptr) {
+	if (buddy == NULL) {
 		return;
 	}
 	if (ptr == NULL) {
 		return;
 	}
 	unsigned char *dst = (unsigned char *)ptr;
-	if ((dst < bbm->main) || (dst > (bbm->main + bbm->memory_size))) {
+	if ((dst < buddy->main) || (dst > (buddy->main + buddy->memory_size))) {
 		return;
 	}
 
 	/* Find the deepest position tracking this address */
-	ptrdiff_t offset = dst - bbm->main;
-	size_t index = offset / BBM_ALIGN;
+	ptrdiff_t offset = dst - buddy->main;
+	size_t index = offset / BUDDY_ALIGN;
 
-	bat_pos pos = bat_root(bat(bbm));
-	while(bat_valid(bat(bbm), bat_left_child(bat(bbm), pos))) {
-		pos = bat_left_child(bat(bbm), pos);
+	buddy_tree_pos pos = buddy_tree_root(buddy_tree(buddy));
+	while(buddy_tree_valid(buddy_tree(buddy), buddy_tree_left_child(buddy_tree(buddy), pos))) {
+		pos = buddy_tree_left_child(buddy_tree(buddy), pos);
 	}
 	while (index > 0) {
-		pos = bat_right_adjacent(bat(bbm), pos);
+		pos = buddy_tree_right_adjacent(buddy_tree(buddy), pos);
 		index--;
 	}
 
 	/* Find the actual allocated position tracking this address */
-	while ((! bat_status(bat(bbm), pos)) && bat_valid(bat(bbm), pos)) {
-		pos = bat_parent(bat(bbm), pos);
+	while ((! buddy_tree_status(buddy_tree(buddy), pos)) && buddy_tree_valid(buddy_tree(buddy), pos)) {
+		pos = buddy_tree_parent(buddy_tree(buddy), pos);
 	}
 
 	/* Release the position */
-	bat_release(bat(bbm), pos);
+	buddy_tree_release(buddy_tree(buddy), pos);
 }
 
-static size_t depth_for_size(struct bbm *bbm, size_t requested_size) {
+static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
 	size_t depth = 1;
-	size_t memory_size = bbm->memory_size;
+	size_t memory_size = buddy->memory_size;
 	while ((memory_size / requested_size) >> 1u) {
 		depth++;
 		memory_size >>= 1u;
@@ -141,14 +141,14 @@ static size_t depth_for_size(struct bbm *bbm, size_t requested_size) {
 	return depth;
 }
 
-static size_t size_for_depth(struct bbm *bbm, size_t depth) {
-	size_t result = bbm->memory_size >> (depth-1);
+static size_t size_for_depth(struct buddy *buddy, size_t depth) {
+	size_t result = buddy->memory_size >> (depth-1);
 	return result;
 }
 
-static struct bat *bat(struct bbm *bbm) {
-	struct bat* bat = (struct bat*) bbm->bat;
-	return bat;
+static struct buddy_tree *buddy_tree(struct buddy *buddy) {
+	struct buddy_tree* buddy_tree = (struct buddy_tree*) buddy->buddy_tree;
+	return buddy_tree;
 }
 
 

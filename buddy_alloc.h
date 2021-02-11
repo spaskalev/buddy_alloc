@@ -9,18 +9,18 @@
 #include <stdalign.h>
 #include <stddef.h>
 
-#define BBM_ALIGN (sizeof(max_align_t))
+#define BUDDY_ALIGN (sizeof(max_align_t))
 
-struct bbm;
+struct buddy;
 
-/* Returns the size of a bbm required to manage of block of the specified size */
-size_t bbm_sizeof(size_t memory_size);
+/* Returns the size of a buddy required to manage of block of the specified size */
+size_t buddy_sizeof(size_t memory_size);
 
 /* Initializes the binary buddy memory allocator at the specified location */
-struct bbm *bbm_init(unsigned char *at, unsigned char *main, size_t memory_size);
+struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_size);
 
-/* Use the specified bbm to allocate memory. See malloc. */
-void *bbm_malloc(struct bbm *bbm, size_t requested_size);
+/* Use the specified buddy to allocate memory. See malloc. */
+void *buddy_malloc(struct buddy *buddy, size_t requested_size);
 
-/* Use the specified bbm to free memory. See free. */
-void bbm_free(struct bbm *bbm, void *ptr);
+/* Use the specified buddy to free memory. See free. */
+void buddy_free(struct buddy *buddy, void *ptr);

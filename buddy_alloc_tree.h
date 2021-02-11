@@ -8,76 +8,76 @@
 #include <stddef.h>
 #include <stdint.h>
 
-struct bat;
+struct buddy_tree;
 
-typedef size_t bat_pos;
+typedef size_t buddy_tree_pos;
 
 /*
  * Initialization functions
  */
 
 /* Returns the size of a buddy allocation tree of the desired order*/
-size_t bat_sizeof(uint8_t order);
+size_t buddy_tree_sizeof(uint8_t order);
 
 /* Initializes a buddy allocation tree at the specified location */
-struct bat *bat_init(unsigned char *at, uint8_t order);
+struct buddy_tree *buddy_tree_init(unsigned char *at, uint8_t order);
 
 /* Indicates whether this is a valid position for the tree */
-_Bool bat_valid(struct bat *t, bat_pos pos);
+_Bool buddy_tree_valid(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the order of the specified buddy allocation tree */
-uint8_t bat_order(struct bat *t);
+uint8_t buddy_tree_order(struct buddy_tree *t);
 
 /*
  * Navigation functions
  */
 
 /* Returns a position at the root of the buddy allocation tree */
-bat_pos bat_root(struct bat *t);
+buddy_tree_pos buddy_tree_root(struct buddy_tree *t);
 
 /* Returns the depth at the indicated position */
-size_t bat_depth(struct bat *t, bat_pos pos);
+size_t buddy_tree_depth(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the left child node position or an invalid position if there is no left child node */
-bat_pos bat_left_child(struct bat *t, bat_pos pos);
+buddy_tree_pos buddy_tree_left_child(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the right child node position or an invalid position if there is no right child node */
-bat_pos bat_right_child(struct bat *t, bat_pos pos);
+buddy_tree_pos buddy_tree_right_child(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the parent node position or an invalid position if there is no parent node */
-bat_pos bat_parent(struct bat *t, bat_pos pos);
+buddy_tree_pos buddy_tree_parent(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the sibling node position or an invalid position if there is no sibling node */
-bat_pos bat_sibling(struct bat *t, bat_pos pos);
+buddy_tree_pos buddy_tree_sibling(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the left adjacent node position or an invalid position if there is no left adjacent node */
-bat_pos bat_left_adjacent(struct bat *t, bat_pos pos);
+buddy_tree_pos buddy_tree_left_adjacent(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the right adjacent node position or an invalid position if there is no right adjacent node */
-bat_pos bat_right_adjacent(struct bat *t, bat_pos pos);
+buddy_tree_pos buddy_tree_right_adjacent(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the at-depth index of the indicated position */
-size_t bat_index(struct bat *t, bat_pos pos);
+size_t buddy_tree_index(struct buddy_tree *t, buddy_tree_pos pos);
 
 /*
  * Allocation functions
  */
 
 /* Returns the free capacity at or underneath the indicated position */
-uint8_t bat_status(struct bat *t, bat_pos pos);
+uint8_t buddy_tree_status(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Marks the indicated position as allocated and propagates the change */
-void bat_mark(struct bat *t, bat_pos pos);
+void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Marks the indicated position as free and propagates the change */
-void bat_release(struct bat *t, bat_pos pos);
+void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns a free position at the specified depth or an invalid position */
-bat_pos bat_find_free(struct bat *t, uint8_t depth);
+buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth);
 
 /*
  * Debug functions
  */
 
 /* Implementation defined */
-void bat_debug(struct bat *t, bat_pos pos);
+void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos);

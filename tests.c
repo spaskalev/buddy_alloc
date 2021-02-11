@@ -51,449 +51,449 @@ void test_bitset_range() {
 	}
 }
 
-void test_bbm_init_null() {
+void test_buddy_init_null() {
 	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)+1];
+    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)+1];
     alignas(max_align_t) unsigned char data_buf[4096+1];
     {
-		struct bbm *bbm = bbm_init(NULL, data_buf, 4096);
-		assert (bbm == NULL);
+		struct buddy *buddy = buddy_init(NULL, data_buf, 4096);
+		assert (buddy == NULL);
 	}
     {
-		struct bbm *bbm = bbm_init(bbm_buf, NULL, 4096);
-		assert (bbm == NULL);
+		struct buddy *buddy = buddy_init(buddy_buf, NULL, 4096);
+		assert (buddy == NULL);
 	}
 }
 
-void test_bbm_misalignment() {
+void test_buddy_misalignment() {
 	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)+1];
+    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)+1];
     alignas(max_align_t) unsigned char data_buf[4096+1];
     {
-		struct bbm *bbm = bbm_init(bbm_buf+1, data_buf, 4096);
-		assert (bbm == NULL);
+		struct buddy *buddy = buddy_init(buddy_buf+1, data_buf, 4096);
+		assert (buddy == NULL);
 	}
     {
-		struct bbm *bbm = bbm_init(bbm_buf, data_buf+1, 4096);
-		assert (bbm == NULL);
+		struct buddy *buddy = buddy_init(buddy_buf, data_buf+1, 4096);
+		assert (buddy == NULL);
 	}
 }
 
-void test_bbm_invalid_datasize() {
+void test_buddy_invalid_datasize() {
 	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
+    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
     alignas(max_align_t) unsigned char data_buf[4096];
     {
-		assert(bbm_sizeof(0) == 0);
-		assert(bbm_sizeof(BBM_ALIGN-1) == 0);
-		assert(bbm_sizeof(BBM_ALIGN+1) == 0);
+		assert(buddy_sizeof(0) == 0);
+		assert(buddy_sizeof(BUDDY_ALIGN-1) == 0);
+		assert(buddy_sizeof(BUDDY_ALIGN+1) == 0);
 	}
     {
-		struct bbm *bbm = bbm_init(bbm_buf, data_buf, 0);
-		assert (bbm == NULL);
+		struct buddy *buddy = buddy_init(buddy_buf, data_buf, 0);
+		assert (buddy == NULL);
 	}
 }
 
-void test_bbm_init() {
+void test_buddy_init() {
 	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
+    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
     alignas(max_align_t) unsigned char data_buf[4096];
     {
-		struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-		assert (bbm != NULL);
+		struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+		assert (buddy != NULL);
 	}
 }
 
-void test_bbm_malloc_null() {
+void test_buddy_malloc_null() {
 	start_test;
-	assert(bbm_malloc(NULL, 1024) == NULL);
+	assert(buddy_malloc(NULL, 1024) == NULL);
 }
 
-void test_bbm_malloc_zero() {
+void test_buddy_malloc_zero() {
 	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
+    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
     alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 0) == NULL);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	assert (buddy != NULL);
+	assert(buddy_malloc(buddy, 0) == NULL);
 }
 
-void test_bbm_malloc_larger() {
+void test_buddy_malloc_larger() {
 	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
+    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
     alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 8192) == NULL);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	assert (buddy != NULL);
+	assert(buddy_malloc(buddy, 8192) == NULL);
 }
 
-void test_bbm_malloc_basic_01() {
+void test_buddy_malloc_basic_01() {
 	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(1024)];
+    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(1024)];
     alignas(max_align_t) unsigned char data_buf[1024];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 1024);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 1024) == data_buf);
-	assert(bbm_malloc(bbm, 1024) == NULL);
-	bbm_free(bbm, data_buf);
-	assert(bbm_malloc(bbm, 1024) == data_buf);
-	assert(bbm_malloc(bbm, 1024) == NULL);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1024);
+	assert (buddy != NULL);
+	assert(buddy_malloc(buddy, 1024) == data_buf);
+	assert(buddy_malloc(buddy, 1024) == NULL);
+	buddy_free(buddy, data_buf);
+	assert(buddy_malloc(buddy, 1024) == data_buf);
+	assert(buddy_malloc(buddy, 1024) == NULL);
 }
 
-void test_bbm_malloc_basic_02() {
+void test_buddy_malloc_basic_02() {
 	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
+    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
     alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 2048) == data_buf);
-	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
-	assert(bbm_malloc(bbm, 2048) == NULL);
-	bbm_free(bbm, data_buf);
-	bbm_free(bbm, data_buf+2048);
-	assert(bbm_malloc(bbm, 2048) == data_buf);
-	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
-	assert(bbm_malloc(bbm, 2048) == NULL);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	assert (buddy != NULL);
+	assert(buddy_malloc(buddy, 2048) == data_buf);
+	assert(buddy_malloc(buddy, 2048) == data_buf+2048);
+	assert(buddy_malloc(buddy, 2048) == NULL);
+	buddy_free(buddy, data_buf);
+	buddy_free(buddy, data_buf+2048);
+	assert(buddy_malloc(buddy, 2048) == data_buf);
+	assert(buddy_malloc(buddy, 2048) == data_buf+2048);
+	assert(buddy_malloc(buddy, 2048) == NULL);
 }
 
-void test_bbm_malloc_basic_03() {
+void test_buddy_malloc_basic_03() {
 	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
+    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
     alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 1024) == data_buf);
-	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
-	assert(bbm_malloc(bbm, 1024) == data_buf+1024);
-	assert(bbm_malloc(bbm, 1024) == NULL);
-	bbm_free(bbm, data_buf+1024);
-	bbm_free(bbm, data_buf+2048);
-	bbm_free(bbm, data_buf);
-	assert(bbm_malloc(bbm, 1024) == data_buf);
-	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
-	assert(bbm_malloc(bbm, 1024) == data_buf+1024);
-	assert(bbm_malloc(bbm, 1024) == NULL);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	assert (buddy != NULL);
+	assert(buddy_malloc(buddy, 1024) == data_buf);
+	assert(buddy_malloc(buddy, 2048) == data_buf+2048);
+	assert(buddy_malloc(buddy, 1024) == data_buf+1024);
+	assert(buddy_malloc(buddy, 1024) == NULL);
+	buddy_free(buddy, data_buf+1024);
+	buddy_free(buddy, data_buf+2048);
+	buddy_free(buddy, data_buf);
+	assert(buddy_malloc(buddy, 1024) == data_buf);
+	assert(buddy_malloc(buddy, 2048) == data_buf+2048);
+	assert(buddy_malloc(buddy, 1024) == data_buf+1024);
+	assert(buddy_malloc(buddy, 1024) == NULL);
 }
 
-void test_bbm_malloc_basic_04() {
+void test_buddy_malloc_basic_04() {
 	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
+    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
     alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 64) == data_buf);
-	assert(bbm_malloc(bbm, 32) == data_buf+64);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	assert (buddy != NULL);
+	assert(buddy_malloc(buddy, 64) == data_buf);
+	assert(buddy_malloc(buddy, 32) == data_buf+64);
 }
 
-void test_bbm_free_coverage() {
+void test_buddy_free_coverage() {
 	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
+    alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
     alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf+1024, 1024);
-	assert (bbm != NULL);
-	bbm_free(NULL, NULL);
-	bbm_free(NULL, data_buf+1024);
-	bbm_free(bbm, NULL);
-	bbm_free(bbm, data_buf);
-	bbm_free(bbm, data_buf+2048);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf+1024, 1024);
+	assert (buddy != NULL);
+	buddy_free(NULL, NULL);
+	buddy_free(NULL, data_buf+1024);
+	buddy_free(buddy, NULL);
+	buddy_free(buddy, data_buf);
+	buddy_free(buddy, data_buf+2048);
 }
 
-void test_bbm_demo() {
+void test_buddy_demo() {
 	size_t arena_size = 65536;
 	/* You need space for the metadata and for the arena */
-	void *buddy_metadata = malloc(bbm_sizeof(arena_size));
+	void *buddy_metadata = malloc(buddy_sizeof(arena_size));
 	void *buddy_arena = malloc(arena_size);
-	struct bbm *buddy = bbm_init(buddy_metadata, buddy_arena, arena_size);
+	struct buddy *buddy = buddy_init(buddy_metadata, buddy_arena, arena_size);
 
 	/* Allocate using the buddy allocator */
-	void *data = bbm_malloc(buddy, 2048);
+	void *data = buddy_malloc(buddy, 2048);
 	/* Free using the buddy allocator */
-	bbm_free(buddy, data);
+	buddy_free(buddy, data);
 
 	free(buddy_metadata);
 	free(buddy_arena);
 }
 
-void test_bat_sizeof() {
+void test_buddy_tree_sizeof() {
 	start_test;
-	assert(bat_sizeof(0) == 0);
-	assert(bat_sizeof(1) == 2);
-	assert(bat_sizeof(2) == 2);
-	assert(bat_sizeof(3) == 3);
-	assert(bat_sizeof(4) == 4);
-	assert(bat_sizeof(5) == 8);
-	assert(bat_sizeof(6) == 14);
-	assert(bat_sizeof(7) == 27);
-	assert(bat_sizeof(8) == 53);
-	assert(bat_sizeof(9) == 106);
-	assert(bat_sizeof(10) == 210);
-	assert(bat_sizeof(11) == 419);
-	assert(bat_sizeof(12) == 837);
-	assert(bat_sizeof(13) == 1673);
-	assert(bat_sizeof(14) == 3345);
-	assert(bat_sizeof(15) == 6689);
-	assert(bat_sizeof(16) == 13377);
-	assert(bat_sizeof(17) == 26753);
-	assert(bat_sizeof(18) == 53506);
-	assert(bat_sizeof(19) == 107011);
-	assert(bat_sizeof(20) == 214021);
-	assert(bat_sizeof(21) == 428041);
-	assert(bat_sizeof(22) == 856081);
-	assert(bat_sizeof(23) == 1712161);
-	assert(bat_sizeof(24) == 3424321);
-	assert(bat_sizeof(25) == 6848641);
-	assert(bat_sizeof(26) == 13697281);
-	assert(bat_sizeof(27) == 27394561);
-	assert(bat_sizeof(28) == 54789121);
-	assert(bat_sizeof(29) == 109578241);
-	assert(bat_sizeof(30) == 219156481);
-	assert(bat_sizeof(31) == 438312961);
-	assert(bat_sizeof(32) == 876625921);
-	assert(bat_sizeof(33) == 1753251841);
-	assert(bat_sizeof(34) == 3506503682); /* 3 GB */
-	assert(bat_sizeof(35) == 7013007363);
-	assert(bat_sizeof(36) == 14026014725);
-	assert(bat_sizeof(37) == 28052029449);
-	assert(bat_sizeof(38) == 56104058897);
-	assert(bat_sizeof(39) == 112208117793);
-	assert(bat_sizeof(40) == 224416235585);
-	assert(bat_sizeof(41) == 448832471169);
-	assert(bat_sizeof(42) == 897664942337);
-	assert(bat_sizeof(43) == 1795329884673);
-	assert(bat_sizeof(44) == 3590659769345);
-	assert(bat_sizeof(45) == 7181319538689);
-	assert(bat_sizeof(46) == 14362639077377);
-	assert(bat_sizeof(47) == 28725278154753);
-	assert(bat_sizeof(48) == 57450556309505); /* 52 TB .. */
+	assert(buddy_tree_sizeof(0) == 0);
+	assert(buddy_tree_sizeof(1) == 2);
+	assert(buddy_tree_sizeof(2) == 2);
+	assert(buddy_tree_sizeof(3) == 3);
+	assert(buddy_tree_sizeof(4) == 4);
+	assert(buddy_tree_sizeof(5) == 8);
+	assert(buddy_tree_sizeof(6) == 14);
+	assert(buddy_tree_sizeof(7) == 27);
+	assert(buddy_tree_sizeof(8) == 53);
+	assert(buddy_tree_sizeof(9) == 106);
+	assert(buddy_tree_sizeof(10) == 210);
+	assert(buddy_tree_sizeof(11) == 419);
+	assert(buddy_tree_sizeof(12) == 837);
+	assert(buddy_tree_sizeof(13) == 1673);
+	assert(buddy_tree_sizeof(14) == 3345);
+	assert(buddy_tree_sizeof(15) == 6689);
+	assert(buddy_tree_sizeof(16) == 13377);
+	assert(buddy_tree_sizeof(17) == 26753);
+	assert(buddy_tree_sizeof(18) == 53506);
+	assert(buddy_tree_sizeof(19) == 107011);
+	assert(buddy_tree_sizeof(20) == 214021);
+	assert(buddy_tree_sizeof(21) == 428041);
+	assert(buddy_tree_sizeof(22) == 856081);
+	assert(buddy_tree_sizeof(23) == 1712161);
+	assert(buddy_tree_sizeof(24) == 3424321);
+	assert(buddy_tree_sizeof(25) == 6848641);
+	assert(buddy_tree_sizeof(26) == 13697281);
+	assert(buddy_tree_sizeof(27) == 27394561);
+	assert(buddy_tree_sizeof(28) == 54789121);
+	assert(buddy_tree_sizeof(29) == 109578241);
+	assert(buddy_tree_sizeof(30) == 219156481);
+	assert(buddy_tree_sizeof(31) == 438312961);
+	assert(buddy_tree_sizeof(32) == 876625921);
+	assert(buddy_tree_sizeof(33) == 1753251841);
+	assert(buddy_tree_sizeof(34) == 3506503682); /* 3 GB */
+	assert(buddy_tree_sizeof(35) == 7013007363);
+	assert(buddy_tree_sizeof(36) == 14026014725);
+	assert(buddy_tree_sizeof(37) == 28052029449);
+	assert(buddy_tree_sizeof(38) == 56104058897);
+	assert(buddy_tree_sizeof(39) == 112208117793);
+	assert(buddy_tree_sizeof(40) == 224416235585);
+	assert(buddy_tree_sizeof(41) == 448832471169);
+	assert(buddy_tree_sizeof(42) == 897664942337);
+	assert(buddy_tree_sizeof(43) == 1795329884673);
+	assert(buddy_tree_sizeof(44) == 3590659769345);
+	assert(buddy_tree_sizeof(45) == 7181319538689);
+	assert(buddy_tree_sizeof(46) == 14362639077377);
+	assert(buddy_tree_sizeof(47) == 28725278154753);
+	assert(buddy_tree_sizeof(48) == 57450556309505); /* 52 TB .. */
 }
 
-void test_bat_init() {
+void test_buddy_tree_init() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	assert(bat_init(NULL, 8) == NULL);
-	assert(bat_init(bat_buf, 0) == NULL);
-	assert(bat_init(bat_buf, 8) != NULL);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	assert(buddy_tree_init(NULL, 8) == NULL);
+	assert(buddy_tree_init(buddy_tree_buf, 0) == NULL);
+	assert(buddy_tree_init(buddy_tree_buf, 8) != NULL);
 }
 
-void test_bat_valid() {
+void test_buddy_tree_valid() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 8);
-	assert(bat_valid(NULL, 1) == 0);
-	assert(bat_valid(t, 0) == 0);
-	assert(bat_valid(t, 256) == 0);
-	assert(bat_valid(t, 1) == 1);
-	assert(bat_valid(t, 255) == 1);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 8);
+	assert(buddy_tree_valid(NULL, 1) == 0);
+	assert(buddy_tree_valid(t, 0) == 0);
+	assert(buddy_tree_valid(t, 256) == 0);
+	assert(buddy_tree_valid(t, 1) == 1);
+	assert(buddy_tree_valid(t, 255) == 1);
 }
 
-void test_bat_order() {
+void test_buddy_tree_order() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 8);
-	assert(bat_order(NULL) == 0);
-	assert(bat_order(t) == 8);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 8);
+	assert(buddy_tree_order(NULL) == 0);
+	assert(buddy_tree_order(t) == 8);
 }
 
-void test_bat_root() {
+void test_buddy_tree_root() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 8);
-	assert(bat_root(NULL) == 0);
-	assert(bat_root(t) == 1);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 8);
+	assert(buddy_tree_root(NULL) == 0);
+	assert(buddy_tree_root(t) == 1);
 }
 
-void test_bat_depth() {
+void test_buddy_tree_depth() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 8);
-	assert(bat_depth(t, 0) == 0);
-	assert(bat_depth(t, 1) == 1);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 8);
+	assert(buddy_tree_depth(t, 0) == 0);
+	assert(buddy_tree_depth(t, 1) == 1);
 }
 
-void test_bat_left_child() {
+void test_buddy_tree_left_child() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 2);
-	bat_pos pos = bat_root(t);
-	pos = bat_left_child(t, pos);
-	assert(bat_depth(t, pos) == 2);
-	pos = bat_left_child(t, pos);
-	assert(bat_valid(t, pos) == 0);
-	pos = bat_left_child(t, pos);
-	assert(bat_valid(t, pos) == 0);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	pos = buddy_tree_left_child(t, pos);
+	assert(buddy_tree_depth(t, pos) == 2);
+	pos = buddy_tree_left_child(t, pos);
+	assert(buddy_tree_valid(t, pos) == 0);
+	pos = buddy_tree_left_child(t, pos);
+	assert(buddy_tree_valid(t, pos) == 0);
 }
 
-void test_bat_right_child() {
+void test_buddy_tree_right_child() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 2);
-	bat_pos pos = bat_root(t);
-	pos = bat_right_child(t, pos);
-	assert(bat_depth(t, pos) == 2);
-	pos = bat_right_child(t, pos);
-	assert(bat_valid(t, pos) == 0);
-	pos = bat_right_child(t, pos);
-	assert(bat_valid(t, pos) == 0);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	pos = buddy_tree_right_child(t, pos);
+	assert(buddy_tree_depth(t, pos) == 2);
+	pos = buddy_tree_right_child(t, pos);
+	assert(buddy_tree_valid(t, pos) == 0);
+	pos = buddy_tree_right_child(t, pos);
+	assert(buddy_tree_valid(t, pos) == 0);
 }
 
-void test_bat_parent() {
+void test_buddy_tree_parent() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 2);
-	bat_pos pos = bat_root(t);
-	assert(bat_parent(t, pos) == 0);
-	assert(bat_parent(t, 0) == 0);
-	assert(bat_parent(t, bat_left_child(t, pos)) == pos);
-	assert(bat_parent(t, bat_right_child(t, pos)) == pos);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	assert(buddy_tree_parent(t, pos) == 0);
+	assert(buddy_tree_parent(t, 0) == 0);
+	assert(buddy_tree_parent(t, buddy_tree_left_child(t, pos)) == pos);
+	assert(buddy_tree_parent(t, buddy_tree_right_child(t, pos)) == pos);
 }
 
-void test_bat_sibling() {
+void test_buddy_tree_sibling() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 2);
-	bat_pos pos = bat_root(t);
-	assert(bat_sibling(t, pos) == 0);
-	assert(bat_sibling(t, 0) == 0);
-	assert(bat_sibling(t, bat_left_child(t, pos)) == bat_right_child(t, pos));
-	assert(bat_sibling(t, bat_right_child(t, pos)) == bat_left_child(t, pos));
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	assert(buddy_tree_sibling(t, pos) == 0);
+	assert(buddy_tree_sibling(t, 0) == 0);
+	assert(buddy_tree_sibling(t, buddy_tree_left_child(t, pos)) == buddy_tree_right_child(t, pos));
+	assert(buddy_tree_sibling(t, buddy_tree_right_child(t, pos)) == buddy_tree_left_child(t, pos));
 }
 
-void test_bat_left_adjacent() {
+void test_buddy_tree_left_adjacent() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 2);
-	bat_pos pos = bat_root(t);
-	assert(bat_left_adjacent(t, 0) == 0);
-	assert(bat_left_adjacent(t, pos) == 0);
-	assert(bat_left_adjacent(t, bat_left_child(t, pos)) == 0);
-	assert(bat_left_adjacent(t, bat_right_child(t, pos)) == bat_left_child(t, pos));
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	assert(buddy_tree_left_adjacent(t, 0) == 0);
+	assert(buddy_tree_left_adjacent(t, pos) == 0);
+	assert(buddy_tree_left_adjacent(t, buddy_tree_left_child(t, pos)) == 0);
+	assert(buddy_tree_left_adjacent(t, buddy_tree_right_child(t, pos)) == buddy_tree_left_child(t, pos));
 }
 
-void test_bat_right_adjacent() {
+void test_buddy_tree_right_adjacent() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 2);
-	bat_pos pos = bat_root(t);
-	assert(bat_right_adjacent(t, 0) == 0);
-	assert(bat_right_adjacent(t, pos) == 0);
-	assert(bat_right_adjacent(t, bat_right_child(t, pos)) == 0);
-	assert(bat_right_adjacent(t, bat_left_child(t, pos)) == bat_right_child(t, pos));
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	assert(buddy_tree_right_adjacent(t, 0) == 0);
+	assert(buddy_tree_right_adjacent(t, pos) == 0);
+	assert(buddy_tree_right_adjacent(t, buddy_tree_right_child(t, pos)) == 0);
+	assert(buddy_tree_right_adjacent(t, buddy_tree_left_child(t, pos)) == buddy_tree_right_child(t, pos));
 }
 
-void test_bat_index() {
+void test_buddy_tree_index() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 2);
-	bat_pos pos = bat_root(t);
-	assert(bat_index(t, 0) == 0);
-	assert(bat_index(t, pos) == 0);
-	assert(bat_index(t, bat_left_child(t, pos)) == 0);
-	assert(bat_index(t, bat_right_child(t, pos)) == 1);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	assert(buddy_tree_index(t, 0) == 0);
+	assert(buddy_tree_index(t, pos) == 0);
+	assert(buddy_tree_index(t, buddy_tree_left_child(t, pos)) == 0);
+	assert(buddy_tree_index(t, buddy_tree_right_child(t, pos)) == 1);
 }
 
-void test_bat_mark_status_release_01() {
+void test_buddy_tree_mark_status_release_01() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 1);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
 
-	assert(bat_status(t, 0) == 0);
-	bat_mark(t, 0); /* coverage */
-	bat_release(t, 0); /* coverage */
+	assert(buddy_tree_status(t, 0) == 0);
+	buddy_tree_mark(t, 0); /* coverage */
+	buddy_tree_release(t, 0); /* coverage */
 
-	bat_pos pos = bat_root(t);
-	assert(bat_status(t, pos) == 0);
-	bat_mark(t, pos);
-	assert(bat_status(t, pos) == 1);
-	bat_release(t, pos);
-	assert(bat_status(t, pos) == 0);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	assert(buddy_tree_status(t, pos) == 0);
+	buddy_tree_mark(t, pos);
+	assert(buddy_tree_status(t, pos) == 1);
+	buddy_tree_release(t, pos);
+	assert(buddy_tree_status(t, pos) == 0);
 }
 
-void test_bat_mark_status_release_02() {
+void test_buddy_tree_mark_status_release_02() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 2);
-	bat_pos pos = bat_root(t);
-	assert(bat_status(t, pos) == 0);
-	bat_mark(t, pos);
-	assert(bat_status(t, pos) == 2);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	assert(buddy_tree_status(t, pos) == 0);
+	buddy_tree_mark(t, pos);
+	assert(buddy_tree_status(t, pos) == 2);
 }
 
-void test_bat_mark_status_release_03() {
+void test_buddy_tree_mark_status_release_03() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 3);
-	bat_pos pos = bat_root(t);
-	assert(bat_status(t, pos) == 0);
-	bat_mark(t, pos);
-	assert(bat_status(t, pos) == 3);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	assert(buddy_tree_status(t, pos) == 0);
+	buddy_tree_mark(t, pos);
+	assert(buddy_tree_status(t, pos) == 3);
 }
 
-void test_bat_mark_status_release_04() {
+void test_buddy_tree_mark_status_release_04() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 4);
-	bat_pos pos = bat_root(t);
-	assert(bat_status(t, pos) == 0);
-	bat_mark(t, pos);
-	assert(bat_status(t, pos) == 4);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 4);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	assert(buddy_tree_status(t, pos) == 0);
+	buddy_tree_mark(t, pos);
+	assert(buddy_tree_status(t, pos) == 4);
 }
 
-void test_bat_propagation_01() {
+void test_buddy_tree_propagation_01() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 2);
-	bat_pos pos = bat_root(t);
-	bat_pos left = bat_left_child(t, pos);
-	assert(bat_status(t, left) == 0);
-	bat_mark(t, left);
-	assert(bat_status(t, left) == 1);
-	assert(bat_status(t, pos) == 1);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	buddy_tree_pos left = buddy_tree_left_child(t, pos);
+	assert(buddy_tree_status(t, left) == 0);
+	buddy_tree_mark(t, left);
+	assert(buddy_tree_status(t, left) == 1);
+	assert(buddy_tree_status(t, pos) == 1);
 }
 
-void test_bat_propagation_02() {
+void test_buddy_tree_propagation_02() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 3);
-	bat_pos pos = bat_root(t);
-	bat_pos left = bat_left_child(t, bat_left_child(t, pos));
-	bat_mark(t, left);
-	assert(bat_status(t, left) == 1);
-	assert(bat_status(t, pos) == 1);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_root(t);
+	buddy_tree_pos left = buddy_tree_left_child(t, buddy_tree_left_child(t, pos));
+	buddy_tree_mark(t, left);
+	assert(buddy_tree_status(t, left) == 1);
+	assert(buddy_tree_status(t, pos) == 1);
 }
 
-void test_bat_find_free_01() {
+void test_buddy_tree_find_free_01() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 3);
-	bat_pos pos = bat_find_free(t, 0);
-	assert(bat_valid(t, pos) == 0);
-	pos = bat_find_free(t, 4);
-	assert(bat_valid(t, pos) == 0);
-	pos = bat_find_free(NULL, 1);
-	assert(bat_valid(t, pos) == 0);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_find_free(t, 0);
+	assert(buddy_tree_valid(t, pos) == 0);
+	pos = buddy_tree_find_free(t, 4);
+	assert(buddy_tree_valid(t, pos) == 0);
+	pos = buddy_tree_find_free(NULL, 1);
+	assert(buddy_tree_valid(t, pos) == 0);
 }
 
-void test_bat_find_free_02() {
+void test_buddy_tree_find_free_02() {
 	start_test;
-	alignas(max_align_t) unsigned char bat_buf[4096];
-	struct bat *t = bat_init(bat_buf, 3);
-	bat_pos pos = bat_find_free(t, 1);
-	assert(bat_valid(t, pos) == 1);
-	pos = bat_find_free(t, 2);
-	assert(bat_valid(t, pos) == 1);
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_find_free(t, 1);
+	assert(buddy_tree_valid(t, pos) == 1);
+	pos = buddy_tree_find_free(t, 2);
+	assert(buddy_tree_valid(t, pos) == 1);
 
-	bat_debug(t, bat_root(t));printf("\n");
-	bat_mark(t, pos);
-	bat_debug(t, bat_root(t));printf("\n");
+	buddy_tree_debug(t, buddy_tree_root(t));printf("\n");
+	buddy_tree_mark(t, pos);
+	buddy_tree_debug(t, buddy_tree_root(t));printf("\n");
 
-	pos = bat_find_free(t, 2);
-	assert(bat_valid(t, pos) == 1);
+	pos = buddy_tree_find_free(t, 2);
+	assert(buddy_tree_valid(t, pos) == 1);
 
-	bat_mark(t, pos);
-	bat_debug(t, bat_root(t));printf("\n");
+	buddy_tree_mark(t, pos);
+	buddy_tree_debug(t, buddy_tree_root(t));printf("\n");
 
-	pos = bat_find_free(t, 2);
-	assert(bat_valid(t, pos) == 0);
+	pos = buddy_tree_find_free(t, 2);
+	assert(buddy_tree_valid(t, pos) == 0);
 }
 
 int main() {
@@ -503,47 +503,47 @@ int main() {
 	}
 
 	{
-		test_bbm_init_null();
-		test_bbm_misalignment();
-		test_bbm_invalid_datasize();
+		test_buddy_init_null();
+		test_buddy_misalignment();
+		test_buddy_invalid_datasize();
 
-		test_bbm_init();
+		test_buddy_init();
 
-		test_bbm_malloc_null();
-		test_bbm_malloc_zero();
-		test_bbm_malloc_larger();
+		test_buddy_malloc_null();
+		test_buddy_malloc_zero();
+		test_buddy_malloc_larger();
 
-		test_bbm_malloc_basic_01();
-		test_bbm_malloc_basic_02();
-		test_bbm_malloc_basic_03();
-		test_bbm_malloc_basic_04();
+		test_buddy_malloc_basic_01();
+		test_buddy_malloc_basic_02();
+		test_buddy_malloc_basic_03();
+		test_buddy_malloc_basic_04();
 
-		test_bbm_free_coverage();
+		test_buddy_free_coverage();
 
-		test_bbm_demo();
+		test_buddy_demo();
 	}
 	
 	{
-		test_bat_sizeof();
-		test_bat_init();
-		test_bat_valid();
-		test_bat_order();
-		test_bat_root();
-		test_bat_depth();
-		test_bat_left_child();
-		test_bat_right_child();
-		test_bat_parent();
-		test_bat_sibling();
-		test_bat_left_adjacent();
-		test_bat_right_adjacent();
-		test_bat_index();
-		test_bat_mark_status_release_01();
-		test_bat_mark_status_release_02();
-		test_bat_mark_status_release_03();
-		test_bat_mark_status_release_04();
-		test_bat_propagation_01();
-		test_bat_propagation_02();
-		test_bat_find_free_01();
-		test_bat_find_free_02();
+		test_buddy_tree_sizeof();
+		test_buddy_tree_init();
+		test_buddy_tree_valid();
+		test_buddy_tree_order();
+		test_buddy_tree_root();
+		test_buddy_tree_depth();
+		test_buddy_tree_left_child();
+		test_buddy_tree_right_child();
+		test_buddy_tree_parent();
+		test_buddy_tree_sibling();
+		test_buddy_tree_left_adjacent();
+		test_buddy_tree_right_adjacent();
+		test_buddy_tree_index();
+		test_buddy_tree_mark_status_release_01();
+		test_buddy_tree_mark_status_release_02();
+		test_buddy_tree_mark_status_release_03();
+		test_buddy_tree_mark_status_release_04();
+		test_buddy_tree_propagation_01();
+		test_buddy_tree_propagation_02();
+		test_buddy_tree_find_free_01();
+		test_buddy_tree_find_free_02();
 	}
 }

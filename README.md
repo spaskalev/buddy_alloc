@@ -12,19 +12,19 @@ This is a simple buddy memory allocator that might be suitable for use in applic
 ## Usage
 
 ```
-	size_t arena_size = 65536;
-	/* You need space for the metadata and for the arena */
-	void *buddy_metadata = malloc(bbm_sizeof(arena_size));
-	void *buddy_arena = malloc(arena_size);
-	struct bbm *buddy = bbm_init(buddy_metadata, buddy_arena, arena_size);
+size_t arena_size = 65536;
+/* You need space for the metadata and for the arena */
+void *buddy_metadata = malloc(buddy_sizeof(arena_size));
+void *buddy_arena = malloc(arena_size);
+struct buddy *buddy = buddy_init(buddy_metadata, buddy_arena, arena_size);
 
-	/* Allocate using the buddy allocator */
-	void *data = bbm_malloc(buddy, 2048);
-	/* Free using the buddy allocator */
-	bbm_free(buddy, data);
+/* Allocate using the buddy allocator */
+void *data = buddy_malloc(buddy, 2048);
+/* Free using the buddy allocator */
+buddy_free(buddy, data);
 
-	free(buddy_metadata);
-	free(buddy_arena);
+free(buddy_metadata);
+free(buddy_arena);
 ```
 
 ## Design
