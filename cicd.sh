@@ -1,3 +1,3 @@
 #!/bin/bash
 
-ls *.c *.h Makefile | entr -n make
+ls *.c *.h Makefile | entr -n make --output-sync --jobs 4
