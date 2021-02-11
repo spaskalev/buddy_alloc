@@ -5,7 +5,7 @@
 /*
  * A buddy allocation tree
  */
-#include "bat.h"
+#include "buddy_alloc_tree.h"
 #include "bitset.h"
 
 #include <stdalign.h>

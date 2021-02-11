@@ -10,8 +10,8 @@
 #include <string.h>
 
 #include "bitset.h"
-#include "bat.h"
-#include "bbm.h"
+#include "buddy_alloc_tree.h"
+#include "buddy_alloc.h"
 
 #define start_test printf("Running test: %s in %s:%d\n", __func__, __FILE__, __LINE__);
 

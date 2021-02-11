@@ -6,8 +6,8 @@
  * A binary buddy memory allocator
  */
 
-#include "bbm.h"
-#include "bat.h"
+#include "buddy_alloc.h"
+#include "buddy_alloc_tree.h"
 
 #include <stddef.h>
 #include <stdint.h>
