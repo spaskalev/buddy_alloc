@@ -7,6 +7,7 @@
  */
 #include "buddy_alloc_tree.h"
 #include "bitset.h"
+#include "bits.h"
 
 #include <stdalign.h>
 #include <stddef.h>
@@ -27,26 +28,17 @@ struct internal_position {
 	size_t bitset_location;
 };
 
-static size_t highest_bit_set(size_t value);
 static size_t size_for_order(uint8_t order, uint8_t to);
 static struct internal_position buddy_tree_internal_position(struct buddy_tree *t, buddy_tree_pos pos);
 static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos);
 static buddy_tree_pos buddy_tree_find_free_internal(struct buddy_tree *t, buddy_tree_pos start,
 	uint8_t target_depth, uint8_t target_status);
 
-static size_t highest_bit_set(size_t value) {
-	size_t pos = ((_Bool) value) & 1u;
-	while ( value >>= 1u ) {
-		pos++;
-	}
-	return pos;
-}
-
 static size_t size_for_order(uint8_t order, uint8_t to) {
 	size_t result = 0;
 	size_t multi = 1u;
 	while (order != to) {
-		result += highest_bit_set(order) * multi;
+		result += highest_bit_position(order) * multi;
 		order -= 1u;
 		multi <<= 1u;
 	}
@@ -57,7 +49,7 @@ static struct internal_position buddy_tree_internal_position(struct buddy_tree *
 	struct internal_position p = {0};
 	p.propagation_depth = t->order - buddy_tree_depth(t, pos) + 1;
 	p.total_offset = size_for_order(t->order, p.propagation_depth);
-	p.local_offset = highest_bit_set(p.propagation_depth);
+	p.local_offset = highest_bit_position(p.propagation_depth);
 	p.local_index = buddy_tree_index(t, pos);
 	p.bitset_location = p.total_offset + (p.local_offset*p.local_index);
 	return p;
@@ -121,7 +113,7 @@ size_t buddy_tree_depth(struct buddy_tree *t, buddy_tree_pos pos) {
 	if (!buddy_tree_valid(t, pos)) {
 		return 0; /* invalid pos */
 	}
-	return highest_bit_set(pos);
+	return highest_bit_position(pos);
 }
 
 buddy_tree_pos buddy_tree_left_child(struct buddy_tree *t, buddy_tree_pos pos) {
@@ -177,7 +169,7 @@ buddy_tree_pos buddy_tree_left_adjacent(struct buddy_tree *t, buddy_tree_pos pos
 	if (pos == 1) {
 		return 0; /* root node has no adjacent nodes */
 	}
-	if (highest_bit_set(pos) != highest_bit_set(pos - 1)) {
+	if (highest_bit_position(pos) != highest_bit_position(pos - 1)) {
 		return 0;
 	}
 	pos -= 1;
@@ -191,7 +183,7 @@ buddy_tree_pos buddy_tree_right_adjacent(struct buddy_tree *t, buddy_tree_pos po
 	if (pos == 1) {
 		return 0; /* root node has no adjacent nodes */
 	}
-	if (highest_bit_set(pos) != highest_bit_set(pos + 1)) {
+	if (highest_bit_position(pos) != highest_bit_position(pos + 1)) {
 		return 0;
 	}
 	pos += 1;
@@ -207,7 +199,7 @@ size_t buddy_tree_index(struct buddy_tree *t, buddy_tree_pos pos) {
 	/* % ((sizeof(size_t) * CHAR_BIT)-1) ensures we don't shift into
 	 * undefined behavior and stops clang from barking :)
 	 * Hopefully clang also optimizes it away :) */
-	size_t mask = 1u << (highest_bit_set(pos) - 1) % ((sizeof(size_t) * CHAR_BIT)-1);
+	size_t mask = 1u << (highest_bit_position(pos) - 1) % ((sizeof(size_t) * CHAR_BIT)-1);
 	size_t result = pos & ~mask;
 	return result;
 }

@@ -104,6 +104,21 @@ void test_buddy_init() {
 	}
 }
 
+void test_buddy_init_non_power_of_two_memory() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
+
+	size_t cutoff = 256;
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096-cutoff);
+	assert (buddy != NULL);
+
+	for (size_t i = 0; i < 60; i++) {
+		assert(buddy_malloc(buddy, BUDDY_ALIGN) != NULL);
+	}
+	assert(buddy_malloc(buddy, BUDDY_ALIGN) == NULL);
+}
+
 void test_buddy_malloc_null() {
 	start_test;
 	assert(buddy_malloc(NULL, 1024) == NULL);
@@ -525,6 +540,7 @@ int main() {
 		test_buddy_invalid_datasize();
 
 		test_buddy_init();
+		test_buddy_init_non_power_of_two_memory();
 
 		test_buddy_malloc_null();
 		test_buddy_malloc_zero();

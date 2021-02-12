@@ -51,3 +51,5 @@ clean:
 
 # Do not remove any intermediate files
 .SECONDARY:
+
+.PRECIOUS: tests.out

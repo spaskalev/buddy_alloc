@@ -6,6 +6,7 @@
  * A binary buddy memory allocator
  */
 
+#include "bits.h"
 #include "buddy_alloc.h"
 #include "buddy_alloc_tree.h"
 
@@ -58,16 +59,28 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 	buddy->main = main;
 	buddy->memory_size = memory_size;
 	buddy_tree_init(buddy->buddy_tree, buddy_tree_order);
+
+	/* Mask the virtual space if memory is not a power of two */
+	size_t effective_memory_size = ceiling_power_of_two(memory_size);
+	if (effective_memory_size != memory_size) {
+		size_t delta = effective_memory_size - memory_size;
+		size_t delta_count = delta / BUDDY_ALIGN;
+		buddy_tree_pos pos = buddy_tree_root(buddy_tree(buddy));
+		for(size_t i = 0; i < buddy_tree_order-1; i++) {
+			pos = buddy_tree_right_child(buddy_tree(buddy), pos);
+		}
+		while (delta_count) {
+			buddy_tree_mark(buddy_tree(buddy), pos);
+			pos = buddy_tree_left_adjacent(buddy_tree(buddy), pos);
+			delta_count--;
+		}
+	}
 	return buddy;
 }
 
 static size_t buddy_tree_order_for_memory(size_t memory_size) {
 	size_t blocks = memory_size / BUDDY_ALIGN;
-	size_t buddy_tree_order = 1;
-	while (blocks >>= 1u) {
-		buddy_tree_order++;
-	}
-	return buddy_tree_order;
+	return highest_bit_position(ceiling_power_of_two(blocks));
 }
 
 void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
