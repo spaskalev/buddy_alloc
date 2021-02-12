@@ -145,17 +145,20 @@ void buddy_free(struct buddy *buddy, void *ptr) {
 }
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
+	if (requested_size < BUDDY_ALIGN) {
+		requested_size = BUDDY_ALIGN;
+	}
 	size_t depth = 1;
-	size_t memory_size = buddy->memory_size;
-	while ((memory_size / requested_size) >> 1u) {
+	size_t effective_memory_size = ceiling_power_of_two(buddy->memory_size);
+	while ((effective_memory_size / requested_size) >> 1u) {
 		depth++;
-		memory_size >>= 1u;
+		effective_memory_size >>= 1u;
 	}
 	return depth;
 }
 
 static size_t size_for_depth(struct buddy *buddy, size_t depth) {
-	size_t result = buddy->memory_size >> (depth-1);
+	size_t result = ceiling_power_of_two(buddy->memory_size) >> (depth-1);
 	return result;
 }
 

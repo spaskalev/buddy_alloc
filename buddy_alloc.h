@@ -6,10 +6,12 @@
  * A binary buddy memory allocator
  */
 
+#include <limits.h>
+
 #include <stdalign.h>
 #include <stddef.h>
 
-#define BUDDY_ALIGN (sizeof(max_align_t))
+#define BUDDY_ALIGN (sizeof(size_t) * CHAR_BIT)
 
 struct buddy;
 
