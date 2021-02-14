@@ -15,15 +15,15 @@
 #include <string.h>
 
 struct buddy {
-	unsigned char *main;
 	size_t memory_size;
+	unsigned char *main;
 	alignas(max_align_t) unsigned char buddy_tree[];
 };
 
 static size_t buddy_tree_order_for_memory(size_t memory_size);
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size);
 static size_t size_for_depth(struct buddy *buddy, size_t depth);
-
+static unsigned char *buddy_main(struct buddy *buddy);
 static struct buddy_tree *buddy_tree(struct buddy *buddy);
 
 size_t buddy_sizeof(size_t memory_size) {
@@ -41,11 +41,11 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 	if ((at == NULL) || (main == NULL)) {
 		return NULL;
 	}
-	size_t at_alignment = ((uintptr_t) at) % alignof(max_align_t);
+	size_t at_alignment = ((uintptr_t) at) % alignof(struct buddy);
 	if (at_alignment != 0) {
 		return NULL;
 	}
-	size_t main_alignment = ((uintptr_t) main) % alignof(max_align_t);
+	size_t main_alignment = ((uintptr_t) main) % alignof(size_t);
 	if (main_alignment != 0) {
 		return NULL;
 	}
@@ -108,7 +108,7 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
 	/* Find and return the actual memory address */
 	size_t block_size = size_for_depth(buddy, target_depth);
 	size_t addr = block_size * buddy_tree_index(buddy_tree(buddy), pos);
-	return (buddy->main + addr);
+	return (buddy_main(buddy) + addr);
 }
 
 void *buddy_calloc(struct buddy *buddy, size_t requested_size) {
@@ -127,12 +127,13 @@ void buddy_free(struct buddy *buddy, void *ptr) {
 		return;
 	}
 	unsigned char *dst = (unsigned char *)ptr;
-	if ((dst < buddy->main) || (dst > (buddy->main + buddy->memory_size))) {
+	unsigned char *main = buddy_main(buddy);
+	if ((dst < main) || (dst > (main + buddy->memory_size))) {
 		return;
 	}
 
 	/* Find the deepest position tracking this address */
-	ptrdiff_t offset = dst - buddy->main;
+	ptrdiff_t offset = dst - main;
 	size_t index = offset / BUDDY_ALIGN;
 
 	buddy_tree_pos pos = buddy_tree_root(buddy_tree(buddy));
@@ -176,4 +177,6 @@ static struct buddy_tree *buddy_tree(struct buddy *buddy) {
 	return buddy_tree;
 }
 
-
+static unsigned char *buddy_main(struct buddy *buddy) {
+	return buddy->main;
+}
