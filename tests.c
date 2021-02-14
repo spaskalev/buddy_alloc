@@ -229,6 +229,18 @@ void test_buddy_demo() {
 	free(buddy_arena);
 }
 
+void test_buddy_calloc() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
+	memset(data_buf, 1, 4096);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	char *result = buddy_calloc(buddy, 4096);
+	for (size_t i = 0; i < 4096; i++) {
+		assert(result[i] == 0);
+	}
+}
+
 void test_buddy_tree_sizeof() {
 	start_test;
 	assert(buddy_tree_sizeof(0) == 0);
@@ -554,6 +566,8 @@ int main() {
 		test_buddy_free_coverage();
 
 		test_buddy_demo();
+
+		test_buddy_calloc();
 	}
 	
 	{

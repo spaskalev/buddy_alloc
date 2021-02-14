@@ -24,5 +24,8 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 /* Use the specified buddy to allocate memory. See malloc. */
 void *buddy_malloc(struct buddy *buddy, size_t requested_size);
 
+/* Use the specified buddy to allocate zeroed memory. See calloc. */
+void *buddy_calloc(struct buddy *buddy, size_t requested_size);
+
 /* Use the specified buddy to free memory. See free. */
 void buddy_free(struct buddy *buddy, void *ptr);

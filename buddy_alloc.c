@@ -12,6 +12,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 struct buddy {
 	unsigned char *main;
@@ -108,6 +109,14 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
 	size_t block_size = size_for_depth(buddy, target_depth);
 	size_t addr = block_size * buddy_tree_index(buddy_tree(buddy), pos);
 	return (buddy->main + addr);
+}
+
+void *buddy_calloc(struct buddy *buddy, size_t requested_size) {
+	void *result = buddy_malloc(buddy, requested_size);
+	if (result) {
+		memset(result, 0, requested_size);
+	}
+	return result;
 }
 
 void buddy_free(struct buddy *buddy, void *ptr) {
