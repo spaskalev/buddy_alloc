@@ -433,6 +433,66 @@ void test_buddy_embedded_malloc_01() {
 	assert(buddy_malloc(buddy, 2048) == NULL);
 }
 
+void test_buddy_mixed_use_01() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
+	void *addr[8] = {0};
+	for (size_t i = 0; i < 8; i++) {
+		addr[i] = buddy_malloc(buddy, 64);
+		assert(addr[i] != NULL);
+	}
+	for (size_t i = 0; i < 8; i++) {
+		if (i%2 == 0) {
+			buddy_free(buddy, addr[i]);
+		}
+	}
+	assert(buddy_malloc(buddy, 64) != NULL);
+	assert(buddy_malloc(buddy, 64) != NULL);
+	assert(buddy_malloc(buddy, 64) != NULL);
+	assert(buddy_malloc(buddy, 64) != NULL);
+	assert(buddy_malloc(buddy, 64) == NULL);
+}
+
+void test_buddy_mixed_use_02() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
+	void *addr[8] = {0};
+	for (size_t i = 0; i < 8; i++) {
+		addr[i] = buddy_malloc(buddy, 64);
+		assert(addr[i] != NULL);
+	}
+	for (size_t i = 0; i < 8; i++) {
+		buddy_free(buddy, addr[i]);
+	}
+	assert(buddy_malloc(buddy, 256) != NULL);
+	assert(buddy_malloc(buddy, 128) != NULL);
+	assert(buddy_malloc(buddy, 64) != NULL);
+	assert(buddy_malloc(buddy, 64) != NULL);
+	assert(buddy_malloc(buddy, 64) == NULL);
+}
+
+void test_buddy_mixed_use_03() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
+	void *addr[4] = {0};
+	for (size_t i = 0; i < 4; i++) {
+		addr[i] = buddy_malloc(buddy, 128);
+		assert(addr[i] != NULL);
+	}
+	for (size_t i = 0; i < 4; i++) {
+		buddy_free(buddy, addr[i]);
+	}
+	assert(buddy_malloc(buddy, 256) != NULL);
+	assert(buddy_malloc(buddy, 256) != NULL);
+	assert(buddy_malloc(buddy, 256) == NULL);
+}
+
 void test_buddy_tree_sizeof() {
 	start_test;
 	assert(buddy_tree_sizeof(0) == 0);
@@ -782,6 +842,10 @@ int main() {
 		test_buddy_embedded_null();
 		test_buddy_embedded_01();
 		test_buddy_embedded_malloc_01();
+
+		test_buddy_mixed_use_01();
+		test_buddy_mixed_use_02();
+		test_buddy_mixed_use_03();
 	}
 	
 	{
