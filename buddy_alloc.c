@@ -27,6 +27,8 @@ struct buddy {
 static size_t buddy_tree_order_for_memory(size_t memory_size);
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size);
 static size_t size_for_depth(struct buddy *buddy, size_t depth);
+static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos);
+static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr);
 static unsigned char *buddy_main(struct buddy *buddy);
 static struct buddy_tree *buddy_tree(struct buddy *buddy);
 
@@ -134,9 +136,7 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
 	buddy_tree_mark(buddy_tree(buddy), pos);
 
 	/* Find and return the actual memory address */
-	size_t block_size = size_for_depth(buddy, target_depth);
-	size_t addr = block_size * buddy_tree_index(buddy_tree(buddy), pos);
-	return (buddy_main(buddy) + addr);
+	return address_for_position(buddy, pos);
 }
 
 void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size) {
@@ -158,6 +158,54 @@ void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size
 	return result;
 }
 
+void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
+	/*
+	 * realloc is a joke:
+	 * - NULL ptr degrades into malloc
+	 * - Zero size degrades into free
+	 * - Same size as previous malloc/calloc/realloc is a no-op or a rellocation
+	 * - Smaller size than previous *alloc decrease the allocated size with an optional rellocation
+	 * - If the new allocation cannot be satisfied NULL is returned BUT the slot
+	 * - Larger size than previous *alloc increase tha allocated size with an optional rellocation
+	 */
+	if (ptr == NULL) {
+		return buddy_malloc(buddy, requested_size);
+	}
+	if (requested_size == 0) {
+		buddy_free(buddy, ptr);
+		return NULL;
+	}
+
+	/* Find the position tracking this address */
+	buddy_tree_pos origin = position_for_address(buddy, ptr);
+	size_t current_depth = buddy_tree_depth(buddy_tree(buddy), origin);
+	size_t target_depth = depth_for_size(buddy, requested_size);
+
+	/* If the new size fits in the same slot do nothing */
+	if (current_depth == target_depth) {
+		return ptr;
+	}
+
+	/* Release the position and perform a search */
+	buddy_tree_release(buddy_tree(buddy), origin);
+	buddy_tree_pos new_pos = buddy_tree_find_free(buddy_tree(buddy), target_depth);
+
+	if (buddy_tree_valid(buddy_tree(buddy), new_pos)) {
+		/* Copy the content */
+		void *source = address_for_position(buddy, origin);
+		void *destination = address_for_position(buddy, new_pos);
+		memmove(destination, source, size_for_depth(buddy,
+			current_depth < target_depth ? current_depth : target_depth));
+		/* Allocate and return */
+		buddy_tree_mark(buddy_tree(buddy), new_pos);
+		return destination;
+	}
+
+	/* allocation failure, restore mark and return null */
+	buddy_tree_mark(buddy_tree(buddy), origin);
+	return NULL;
+}
+
 void buddy_free(struct buddy *buddy, void *ptr) {
 	if (buddy == NULL) {
 		return;
@@ -171,23 +219,8 @@ void buddy_free(struct buddy *buddy, void *ptr) {
 		return;
 	}
 
-	/* Find the deepest position tracking this address */
-	ptrdiff_t offset = dst - main;
-	size_t index = offset / BUDDY_ALIGN;
-
-	buddy_tree_pos pos = buddy_tree_root(buddy_tree(buddy));
-	while(buddy_tree_valid(buddy_tree(buddy), buddy_tree_left_child(buddy_tree(buddy), pos))) {
-		pos = buddy_tree_left_child(buddy_tree(buddy), pos);
-	}
-	while (index > 0) {
-		pos = buddy_tree_right_adjacent(buddy_tree(buddy), pos);
-		index--;
-	}
-
-	/* Find the actual allocated position tracking this address */
-	while ((! buddy_tree_status(buddy_tree(buddy), pos)) && buddy_tree_valid(buddy_tree(buddy), pos)) {
-		pos = buddy_tree_parent(buddy_tree(buddy), pos);
-	}
+	/* Find the position tracking this address */
+	buddy_tree_pos pos = position_for_address(buddy, dst);
 
 	/* Release the position */
 	buddy_tree_release(buddy_tree(buddy), pos);
@@ -214,6 +247,35 @@ static size_t size_for_depth(struct buddy *buddy, size_t depth) {
 static struct buddy_tree *buddy_tree(struct buddy *buddy) {
 	struct buddy_tree* buddy_tree = (struct buddy_tree*) buddy->buddy_tree;
 	return buddy_tree;
+}
+
+static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos) {
+	size_t block_size = size_for_depth(buddy, buddy_tree_depth(buddy_tree(buddy), pos));
+	size_t addr = block_size * buddy_tree_index(buddy_tree(buddy), pos);
+	return buddy_main(buddy) + addr;
+}
+
+static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr) {
+	/* Find the deepest position tracking this address */
+	unsigned char *main = buddy_main(buddy);
+	ptrdiff_t offset = addr - main;
+	size_t index = offset / BUDDY_ALIGN;
+
+	buddy_tree_pos pos = buddy_tree_root(buddy_tree(buddy));
+	while(buddy_tree_valid(buddy_tree(buddy), buddy_tree_left_child(buddy_tree(buddy), pos))) {
+		pos = buddy_tree_left_child(buddy_tree(buddy), pos);
+	}
+	while (index > 0) {
+		pos = buddy_tree_right_adjacent(buddy_tree(buddy), pos);
+		index--;
+	}
+
+	/* Find the actual allocated position tracking this address */
+	while ((! buddy_tree_status(buddy_tree(buddy), pos)) && buddy_tree_valid(buddy_tree(buddy), pos)) {
+		pos = buddy_tree_parent(buddy_tree(buddy), pos);
+	}
+
+	return pos;
 }
 
 static unsigned char *buddy_main(struct buddy *buddy) {
