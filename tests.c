@@ -248,10 +248,37 @@ void test_buddy_calloc() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	memset(data_buf, 1, 4096);
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
-	char *result = buddy_calloc(buddy, 4096);
+	char *result = buddy_calloc(buddy, sizeof(char), 4096);
 	for (size_t i = 0; i < 4096; i++) {
 		assert(result[i] == 0);
 	}
+}
+
+void test_buddy_calloc_no_members() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	char *result = buddy_calloc(buddy, 0, 4096);
+	assert(result == NULL);
+}
+
+void test_buddy_calloc_no_size() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	char *result = buddy_calloc(buddy, sizeof(char), 0);
+	assert(result == NULL);
+}
+
+void test_buddy_calloc_overflow() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	short *result = buddy_calloc(buddy, sizeof(short), SIZE_MAX);
+	assert(result == NULL);
 }
 
 void test_buddy_embedded_not_enough_memory() {
@@ -614,6 +641,9 @@ int main() {
 		test_buddy_demo_embedded();
 
 		test_buddy_calloc();
+		test_buddy_calloc_no_members();
+		test_buddy_calloc_no_size();
+		test_buddy_calloc_overflow();
 
 		test_buddy_embedded_not_enough_memory();
 		test_buddy_embedded_null();

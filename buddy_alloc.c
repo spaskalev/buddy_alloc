@@ -139,10 +139,21 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
 	return (buddy_main(buddy) + addr);
 }
 
-void *buddy_calloc(struct buddy *buddy, size_t requested_size) {
-	void *result = buddy_malloc(buddy, requested_size);
+void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size) {
+	if (members_count == 0) {
+		return NULL;
+	}
+	if (member_size == 0) {
+		return NULL;
+	}
+	/* Check for overflow */
+	if ((members_count * member_size)/members_count != member_size) {
+		return NULL;
+	}
+	size_t total_size = members_count * member_size;
+	void *result = buddy_malloc(buddy, total_size);
 	if (result) {
-		memset(result, 0, requested_size);
+		memset(result, 0, total_size);
 	}
 	return result;
 }

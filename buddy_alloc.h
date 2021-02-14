@@ -31,7 +31,7 @@ struct buddy *buddy_embed(unsigned char *main, size_t memory_size);
 void *buddy_malloc(struct buddy *buddy, size_t requested_size);
 
 /* Use the specified buddy to allocate zeroed memory. See calloc. */
-void *buddy_calloc(struct buddy *buddy, size_t requested_size);
+void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size);
 
 /* Use the specified buddy to free memory. See free. */
 void buddy_free(struct buddy *buddy, void *ptr);
