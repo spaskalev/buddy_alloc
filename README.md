@@ -11,6 +11,8 @@ This is a simple buddy memory allocator that might be suitable for use in applic
 
 ## Usage
 
+Here is an example of initializing and using the buddy allocator with metadata external to the arena.
+
 ```
 size_t arena_size = 65536;
 /* You need space for the metadata and for the arena */
@@ -27,6 +29,22 @@ free(buddy_metadata);
 free(buddy_arena);
 ```
 
+Here is an example of initializing and using the buddy allocator with metadata internal to the arena.
+
+```
+size_t arena_size = 65536;
+/* You need space for arena and builtin metadata */
+void *buddy_arena = malloc(arena_size);
+struct buddy *buddy = buddy_embed(buddy_arena, arena_size);
+
+/* Allocate using the buddy allocator */
+void *data = buddy_malloc(buddy, 2048);
+/* Free using the buddy allocator */
+buddy_free(buddy, data);
+
+free(buddy_arena);
+```
+
 ## Design
 
 The allocator was designed with the following requirements in mind.
@@ -34,7 +52,7 @@ The allocator was designed with the following requirements in mind.
 - Allocation and deallocation operations should behave in a similar and preditable way regardless of the state of the allocator
 - The allocator's metadata size should be predictable based on the arena's size and not dependent on the state of the allocator
 - The allocator's metadata location should be external to the arena
-- Returned memory should be aligned to max_align_t
+- Returned memory should be aligned to size_t
 
 The following were not design goals
 
