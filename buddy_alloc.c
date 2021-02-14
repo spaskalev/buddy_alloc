@@ -16,11 +16,11 @@
 
 struct buddy {
 	size_t memory_size;
-	_Bool relative_mode;
 	union {
 		unsigned char *main;
 		ptrdiff_t main_offset;
 	};
+	_Bool relative_mode;
 	unsigned char buddy_tree[];
 };
 
