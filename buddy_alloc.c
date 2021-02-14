@@ -209,6 +209,18 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
 	return NULL;
 }
 
+void *buddy_reallocarray(struct buddy *buddy, void *ptr,
+		size_t members_count, size_t member_size) {
+	if (members_count == 0 || member_size == 0) {
+		return buddy_realloc(buddy, ptr, 0);
+	}
+	/* Check for overflow */
+	if ((members_count * member_size)/members_count != member_size) {
+		return NULL;
+	}
+	return buddy_realloc(buddy, ptr, members_count * member_size);
+}
+
 void buddy_free(struct buddy *buddy, void *ptr) {
 	if (buddy == NULL) {
 		return;

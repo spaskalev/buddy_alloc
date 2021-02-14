@@ -36,5 +36,9 @@ void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size
 /* Realloc semantics are a joke. See realloc. */
 void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size);
 
+/* Realloc-like behavior that checks for overflow. See reallocarray*/
+void *buddy_reallocarray(struct buddy *buddy, void *ptr,
+	size_t members_count, size_t member_size);
+
 /* Use the specified buddy to free memory. See free. */
 void buddy_free(struct buddy *buddy, void *ptr);

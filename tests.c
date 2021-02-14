@@ -374,6 +374,32 @@ void test_buddy_realloc_08() {
 	assert(result == NULL);
 }
 
+void test_buddy_reallocarray_01() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
+	void *result = buddy_reallocarray(buddy, NULL, 0, 0);
+	assert(result == NULL);
+}
+
+void test_buddy_reallocarray_02() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
+	void *result = buddy_reallocarray(buddy, NULL, sizeof(short), SIZE_MAX);
+	assert(result == NULL);
+}
+
+void test_buddy_reallocarray_03() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
+	void *result = buddy_reallocarray(buddy, NULL, sizeof(char), 256);
+	assert(result == data_buf);
+}
 
 void test_buddy_embedded_not_enough_memory() {
 	start_test;
@@ -747,6 +773,10 @@ int main() {
 		test_buddy_realloc_06();
 		test_buddy_realloc_07();
 		test_buddy_realloc_08();
+
+		test_buddy_reallocarray_01();
+		test_buddy_reallocarray_02();
+		test_buddy_reallocarray_03();
 
 		test_buddy_embedded_not_enough_memory();
 		test_buddy_embedded_null();
