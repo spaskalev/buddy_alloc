@@ -228,6 +228,20 @@ void test_buddy_demo() {
 	free(buddy_arena);
 }
 
+void test_buddy_demo_embedded() {
+	size_t arena_size = 65536;
+	/* You need space for arena and builtin metadata */
+	void *buddy_arena = malloc(arena_size);
+	struct buddy *buddy = buddy_embed(buddy_arena, arena_size);
+
+	/* Allocate using the buddy allocator */
+	void *data = buddy_malloc(buddy, 2048);
+	/* Free using the buddy allocator */
+	buddy_free(buddy, data);
+
+	free(buddy_arena);
+}
+
 void test_buddy_calloc() {
 	start_test;
 	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
@@ -597,6 +611,7 @@ int main() {
 		test_buddy_free_coverage();
 
 		test_buddy_demo();
+		test_buddy_demo_embedded();
 
 		test_buddy_calloc();
 
