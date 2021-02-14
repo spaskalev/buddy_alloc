@@ -365,4 +365,5 @@ void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos) {
 	printf("pos: %zu status: %zu\n", pos, (size_t) buddy_tree_status(t, pos));
 	buddy_tree_debug(t, buddy_tree_left_child(t, pos));
 	buddy_tree_debug(t, buddy_tree_right_child(t, pos));
+	fflush(stdout);
 }

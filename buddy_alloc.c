@@ -175,6 +175,9 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
 		buddy_free(buddy, ptr);
 		return NULL;
 	}
+	if (requested_size > buddy->memory_size) {
+		return NULL;
+	}
 
 	/* Find the position tracking this address */
 	buddy_tree_pos origin = position_for_address(buddy, ptr);
