@@ -21,7 +21,7 @@ struct buddy {
 		unsigned char *main;
 		ptrdiff_t main_offset;
 	};
-	alignas(max_align_t) unsigned char buddy_tree[];
+	unsigned char buddy_tree[];
 };
 
 static size_t buddy_tree_order_for_memory(size_t memory_size);
@@ -31,10 +31,7 @@ static unsigned char *buddy_main(struct buddy *buddy);
 static struct buddy_tree *buddy_tree(struct buddy *buddy);
 
 size_t buddy_sizeof(size_t memory_size) {
-	if ((memory_size % BUDDY_ALIGN) != 0) {
-		return 0; /* invalid */
-	}
-	if (memory_size == 0) {
+	if (memory_size < BUDDY_ALIGN) {
 		return 0; /* invalid */
 	}
 	size_t buddy_tree_order = buddy_tree_order_for_memory(memory_size);
@@ -71,6 +68,9 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 	if (effective_memory_size != memory_size) {
 		size_t delta = effective_memory_size - memory_size;
 		size_t delta_count = delta / BUDDY_ALIGN;
+		if (delta < BUDDY_ALIGN) {
+			delta_count = 1;
+		}
 		buddy_tree_pos pos = buddy_tree_root(buddy_tree(buddy));
 		for(size_t i = 0; i < buddy_tree_order-1; i++) {
 			pos = buddy_tree_right_child(buddy_tree(buddy), pos);

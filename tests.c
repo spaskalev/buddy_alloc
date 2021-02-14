@@ -86,7 +86,6 @@ void test_buddy_invalid_datasize() {
 	{
 		assert(buddy_sizeof(0) == 0);
 		assert(buddy_sizeof(BUDDY_ALIGN-1) == 0);
-		assert(buddy_sizeof(BUDDY_ALIGN+1) == 0);
 	}
 	{
 		struct buddy *buddy = buddy_init(buddy_buf, data_buf, 0);
