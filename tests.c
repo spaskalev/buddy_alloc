@@ -493,6 +493,19 @@ void test_buddy_mixed_use_03() {
 	assert(buddy_malloc(buddy, 256) == NULL);
 }
 
+void test_buddy_mixed_sizes_01() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	assert(buddy_malloc(buddy, 0) == NULL);
+	for(size_t i = 1; i <= 64; i++) {
+		printf("%zu\n", i); fflush(stdout);
+		assert(buddy_malloc(buddy, i) == data_buf+((i-1)*64));
+	}
+	assert(buddy_malloc(buddy, 1) == NULL);
+}
+
 void test_buddy_tree_sizeof() {
 	start_test;
 	assert(buddy_tree_sizeof(0) == 0);
@@ -846,6 +859,8 @@ int main() {
 		test_buddy_mixed_use_01();
 		test_buddy_mixed_use_02();
 		test_buddy_mixed_use_03();
+
+		test_buddy_mixed_sizes_01();
 	}
 	
 	{
