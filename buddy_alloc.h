@@ -18,8 +18,14 @@ struct buddy;
 /* Returns the size of a buddy required to manage of block of the specified size */
 size_t buddy_sizeof(size_t memory_size);
 
-/* Initializes the binary buddy memory allocator at the specified location */
+/* Initializes a binary buddy memory allocator at the specified location */
 struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_size);
+
+/*
+ * Initializes a binary buddy memory allocator embedded in the specified arena.
+ * The arena's capacity is reduced to account for the allocator metadata.
+ */
+struct buddy *buddy_embed(unsigned char *main, size_t memory_size);
 
 /* Use the specified buddy to allocate memory. See malloc. */
 void *buddy_malloc(struct buddy *buddy, size_t requested_size);

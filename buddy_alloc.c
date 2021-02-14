@@ -16,7 +16,11 @@
 
 struct buddy {
 	size_t memory_size;
-	unsigned char *main;
+	_Bool relative_mode;
+	union {
+		unsigned char *main;
+		ptrdiff_t main_offset;
+	};
 	alignas(max_align_t) unsigned char buddy_tree[];
 };
 
@@ -59,6 +63,7 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 	struct buddy *buddy = (struct buddy *) at;
 	buddy->main = main;
 	buddy->memory_size = memory_size;
+	buddy->relative_mode = 0;
 	buddy_tree_init(buddy->buddy_tree, buddy_tree_order);
 
 	/* Mask the virtual space if memory is not a power of two */
@@ -76,6 +81,29 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 			delta_count--;
 		}
 	}
+	return buddy;
+}
+
+struct buddy *buddy_embed(unsigned char *main, size_t memory_size) {
+	size_t buddy_size = buddy_sizeof(memory_size);
+	init:
+	if (buddy_size >= memory_size) {
+		/* not enough memory */
+		return NULL;
+	}
+	size_t offset = memory_size - buddy_size;
+	if (offset % alignof(struct buddy) != 0) {
+		buddy_size += offset % alignof(struct buddy);
+		/* retry */
+		goto init;
+	}
+	struct buddy *buddy = buddy_init(main+offset, main, offset);
+	if (! buddy) {
+		/* regular initialization failed */
+		return NULL;
+	}
+	buddy->relative_mode = 1;
+	buddy->main_offset = (unsigned char *)buddy - main;
 	return buddy;
 }
 
@@ -178,5 +206,8 @@ static struct buddy_tree *buddy_tree(struct buddy *buddy) {
 }
 
 static unsigned char *buddy_main(struct buddy *buddy) {
+	if (buddy->relative_mode) {
+		return (unsigned char *)buddy - buddy->main_offset;
+	}
 	return buddy->main;
 }

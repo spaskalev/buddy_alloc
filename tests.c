@@ -241,6 +241,38 @@ void test_buddy_calloc() {
 	}
 }
 
+void test_buddy_embedded_not_enough_memory() {
+	start_test;
+	alignas(max_align_t) unsigned char buf[4];
+	struct buddy *buddy = buddy_embed(buf, 4);
+	assert(buddy == NULL);
+}
+
+void test_buddy_embedded_null() {
+	start_test;
+	struct buddy *buddy = buddy_embed(NULL, 4096);
+	assert(buddy == NULL);
+}
+
+void test_buddy_embedded_01() {
+	start_test;
+	alignas(max_align_t) unsigned char buf[4096];
+	struct buddy *buddy = buddy_embed(buf, 4096);
+	assert(buddy != NULL);
+}
+
+void test_buddy_embedded_malloc_01() {
+	start_test;
+	alignas(max_align_t) unsigned char buf[4096];
+	struct buddy *buddy = buddy_embed(buf, 4096);
+	assert(buddy != NULL);
+	assert(buddy_malloc(buddy, 2048) == buf);
+	assert(buddy_malloc(buddy, 2048) == NULL);
+	buddy_free(buddy, buf);
+	assert(buddy_malloc(buddy, 2048) == buf);
+	assert(buddy_malloc(buddy, 2048) == NULL);
+}
+
 void test_buddy_tree_sizeof() {
 	start_test;
 	assert(buddy_tree_sizeof(0) == 0);
@@ -568,6 +600,11 @@ int main() {
 		test_buddy_demo();
 
 		test_buddy_calloc();
+
+		test_buddy_embedded_not_enough_memory();
+		test_buddy_embedded_null();
+		test_buddy_embedded_01();
+		test_buddy_embedded_malloc_01();
 	}
 	
 	{
