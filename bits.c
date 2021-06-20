@@ -5,15 +5,6 @@
 #include "bits.h"
 
 size_t highest_bit_position(size_t value) {
-	/*if (value == 0) {
-		return 0;
-	}
-	size_t pos = 0;
-	while ( value > 0 ) {
-		pos += 1;
-		value >>= 1u;
-	}
-	return pos - 1;*/
        size_t pos = ((_Bool) value) & 1u;
        while ( value >>= 1u ) {
                 pos += 1;
