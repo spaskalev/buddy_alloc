@@ -11,9 +11,47 @@
 
 #include "tests.h"
 
+#include "bits.h"
 #include "bitset.h"
 #include "buddy_alloc_tree.h"
 #include "buddy_alloc.h"
+
+void test_highest_bit_position() {
+	assert(highest_bit_position(0) == 0);
+	assert(highest_bit_position(1) == 1);
+	assert(highest_bit_position(2) == 2);
+	assert(highest_bit_position(3) == 2);
+	assert(highest_bit_position(4) == 3);
+	assert(highest_bit_position(SIZE_MAX-1) == (sizeof(size_t) * CHAR_BIT));
+	assert(highest_bit_position(SIZE_MAX) == (sizeof(size_t) * CHAR_BIT));
+}
+
+void test_highest_bit() {
+	assert(highest_bit(0) == 0);
+	assert(highest_bit(1) == 1);
+	assert(highest_bit(2) == 2);
+	assert(highest_bit(3) == 2);
+	assert(highest_bit(4) == 4);
+	assert(highest_bit(5) == 4);
+	assert(highest_bit(6) == 4);
+	assert(highest_bit(7) == 4);
+	assert(highest_bit(8) == 8);
+	assert(highest_bit(SIZE_MAX-1) == (1ul << ((sizeof(size_t) * CHAR_BIT) -1)));
+	assert(highest_bit(SIZE_MAX) == (1ul << ((sizeof(size_t) * CHAR_BIT) -1)));
+}
+
+void test_ceiling_power_of_two() {
+	assert(ceiling_power_of_two(0) == 1);
+	assert(ceiling_power_of_two(1) == 1);
+	assert(ceiling_power_of_two(2) == 2);
+	assert(ceiling_power_of_two(3) == 4);
+	assert(ceiling_power_of_two(4) == 4);
+	assert(ceiling_power_of_two(5) == 8);
+	assert(ceiling_power_of_two(6) == 8);
+	assert(ceiling_power_of_two(7) == 8);
+	assert(ceiling_power_of_two(8) == 8);
+	assert(ceiling_power_of_two(SIZE_MAX) == 0); /* ceiling unavailable for values near limit */
+}
 
 void test_bitset_basic() {
 	start_test;
@@ -806,6 +844,12 @@ void test_buddy_tree_find_free_02() {
 }
 
 int main() {
+	{
+		test_highest_bit_position();
+		test_highest_bit();
+		test_ceiling_power_of_two();
+	}
+
 	{
 		test_bitset_basic();
 		test_bitset_range();

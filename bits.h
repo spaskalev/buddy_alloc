@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Returns the index of the highest bit set */
+/* Returns the index of the highest bit set (1-based) */
 size_t highest_bit_position(size_t value);
 
 /* Returns the the highest bit set */
