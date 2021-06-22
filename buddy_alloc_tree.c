@@ -297,6 +297,11 @@ static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
 			free = (left <= right ? left : right) + 1;
 		}
 
+		uint8_t current = buddy_tree_status(t, pos);
+		if (free == current) {
+			break; /* short the parent chain update */
+		}
+
 		struct internal_position p = buddy_tree_internal_position(t, pos);
 		while (p.local_offset) {
 			if (free & 1u) {
