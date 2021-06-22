@@ -330,27 +330,31 @@ static buddy_tree_pos buddy_tree_find_free_internal(struct buddy_tree *t, buddy_
 		uint8_t target_depth, uint8_t target_status) {
 	size_t current_depth = buddy_tree_depth(t, start);
 	size_t current_status = buddy_tree_status(t, start);
-	if (current_depth == target_depth) {
-		/* Target depth reached */
-		if (current_status == 0) {
-			/* Position is free, success */
-			return start;
+	while (1) {
+		if (current_depth == target_depth) {
+			if (current_status == 0) {
+				return start; /* Position is free, success */
+			}
+			return 0; /* Position is not free, fail */
 		}
-		/* Position is not free, fail */
-		return 0;
-	}
-	if (current_status <= target_status) {
-		/* A free position is available in this part of the tree, traverse left-first */
-		buddy_tree_pos pos = buddy_tree_find_free_internal(t, buddy_tree_left_child(t, start), target_depth, target_status-1);
-		if (buddy_tree_valid(t, pos)) {
-			/* Position found, success */
-			return pos;
+		if (current_status <= target_status) { /* A free position is available down the tree */
+			/* Advance criteria */
+			target_status -= 1;
+			current_depth += 1;
+			/* Test the left branch */
+			buddy_tree_pos left_pos = buddy_tree_left_child(t, start);
+			current_status = buddy_tree_status(t, left_pos);
+			if (current_status <= target_status) {
+				start = left_pos;
+				continue;
+			}
+			start = buddy_tree_right_child(t, start);
+			current_status = buddy_tree_status(t, start);
+		} else {
+			/* No position available down the tree */
+			return 0;
 		}
-		/* The free position should be in the right branch otherwise */
-		return buddy_tree_find_free_internal(t, buddy_tree_right_child(t, start), target_depth, target_status-1);
 	}
-	/* A free position is not available in this part of the tree, fail */
-	return 0;
 }
 
 void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos) {
