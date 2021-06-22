@@ -260,8 +260,7 @@ static size_t size_for_depth(struct buddy *buddy, size_t depth) {
 }
 
 static struct buddy_tree *buddy_tree(struct buddy *buddy) {
-	struct buddy_tree* buddy_tree = (struct buddy_tree*) buddy->buddy_tree;
-	return buddy_tree;
+	return (struct buddy_tree*) buddy->buddy_tree;
 }
 
 static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos) {
