@@ -88,17 +88,19 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 
 struct buddy *buddy_embed(unsigned char *main, size_t memory_size) {
 	size_t buddy_size = buddy_sizeof(memory_size);
-	init:
 	if (buddy_size >= memory_size) {
-		/* not enough memory */
 		return NULL;
 	}
+
 	size_t offset = memory_size - buddy_size;
 	if (offset % alignof(struct buddy) != 0) {
 		buddy_size += offset % alignof(struct buddy);
-		/* retry */
-		goto init;
+		if (buddy_size >= memory_size) {
+			return NULL;
+		}
+		offset = memory_size - buddy_size;
 	}
+
 	struct buddy *buddy = buddy_init(main+offset, main, offset);
 	if (! buddy) {
 		/* regular initialization failed */
