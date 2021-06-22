@@ -288,30 +288,29 @@ void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
 }
 
 static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
-	if (!buddy_tree_valid(t, pos)) {
-		return;
-	}
+	while (buddy_tree_valid(t, pos)) {
 
-	uint8_t left = buddy_tree_status(t, buddy_tree_left_child(t, pos));
-	uint8_t right = buddy_tree_status(t, buddy_tree_right_child(t, pos));
-	uint8_t free = 0;
-	if (left || right) {
-		free = (left <= right ? left : right) + 1;
-	}
-
-	struct internal_position p = buddy_tree_internal_position(t, pos);
-	while (p.local_offset) {
-		if (free & 1u) {
-			bitset_set(t->bits, p.bitset_location);
-		} else {
-			bitset_clear(t->bits, p.bitset_location);
+		uint8_t left = buddy_tree_status(t, buddy_tree_left_child(t, pos));
+		uint8_t right = buddy_tree_status(t, buddy_tree_right_child(t, pos));
+		uint8_t free = 0;
+		if (left || right) {
+			free = (left <= right ? left : right) + 1;
 		}
-		free >>= 1u;
-		p.bitset_location += 1;
-		p.local_offset -= 1;
-	}
 
-	update_parent_chain(t, buddy_tree_parent(t, pos));
+		struct internal_position p = buddy_tree_internal_position(t, pos);
+		while (p.local_offset) {
+			if (free & 1u) {
+				bitset_set(t->bits, p.bitset_location);
+			} else {
+				bitset_clear(t->bits, p.bitset_location);
+			}
+			free >>= 1u;
+			p.bitset_location += 1;
+			p.local_offset -= 1;
+		}
+
+		pos = buddy_tree_parent(t, pos);
+	}
 }
 
 buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth) {
