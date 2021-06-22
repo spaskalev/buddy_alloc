@@ -22,7 +22,6 @@ struct buddy_tree {
 
 struct internal_position {
 	size_t propagation_depth;
-	size_t total_offset;
 	size_t local_offset;
 	size_t local_index;
 	size_t bitset_location;
@@ -48,10 +47,10 @@ static size_t size_for_order(uint8_t order, uint8_t to) {
 static struct internal_position buddy_tree_internal_position(struct buddy_tree *t, buddy_tree_pos pos) {
 	struct internal_position p = {0};
 	p.propagation_depth = t->order - buddy_tree_depth(t, pos) + 1;
-	p.total_offset = size_for_order(t->order, p.propagation_depth);
+	size_t total_offset = size_for_order(t->order, p.propagation_depth);
 	p.local_offset = highest_bit_position(p.propagation_depth);
 	p.local_index = buddy_tree_index(t, pos);
-	p.bitset_location = p.total_offset + (p.local_offset*p.local_index);
+	p.bitset_location = total_offset + (p.local_offset*p.local_index);
 	return p;
 }
 
