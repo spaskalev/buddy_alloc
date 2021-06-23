@@ -250,6 +250,14 @@ void test_buddy_free_coverage() {
 	buddy_free(buddy, data_buf+2048);
 }
 
+void test_buddy_free_alignment() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	buddy_free(buddy, data_buf+1);
+}
+
 void test_buddy_demo() {
 	size_t arena_size = 65536;
 	/* You need space for the metadata and for the arena */
@@ -873,6 +881,7 @@ int main() {
 		test_buddy_malloc_basic_04();
 
 		test_buddy_free_coverage();
+		test_buddy_free_alignment();
 
 		test_buddy_demo();
 		test_buddy_demo_embedded();

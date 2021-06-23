@@ -275,6 +275,9 @@ static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned c
 	/* Find the deepest position tracking this address */
 	unsigned char *main = buddy_main(buddy);
 	ptrdiff_t offset = addr - main;
+	if (offset % BUDDY_ALIGN) {
+		return 0; /* invalid alignment */
+	}
 	size_t index = offset / BUDDY_ALIGN;
 
 	buddy_tree_pos pos = buddy_tree_root(buddy_tree(buddy));
