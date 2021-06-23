@@ -15,7 +15,6 @@
 #include "bitset.h"
 #include "buddy_alloc_tree.h"
 #include "buddy_alloc.h"
-#include "buddy_brk.h"
 
 void test_highest_bit_position() {
 	assert(highest_bit_position(0) == 0);
