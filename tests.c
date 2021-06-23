@@ -442,8 +442,8 @@ void test_buddy_reallocarray_03() {
 void test_buddy_embedded_not_enough_memory() {
 	start_test;
 	alignas(max_align_t) unsigned char buf[4];
-	struct buddy *buddy = buddy_embed(buf, 4);
-	assert(buddy == NULL);
+	assert(buddy_embed(buf, 4) == NULL);
+	assert(buddy_embed(buf, 0) == NULL);
 }
 
 void test_buddy_embedded_null() {
