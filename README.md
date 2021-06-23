@@ -72,3 +72,7 @@ The binary tree nodes are labeled with the largest allocation slot available und
 ### Space requirement
 
 The tree is stored in a bitset with each node using just enough bits to store the maximum allocation slot available under it. For leaf nodes this is a single bit. Other nodes sizes depend on the height of the tree.
+
+### Resiliency
+
+- Calling free in a wrong way (double free, out of arena, unaligned) will not corrupt the allocator's metadata.
