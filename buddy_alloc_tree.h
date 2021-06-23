@@ -64,7 +64,7 @@ size_t buddy_tree_index(struct buddy_tree *t, buddy_tree_pos pos);
  */
 
 /* Returns the free capacity at or underneath the indicated position */
-uint8_t buddy_tree_status(struct buddy_tree *t, buddy_tree_pos pos);
+size_t buddy_tree_status(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Marks the indicated position as allocated and propagates the change */
 void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos);

@@ -21,7 +21,7 @@ struct buddy_tree {
 };
 
 struct internal_position {
-	size_t propagation_depth;
+	size_t max_value;
 	size_t local_offset;
 	size_t local_index;
 	size_t bitset_location;
@@ -32,6 +32,9 @@ static struct internal_position buddy_tree_internal_position(struct buddy_tree *
 static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos);
 static buddy_tree_pos buddy_tree_find_free_internal(struct buddy_tree *t, buddy_tree_pos start,
 	uint8_t target_depth, uint8_t target_status);
+
+static void write_to_internal_position(struct buddy_tree *t, struct internal_position pos, size_t value);
+static size_t read_from_internal_position(struct buddy_tree *t, struct internal_position pos);
 
 static size_t size_for_order(uint8_t order, uint8_t to) {
 	size_t result = 0;
@@ -46,9 +49,9 @@ static size_t size_for_order(uint8_t order, uint8_t to) {
 
 static struct internal_position buddy_tree_internal_position(struct buddy_tree *t, buddy_tree_pos pos) {
 	struct internal_position p = {0};
-	p.propagation_depth = t->order - buddy_tree_depth(t, pos) + 1;
-	size_t total_offset = size_for_order(t->order, p.propagation_depth);
-	p.local_offset = highest_bit_position(p.propagation_depth);
+	p.max_value = t->order - buddy_tree_depth(t, pos) + 1;
+	size_t total_offset = size_for_order(t->order, p.max_value);
+	p.local_offset = highest_bit_position(p.max_value);
 	p.local_index = buddy_tree_index(t, pos);
 	p.bitset_location = total_offset + (p.local_offset*p.local_index);
 	return p;
@@ -203,21 +206,38 @@ size_t buddy_tree_index(struct buddy_tree *t, buddy_tree_pos pos) {
 	return result;
 }
 
-uint8_t buddy_tree_status(struct buddy_tree *t, buddy_tree_pos pos) {
+static void write_to_internal_position(struct buddy_tree *t, struct internal_position pos, size_t value) {
+	while (pos.local_offset) {
+		if (value & 1u) {
+			bitset_set(t->bits, pos.bitset_location);
+		} else {
+			bitset_clear(t->bits, pos.bitset_location);
+		}
+		value >>= 1u;
+		pos.bitset_location += 1;
+		pos.local_offset -= 1;
+	}
+}
+
+static size_t read_from_internal_position(struct buddy_tree *t, struct internal_position pos) {
+	size_t result = 0;
+	size_t shift = 0;
+	while (pos.local_offset) {
+		result |= (size_t) (bitset_test(t->bits, pos.bitset_location) << shift);
+		pos.bitset_location += 1;
+		pos.local_offset -= 1;
+		shift += 1;
+	}
+	return result;
+}
+
+size_t buddy_tree_status(struct buddy_tree *t, buddy_tree_pos pos) {
 	if (!buddy_tree_valid(t, pos)) {
 		return 0;
 	}
 
-	struct internal_position p = buddy_tree_internal_position(t, pos);
-	uint8_t result = 0;
-	size_t shift = 0;
-	while (p.local_offset) {
-		result |= (uint8_t) (bitset_test(t->bits, p.bitset_location) << shift);
-		p.bitset_location += 1;
-		p.local_offset -= 1;
-		shift += 1;
-	}
-	return result;
+	struct internal_position internal = buddy_tree_internal_position(t, pos);
+	return read_from_internal_position(t, internal);
 }
 
 void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos) {
@@ -225,34 +245,16 @@ void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos) {
 		return;
 	}
 
-	struct internal_position p = buddy_tree_internal_position(t, pos);
-	struct internal_position check = p;
-
-	_Bool used = 0;
-	while (check.local_offset) {
-		if (bitset_test(t->bits, check.bitset_location)) {
-			used = 1;
-			break;
-		}
-		check.bitset_location += 1;
-		check.local_offset -= 1;
-	}
-	if (used) {
+	struct internal_position internal = buddy_tree_internal_position(t, pos);
+	if (read_from_internal_position(t, internal)) {
 		/* Calling mark on a used position is likely a bug in caller */
 		return;
 	}
 
-	while (p.local_offset) {
-		if (p.propagation_depth & 1u) {
-			bitset_set(t->bits, p.bitset_location);
-		} else {
-			bitset_clear(t->bits, p.bitset_location);
-		}
-		p.bitset_location += 1;
-		p.local_offset -= 1;
-		p.propagation_depth >>= 1u;
-	}
+	/* Mark the node as used */
+	write_to_internal_position(t, internal, internal.max_value);
 
+	/* Update the tree upwards */
 	update_parent_chain(t, buddy_tree_parent(t, pos));
 }
 
@@ -261,59 +263,40 @@ void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
 		return;
 	}
 
-	struct internal_position p = buddy_tree_internal_position(t, pos);
-	struct internal_position check = p;
+	struct internal_position internal = buddy_tree_internal_position(t, pos);
 
-	_Bool used = 0;
-	while (check.local_offset) {
-		if (bitset_test(t->bits, check.bitset_location)) {
-			used = 1;
-			break;
-		}
-		check.bitset_location += 1;
-		check.local_offset -= 1;
-	}
-	if (! used) {
-		/* Calling release on an unused position is likely a bug in caller */
+	if (read_from_internal_position(t, internal) != internal.max_value) {
+		/* Calling release on an unused or a partially-used position is
+		   likely a bug in caller */
 		return;
 	}
 
-	while (p.local_offset) {
-		bitset_clear(t->bits, p.bitset_location);
-		p.bitset_location += 1;
-		p.local_offset -= 1;
-	}
+	/* Mark the node as unused */
+	write_to_internal_position(t, internal, 0);
 
+	/* Update the tree upwards */
 	update_parent_chain(t, buddy_tree_parent(t, pos));
 }
 
 static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
 	while (buddy_tree_valid(t, pos)) {
 
-		uint8_t left = buddy_tree_status(t, buddy_tree_left_child(t, pos));
-		uint8_t right = buddy_tree_status(t, buddy_tree_right_child(t, pos));
-		uint8_t free = 0;
+		size_t left = buddy_tree_status(t, buddy_tree_left_child(t, pos));
+		size_t right = buddy_tree_status(t, buddy_tree_right_child(t, pos));
+		size_t free = 0;
 		if (left || right) {
 			free = (left <= right ? left : right) + 1;
 		}
 
-		uint8_t current = buddy_tree_status(t, pos);
+		size_t current = buddy_tree_status(t, pos);
 		if (free == current) {
 			break; /* short the parent chain update */
 		}
 
-		struct internal_position p = buddy_tree_internal_position(t, pos);
-		while (p.local_offset) {
-			if (free & 1u) {
-				bitset_set(t->bits, p.bitset_location);
-			} else {
-				bitset_clear(t->bits, p.bitset_location);
-			}
-			free >>= 1u;
-			p.bitset_location += 1;
-			p.local_offset -= 1;
-		}
+		/* Update the node */
+		write_to_internal_position(t, buddy_tree_internal_position(t, pos), free);
 
+		/* Advance upwards */
 		pos = buddy_tree_parent(t, pos);
 	}
 }
@@ -369,7 +352,7 @@ void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos) {
 	for (size_t j = buddy_tree_depth(t, pos); j > 0; j--) {
 		printf(" ");
 	}
-	printf("pos: %zu status: %zu\n", pos, (size_t) buddy_tree_status(t, pos));
+	printf("pos: %zu status: %zu\n", pos, buddy_tree_status(t, pos));
 	buddy_tree_debug(t, buddy_tree_left_child(t, pos));
 	buddy_tree_debug(t, buddy_tree_right_child(t, pos));
 	fflush(stdout);
