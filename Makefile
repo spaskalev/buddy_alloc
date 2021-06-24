@@ -13,6 +13,8 @@ export SHELL = /bin/bash
 CC=clang
 AR=ar
 CFLAGS=-g -fstrict-aliasing -fstack-protector-all -pedantic -Wall -Wextra -Werror -Wfatal-errors --coverage
+CTIDY_CHECKS='*,-llvm-header-guard,-llvm-include-order,-bugprone-assert-side-effect,-readability-else-after-return'
+
 LLVM_COV=$(shell compgen -c | grep llvm-cov | sort | head -n 1)
 ALL_SRC=$(wildcard *.c *.h)
 C_SRC=$(wildcard *.c)
@@ -39,7 +41,7 @@ endef
 $(foreach src,$(wildcard *.c),$(eval $(call DEP,$(src))))
 
 %.static_clang_tidy:  %.c %.h
-	clang-tidy -checks='*,-llvm-header-guard,-llvm-include-order,-bugprone-assert-side-effect' -warnings-as-errors='*' $^ --
+	clang-tidy -checks=$(CTIDY_CHECKS) -warnings-as-errors='*' $^ --
 
 %.static_ccpcheck: %.c %.h
 	cppcheck --error-exitcode=1 --quiet $^
