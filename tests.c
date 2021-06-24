@@ -89,6 +89,67 @@ void test_bitset_range() {
 	}
 }
 
+void test_bitset_shift() {
+	start_test;
+	unsigned char buf[bitset_size(16)];
+	for (size_t i = 0; i < 8; i++) {
+		bitset_set(buf, i);
+	}
+	for (size_t i = 8; i < 16; i++) {
+		bitset_clear(buf, i);
+	}
+	assert(bitset_test(buf, 0) == 1);
+	assert(bitset_test(buf, 1) == 1);
+	assert(bitset_test(buf, 2) == 1);
+	assert(bitset_test(buf, 3) == 1);
+	assert(bitset_test(buf, 4) == 1);
+	assert(bitset_test(buf, 5) == 1);
+	assert(bitset_test(buf, 6) == 1);
+	assert(bitset_test(buf, 7) == 1);
+	assert(bitset_test(buf, 8) == 0);
+	assert(bitset_test(buf, 9) == 0);
+	assert(bitset_test(buf, 10) == 0);
+	assert(bitset_test(buf, 11) == 0);
+	assert(bitset_test(buf, 12) == 0);
+	assert(bitset_test(buf, 13) == 0);
+	assert(bitset_test(buf, 14) == 0);
+	assert(bitset_test(buf, 15) == 0);
+	bitset_shift_right(buf, 0, 8, 4);
+	assert(bitset_test(buf, 0) == 0);
+	assert(bitset_test(buf, 1) == 0);
+	assert(bitset_test(buf, 2) == 0);
+	assert(bitset_test(buf, 3) == 0);
+	assert(bitset_test(buf, 4) == 1);
+	assert(bitset_test(buf, 5) == 1);
+	assert(bitset_test(buf, 6) == 1);
+	assert(bitset_test(buf, 7) == 1);
+	assert(bitset_test(buf, 8) == 1);
+	assert(bitset_test(buf, 9) == 1);
+	assert(bitset_test(buf, 10) == 1);
+	assert(bitset_test(buf, 11) == 1);
+	assert(bitset_test(buf, 12) == 0);
+	assert(bitset_test(buf, 13) == 0);
+	assert(bitset_test(buf, 14) == 0);
+	assert(bitset_test(buf, 15) == 0);
+	bitset_shift_left(buf, 4, 12, 4);
+	assert(bitset_test(buf, 0) == 1);
+	assert(bitset_test(buf, 1) == 1);
+	assert(bitset_test(buf, 2) == 1);
+	assert(bitset_test(buf, 3) == 1);
+	assert(bitset_test(buf, 4) == 1);
+	assert(bitset_test(buf, 5) == 1);
+	assert(bitset_test(buf, 6) == 1);
+	assert(bitset_test(buf, 7) == 1);
+	assert(bitset_test(buf, 8) == 0);
+	assert(bitset_test(buf, 9) == 0);
+	assert(bitset_test(buf, 10) == 0);
+	assert(bitset_test(buf, 11) == 0);
+	assert(bitset_test(buf, 12) == 0);
+	assert(bitset_test(buf, 13) == 0);
+	assert(bitset_test(buf, 14) == 0);
+	assert(bitset_test(buf, 15) == 0);
+}
+
 void test_buddy_init_null() {
 	start_test;
 	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)+1];
@@ -852,6 +913,8 @@ void test_buddy_tree_find_free_02() {
 }
 
 int main() {
+	setvbuf(stdout, NULL, _IONBF, 0);
+
 	{
 		test_highest_bit_position();
 		test_highest_bit();
@@ -861,6 +924,8 @@ int main() {
 	{
 		test_bitset_basic();
 		test_bitset_range();
+
+		test_bitset_shift();
 	}
 
 	{
