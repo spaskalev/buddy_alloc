@@ -92,40 +92,25 @@ void test_bitset_range() {
 void test_bitset_shift() {
 	start_test;
 	unsigned char buf[bitset_size(16)];
-	for (size_t i = 0; i < 8; i++) {
-		bitset_set(buf, i);
-	}
-	for (size_t i = 8; i < 16; i++) {
+	for (size_t i = 0; i < 16; i++) {
 		bitset_clear(buf, i);
 	}
-	assert(bitset_test(buf, 0) == 1);
-	assert(bitset_test(buf, 1) == 1);
-	assert(bitset_test(buf, 2) == 1);
-	assert(bitset_test(buf, 3) == 1);
-	assert(bitset_test(buf, 4) == 1);
-	assert(bitset_test(buf, 5) == 1);
-	assert(bitset_test(buf, 6) == 1);
-	assert(bitset_test(buf, 7) == 1);
-	assert(bitset_test(buf, 8) == 0);
-	assert(bitset_test(buf, 9) == 0);
-	assert(bitset_test(buf, 10) == 0);
-	assert(bitset_test(buf, 11) == 0);
-	assert(bitset_test(buf, 12) == 0);
-	assert(bitset_test(buf, 13) == 0);
-	assert(bitset_test(buf, 14) == 0);
-	assert(bitset_test(buf, 15) == 0);
+	bitset_set(buf, 0);
+	bitset_set(buf, 3);
+	bitset_set(buf, 4);
+	bitset_set(buf, 7);
 	bitset_shift_right(buf, 0, 8, 4);
 	assert(bitset_test(buf, 0) == 0);
 	assert(bitset_test(buf, 1) == 0);
 	assert(bitset_test(buf, 2) == 0);
 	assert(bitset_test(buf, 3) == 0);
 	assert(bitset_test(buf, 4) == 1);
-	assert(bitset_test(buf, 5) == 1);
-	assert(bitset_test(buf, 6) == 1);
+	assert(bitset_test(buf, 5) == 0);
+	assert(bitset_test(buf, 6) == 0);
 	assert(bitset_test(buf, 7) == 1);
 	assert(bitset_test(buf, 8) == 1);
-	assert(bitset_test(buf, 9) == 1);
-	assert(bitset_test(buf, 10) == 1);
+	assert(bitset_test(buf, 9) == 0);
+	assert(bitset_test(buf, 10) == 0);
 	assert(bitset_test(buf, 11) == 1);
 	assert(bitset_test(buf, 12) == 0);
 	assert(bitset_test(buf, 13) == 0);
@@ -133,12 +118,12 @@ void test_bitset_shift() {
 	assert(bitset_test(buf, 15) == 0);
 	bitset_shift_left(buf, 4, 12, 4);
 	assert(bitset_test(buf, 0) == 1);
-	assert(bitset_test(buf, 1) == 1);
-	assert(bitset_test(buf, 2) == 1);
+	assert(bitset_test(buf, 1) == 0);
+	assert(bitset_test(buf, 2) == 0);
 	assert(bitset_test(buf, 3) == 1);
 	assert(bitset_test(buf, 4) == 1);
-	assert(bitset_test(buf, 5) == 1);
-	assert(bitset_test(buf, 6) == 1);
+	assert(bitset_test(buf, 5) == 0);
+	assert(bitset_test(buf, 6) == 0);
 	assert(bitset_test(buf, 7) == 1);
 	assert(bitset_test(buf, 8) == 0);
 	assert(bitset_test(buf, 9) == 0);
@@ -148,6 +133,31 @@ void test_bitset_shift() {
 	assert(bitset_test(buf, 13) == 0);
 	assert(bitset_test(buf, 14) == 0);
 	assert(bitset_test(buf, 15) == 0);
+}
+
+void test_bitset_shift_invalid() {
+	start_test;
+	unsigned char buf[4096] = {0};
+	bitset_set_range(buf, 1, 0); /* no-op */
+	assert(bitset_test(buf, 0) == 0);
+	assert(bitset_test(buf, 1) == 0);
+	bitset_set_range(buf, 0, 1);
+	assert(bitset_test(buf, 0) == 1);
+	assert(bitset_test(buf, 1) == 1);
+	bitset_clear_range(buf, 1, 0) /* no-op */;
+	assert(bitset_test(buf, 0) == 1);
+	assert(bitset_test(buf, 1) == 1);
+	bitset_clear_range(buf, 0, 1);
+	assert(bitset_test(buf, 0) == 0);
+	assert(bitset_test(buf, 1) == 0);
+}
+
+void test_bitset_debug() {
+	start_test;
+	unsigned char buf[4096] = {0};
+	bitset_set(buf, 0);
+	bitset_clear(buf, 1);
+	bitset_debug(buf, 2);
 }
 
 void test_buddy_init_null() {
@@ -607,7 +617,6 @@ void test_buddy_mixed_sizes_01() {
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy_malloc(buddy, 0) == NULL);
 	for(size_t i = 1; i <= 64; i++) {
-		printf("%zu\n", i); fflush(stdout);
 		assert(buddy_malloc(buddy, i) == data_buf+((i-1)*64));
 	}
 	assert(buddy_malloc(buddy, 1) == NULL);
@@ -898,18 +907,98 @@ void test_buddy_tree_find_free_02() {
 	pos = buddy_tree_find_free(t, 2);
 	assert(buddy_tree_valid(t, pos) == 1);
 
-	buddy_tree_debug(t, buddy_tree_root(t));printf("\n");
 	buddy_tree_mark(t, pos);
-	buddy_tree_debug(t, buddy_tree_root(t));printf("\n");
-
 	pos = buddy_tree_find_free(t, 2);
 	assert(buddy_tree_valid(t, pos) == 1);
 
 	buddy_tree_mark(t, pos);
-	buddy_tree_debug(t, buddy_tree_root(t));printf("\n");
-
 	pos = buddy_tree_find_free(t, 2);
 	assert(buddy_tree_valid(t, pos) == 0);
+}
+
+void test_buddy_tree_debug() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_mark(t, buddy_tree_root(t));
+	buddy_tree_debug(t, buddy_tree_root(t));printf("\n");
+}
+
+void test_buddy_tree_resize_buddy_null() {
+	start_test;
+	struct buddy_tree *t = NULL;
+	buddy_tree_resize(t, 3);
+}
+
+void test_buddy_tree_resize_same_size() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
+	buddy_tree_resize(t, 1);
+}
+
+void test_buddy_tree_resize_01() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
+	buddy_tree_mark(t, buddy_tree_root(t));
+	buddy_tree_resize(t, 2);
+	assert(buddy_tree_order(t) == 2);
+	assert(buddy_tree_status(t, buddy_tree_root(t)) == 1);
+	assert(buddy_tree_status(t, buddy_tree_left_child(t, buddy_tree_root(t))) == 1);
+	assert(buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root(t))) == 0);
+	buddy_tree_resize(t, 3);
+	unsigned char expected[] = {0 /*ignored */, 1, 1, 0, 1, 0, 0, 0};
+	for (size_t i = 1; i < 8; i++) {
+		assert(buddy_tree_status(t, i) == expected[i]);
+	}
+	// assert(0);
+}
+
+void test_buddy_tree_leftmost_child() {
+	start_test;
+	{
+		struct buddy_tree *t = NULL;
+		buddy_tree_pos leftmost = buddy_tree_leftmost_child(t);
+		assert(leftmost == 0);
+	}
+	{
+		unsigned char buddy_tree_buf[4096] = {0};
+		struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
+		buddy_tree_pos leftmost = buddy_tree_leftmost_child(t);
+		assert(buddy_tree_valid(t, leftmost));
+		assert(leftmost == buddy_tree_root(t));
+	}
+	{
+		unsigned char buddy_tree_buf[4096] = {0};
+		struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+		buddy_tree_pos leftmost = buddy_tree_leftmost_child(t);
+		assert(buddy_tree_valid(t, leftmost));
+		assert(leftmost == buddy_tree_left_child(t, buddy_tree_root(t)));
+	}
+}
+
+void test_buddy_tree_rightmost_child() {
+	start_test;
+	{
+		struct buddy_tree *t = NULL;
+		buddy_tree_pos rightmost = buddy_tree_rightmost_child(t);
+		assert(rightmost == 0);
+	}
+	{
+		unsigned char buddy_tree_buf[4096] = {0};
+		struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
+		buddy_tree_pos leftmost = buddy_tree_rightmost_child(t);
+		assert(buddy_tree_valid(t, leftmost));
+		assert(leftmost == buddy_tree_root(t));
+	}
+	{
+		unsigned char buddy_tree_buf[4096] = {0};
+		struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+		buddy_tree_pos leftmost = buddy_tree_rightmost_child(t);
+		assert(buddy_tree_valid(t, leftmost));
+		assert(leftmost == buddy_tree_right_child(t, buddy_tree_root(t)));
+	}
 }
 
 int main() {
@@ -926,6 +1015,9 @@ int main() {
 		test_bitset_range();
 
 		test_bitset_shift();
+		test_bitset_shift_invalid();
+
+		test_bitset_debug();
 	}
 
 	{
@@ -1005,5 +1097,11 @@ int main() {
 		test_buddy_tree_propagation_02();
 		test_buddy_tree_find_free_01();
 		test_buddy_tree_find_free_02();
+		test_buddy_tree_debug();
+		test_buddy_tree_resize_buddy_null();
+		test_buddy_tree_resize_same_size();
+		test_buddy_tree_resize_01();
+		test_buddy_tree_leftmost_child();
+		test_buddy_tree_rightmost_child();
 	}
 }

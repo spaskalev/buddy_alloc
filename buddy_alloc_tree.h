@@ -28,12 +28,22 @@ _Bool buddy_tree_valid(struct buddy_tree *t, buddy_tree_pos pos);
 /* Returns the order of the specified buddy allocation tree */
 uint8_t buddy_tree_order(struct buddy_tree *t);
 
+/* Resize the tree to the new order. When downsizing the left subtree is picked. */
+/* Caller must ensure enough space for the new order. */
+void buddy_tree_resize(struct buddy_tree *t, uint8_t desired_order);
+
 /*
  * Navigation functions
  */
 
 /* Returns a position at the root of the buddy allocation tree */
 buddy_tree_pos buddy_tree_root(struct buddy_tree *t);
+
+/* Returns the leftmost child node */
+buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t);
+
+/* Returns the rightmost child node */
+buddy_tree_pos buddy_tree_rightmost_child(struct buddy_tree *t);
 
 /* Returns the depth at the indicated position */
 size_t buddy_tree_depth(struct buddy_tree *t, buddy_tree_pos pos);

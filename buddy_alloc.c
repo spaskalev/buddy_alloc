@@ -280,10 +280,7 @@ static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned c
 	}
 	size_t index = offset / BUDDY_ALIGN;
 
-	buddy_tree_pos pos = buddy_tree_root(buddy_tree(buddy));
-	while(buddy_tree_valid(buddy_tree(buddy), buddy_tree_left_child(buddy_tree(buddy), pos))) {
-		pos = buddy_tree_left_child(buddy_tree(buddy), pos);
-	}
+	buddy_tree_pos pos = buddy_tree_leftmost_child(buddy_tree(buddy));
 	while (index > 0) {
 		pos = buddy_tree_right_adjacent(buddy_tree(buddy), pos);
 		index--;

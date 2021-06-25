@@ -27,3 +27,10 @@ _Bool bitset_test(const unsigned char *bitset, size_t pos);
 void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by);
 
 void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by);
+
+/*
+ * Debug functions
+ */
+
+/* Implementation defined */
+void bitset_debug(unsigned char *bitset, size_t length);

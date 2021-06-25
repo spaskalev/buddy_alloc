@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <stddef.h>
 #include <sys/types.h>
+#include <stdio.h>
 
 #include "bitset.h"
 
@@ -17,37 +18,23 @@ size_t bitset_size(size_t elements) {
 }
 
 void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
-	const unsigned char cbits[8] = {1, 3, 7, 15, 31, 63, 127, 255};
-    size_t from_bucket = from_pos / CHAR_BIT;
-    size_t from_index = from_pos % CHAR_BIT;
-    size_t to_bucket = to_pos / CHAR_BIT;
-    size_t to_index = to_pos % CHAR_BIT;
-    if (from_bucket == to_bucket) {
-		bitset[from_bucket] |= (size_t)(cbits[to_index - from_index]) << from_index;
-	} else {
-		bitset[from_bucket] |= (size_t)(cbits[7u - from_index]) << from_index;
-		for (size_t i = from_bucket+1; i < to_bucket; i++) {
-			bitset[i] = 255u;
-		}
-		bitset[to_bucket] |= cbits[to_index];
-	}
+    if (to_pos < from_pos) {
+        return;
+    }
+    while (from_pos <= to_pos) {
+        bitset_set(bitset, from_pos);
+        from_pos += 1;
+    }
 }
 
 void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
-	const unsigned char cbits[8] = {1, 3, 7, 15, 31, 63, 127, 255};
-    size_t from_bucket = from_pos / CHAR_BIT;
-    size_t from_index = from_pos % CHAR_BIT;
-    size_t to_bucket = to_pos / CHAR_BIT;
-    size_t to_index = to_pos % CHAR_BIT;
-    if (from_bucket == to_bucket) {
-		bitset[from_bucket] &= ~(size_t)(cbits[to_index - from_index]) << from_index;
-	} else {
-		bitset[from_bucket] &= ~(size_t)(cbits[7u - from_index]) << from_index;
-		for (size_t i = from_bucket+1; i < to_bucket; i++) {
-			bitset[i] = 0u;
-		}
-		bitset[to_bucket] &= ~(size_t)cbits[to_index];
-	}
+    if (to_pos < from_pos) {
+        return;
+    }
+    while (from_pos <= to_pos) {
+        bitset_clear(bitset, from_pos);
+        from_pos += 1;
+    }
 }
 
 void bitset_set(unsigned char *bitset, size_t pos) {
@@ -76,7 +63,7 @@ _Bool bitset_test(const unsigned char *bitset, size_t pos) {
 
 void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by) {
     size_t length = to_pos - from_pos;
-    for(size_t i = 0; i <= length; i++) {
+    for(size_t i = 0; i < length; i++) {
         size_t at = from_pos + i;
         if (bitset_test(bitset, at)) {
             bitset_set(bitset, at-by);
@@ -84,7 +71,8 @@ void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_pos, si
             bitset_clear(bitset, at-by);
         }
     }
-    bitset_clear_range(bitset, to_pos, to_pos+by-1);
+    bitset_clear_range(bitset, length, length+by-1);
+
 }
 
 void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by) {
@@ -99,4 +87,10 @@ void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to_pos, s
         length -= 1;
     }
     bitset_clear_range(bitset, from_pos, from_pos+by-1);
+}
+
+void bitset_debug(unsigned char *bitset, size_t length) {
+    for (size_t i = 0; i < length; i++) {
+        printf("%zu: %d\n", i, bitset_test(bitset, i));
+    }
 }
