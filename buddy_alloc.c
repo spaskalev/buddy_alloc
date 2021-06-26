@@ -32,6 +32,8 @@ static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned c
 static unsigned char *buddy_main(struct buddy *buddy);
 static struct buddy_tree *buddy_tree(struct buddy *buddy);
 static void buddy_toggle_virtual_slots(struct buddy *buddy, size_t memory_size, _Bool state);
+static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size);
+static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
 
 size_t buddy_sizeof(size_t memory_size) {
 	if (memory_size < BUDDY_ALIGN) {
@@ -98,48 +100,57 @@ struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size) {
 	if (buddy == NULL) {
 		return NULL;
 	}
-
-	if (buddy->relative_mode) {
-		return NULL; /* not implemented (yet) */
-	}
-
 	if (new_memory_size == buddy->memory_size) {
 		return buddy;
 	}
+	if (buddy->relative_mode) {
+		return buddy_resize_embedded(buddy, new_memory_size);
+	} else {
+		return buddy_resize_standard(buddy, new_memory_size);
+	}
+}
 
+static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size) {
 	size_t current_effective_memory_size = ceiling_power_of_two(buddy->memory_size);
 	size_t new_effective_memory_size = ceiling_power_of_two(new_memory_size);
 
-	if (new_memory_size > buddy->memory_size) {
-		if (current_effective_memory_size == new_effective_memory_size) {
-			/* No resize needed, just update the reserved blocks and memory size*/
-			buddy_toggle_virtual_slots(buddy, buddy->memory_size, 0);
-			buddy_toggle_virtual_slots(buddy, new_memory_size, 1);
-			buddy->memory_size = new_memory_size;
-			return buddy;
-		} else {
-			/* Resize required */
+	if (current_effective_memory_size == new_effective_memory_size) {
+		/* No resize needed, just update the reserved blocks and memory size*/
+		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 0);
+		buddy_toggle_virtual_slots(buddy, new_memory_size, 1);
+		buddy->memory_size = new_memory_size;
+		return buddy;
+	} else {
+		/* Resize required */
 
-			/* Release the virtual slots */
-			buddy_toggle_virtual_slots(buddy, buddy->memory_size, 0);
+		/* Release the virtual slots */
+		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 0);
 
-			/* Calculate new tree size and adjust it */
-			size_t new_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size);
-			/* Upsizing the buddy tree can always go through (vs downsizing) */
-			buddy_tree_resize(buddy_tree(buddy), new_buddy_tree_order);
-
-			/* Store the new memory size and reconstruct any virtual slots */
-			buddy->memory_size = new_memory_size;
+		/* Calculate new tree size and adjust it */
+		size_t old_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size);
+		size_t new_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size);
+		/* Upsizing the buddy tree can always go through (vs downsizing) */
+		buddy_tree_resize(buddy_tree(buddy), new_buddy_tree_order);
+		if (buddy_tree_order(buddy_tree(buddy)) != new_buddy_tree_order) {
+			/* Resizing failed, restore the tree and virtual blocks */
+			buddy_tree_resize(buddy_tree(buddy), old_buddy_tree_order);
 			buddy_toggle_virtual_slots(buddy, buddy->memory_size, 1);
-
-			/* Resize successful */
-			return buddy;
+			return NULL;
 		}
-	} else /* new_memory_size < buddy->memory_size */ {
-		/* If the new size overlaps with used blocks 
-		   fail the resize. */
-		return NULL;
+
+		/* Store the new memory size and reconstruct any virtual slots */
+		buddy->memory_size = new_memory_size;
+		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 1);
+
+		/* Resize successful */
+		return buddy;
 	}
+}
+
+static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size) {
+	(void)(buddy);
+	(void)(new_memory_size);
+	return NULL; /* not implemented (yet) */
 }
 
 static size_t buddy_tree_order_for_memory(size_t memory_size) {
