@@ -952,7 +952,47 @@ void test_buddy_tree_resize_01() {
 	for (size_t i = 1; i < 8; i++) {
 		assert(buddy_tree_status(t, i) == expected[i]);
 	}
-	// assert(0);
+}
+
+void test_buddy_tree_resize_02() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_mark(t, buddy_tree_left_child(t, buddy_tree_root(t)));
+	buddy_tree_resize(t, 2);
+	assert(buddy_tree_status(t, buddy_tree_root(t)) == 2);
+	assert(buddy_tree_status(t, buddy_tree_left_child(t, buddy_tree_root(t))) == 0);
+	assert(buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root(t))) == 0);
+	buddy_tree_resize(t, 1);
+	assert(buddy_tree_order(t) == 2); /* cannot shrink */
+	assert(buddy_tree_status(t, buddy_tree_root(t)) == 2);
+	assert(buddy_tree_status(t, buddy_tree_left_child(t, buddy_tree_root(t))) == 0);
+	assert(buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root(t))) == 0);
+}
+
+void test_buddy_tree_resize_04() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_mark(t, buddy_tree_right_child(t, buddy_tree_root(t)));
+	buddy_tree_resize(t, 1);
+	assert(buddy_tree_order(t) == 2);
+	assert(buddy_tree_status(t, buddy_tree_root(t)) == 1);
+	assert(buddy_tree_status(t, buddy_tree_left_child(t, buddy_tree_root(t))) == 0);
+	assert(buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root(t))) == 1);
+}
+
+
+void test_buddy_tree_resize_03() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_mark(t, buddy_tree_left_child(t, buddy_tree_root(t)));
+	buddy_tree_resize(t, 0);
+	assert(buddy_tree_order(t) == 2);
+	assert(buddy_tree_status(t, buddy_tree_root(t)) == 1);
+	assert(buddy_tree_status(t, buddy_tree_left_child(t, buddy_tree_root(t))) == 1);
+	assert(buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root(t))) == 0);
 }
 
 void test_buddy_tree_leftmost_child() {
@@ -1101,6 +1141,9 @@ int main() {
 		test_buddy_tree_resize_buddy_null();
 		test_buddy_tree_resize_same_size();
 		test_buddy_tree_resize_01();
+		test_buddy_tree_resize_02();
+		test_buddy_tree_resize_03();
+		test_buddy_tree_resize_04();
 		test_buddy_tree_leftmost_child();
 		test_buddy_tree_rightmost_child();
 	}
