@@ -1130,6 +1130,69 @@ void test_buddy_tree_rightmost_child() {
 	}
 }
 
+void test_buddy_tree_is_free_01() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+}
+
+void test_buddy_tree_is_free_02() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	buddy_tree_mark(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+}
+void test_buddy_tree_is_free_03() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	buddy_tree_mark(t, buddy_tree_parent(t, pos));
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+}
+
+void test_buddy_tree_is_free_04() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_mark(t, buddy_tree_root(t));
+	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 0);
+}
+
+void test_buddy_tree_is_free_05() {
+	start_test;
+	assert(buddy_tree_is_free(NULL, buddy_tree_root(NULL)) == 0);
+}
+
 int main() {
 	setvbuf(stdout, NULL, _IONBF, 0);
 
@@ -1247,5 +1310,10 @@ int main() {
 		test_buddy_tree_resize_04();
 		test_buddy_tree_leftmost_child();
 		test_buddy_tree_rightmost_child();
+		test_buddy_tree_is_free_01();
+		test_buddy_tree_is_free_02();
+		test_buddy_tree_is_free_03();
+		test_buddy_tree_is_free_04();
+		test_buddy_tree_is_free_05();
 	}
 }

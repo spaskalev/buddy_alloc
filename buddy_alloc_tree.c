@@ -509,6 +509,26 @@ static buddy_tree_pos buddy_tree_find_free_internal(struct buddy_tree *t, buddy_
 	}
 }
 
+_Bool buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos) {
+	if (!buddy_tree_valid(t, pos)) {
+		return 0;
+	}
+	if (buddy_tree_status(t, pos)) {
+		return 0;
+	}
+	pos = buddy_tree_parent(t, pos);
+	while(buddy_tree_valid(t, pos)) {
+		struct internal_position internal = buddy_tree_internal_position(t->order, pos);
+		size_t value = read_from_internal_position(t->bits, internal);
+		if (value == internal.max_value) {
+			return 0;
+		}
+		pos = buddy_tree_parent(t, pos);
+	}
+	return 1;
+}
+
+
 void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos) {
 	if (!buddy_tree_valid(t, pos)) {
 		return;
