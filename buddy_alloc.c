@@ -25,6 +25,12 @@ struct buddy {
 	unsigned char buddy_tree[];
 };
 
+struct buddy_embed_check {
+	_Bool can_fit;
+	size_t offset;
+	size_t buddy_size;
+};
+
 static size_t buddy_tree_order_for_memory(size_t memory_size);
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size);
 static size_t size_for_depth(struct buddy *buddy, size_t depth);
@@ -36,6 +42,7 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, size_t memory_size, 
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size);
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
 static _Bool buddy_is_free(struct buddy *buddy, size_t from);
+static struct buddy_embed_check buddy_embed_offset(size_t memory_size);
 
 size_t buddy_sizeof(size_t memory_size) {
 	if (memory_size < BUDDY_ALIGN) {
@@ -74,25 +81,16 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 }
 
 struct buddy *buddy_embed(unsigned char *main, size_t memory_size) {
-	size_t buddy_size = buddy_sizeof(memory_size);
-	if (buddy_size >= memory_size) {
+	struct buddy_embed_check result = buddy_embed_offset(memory_size);
+	if (! result.can_fit) {
 		return NULL;
 	}
 
-	size_t offset = memory_size - buddy_size;
-	if (offset % alignof(struct buddy) != 0) {
-		buddy_size += offset % alignof(struct buddy);
-		if (buddy_size >= memory_size) {
-			return NULL;
-		}
-		offset = memory_size - buddy_size;
-	}
-
-	struct buddy *buddy = buddy_init(main+offset, main, offset);
-	if (! buddy) {
-		/* regular initialization failed */
+	struct buddy *buddy = buddy_init(main+result.offset, main, result.offset);
+	if (! buddy) { /* regular initialization failed */
 		return NULL;
 	}
+
 	buddy->relative_mode = 1;
 	buddy->main_offset = (unsigned char *)buddy - main;
 	return buddy;
@@ -105,14 +103,7 @@ struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size) {
 	if (new_memory_size == buddy->memory_size) {
 		return buddy;
 	}
-	if (buddy->relative_mode) {
-		return buddy_resize_embedded(buddy, new_memory_size);
-	} else {
-		return buddy_resize_standard(buddy, new_memory_size);
-	}
-}
 
-static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size) {
 	size_t current_effective_memory_size = ceiling_power_of_two(buddy->memory_size);
 	size_t new_effective_memory_size = ceiling_power_of_two(new_memory_size);
 
@@ -132,37 +123,64 @@ static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memor
 		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 1);
 
 		return buddy;
+	}
+
+	if (buddy->relative_mode) {
+		return buddy_resize_embedded(buddy, new_memory_size);
 	} else {
-		/* Resize required */
-
-		/* Release the virtual slots */
-		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 0);
-
-		/* Calculate new tree size and adjust it */
-		size_t old_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size);
-		size_t new_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size);
-		/* Upsizing the buddy tree can always go through (vs downsizing) */
-		buddy_tree_resize(buddy_tree(buddy), new_buddy_tree_order);
-		if (buddy_tree_order(buddy_tree(buddy)) != new_buddy_tree_order) {
-			/* Resizing failed, restore the tree and virtual blocks */
-			buddy_tree_resize(buddy_tree(buddy), old_buddy_tree_order);
-			buddy_toggle_virtual_slots(buddy, buddy->memory_size, 1);
-			return NULL;
-		}
-
-		/* Store the new memory size and reconstruct any virtual slots */
-		buddy->memory_size = new_memory_size;
-		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 1);
-
-		/* Resize successful */
-		return buddy;
+		return buddy_resize_standard(buddy, new_memory_size);
 	}
 }
 
+static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size) {
+	/* Release the virtual slots */
+	buddy_toggle_virtual_slots(buddy, buddy->memory_size, 0);
+
+	/* Calculate new tree size and adjust it */
+	size_t old_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size);
+	size_t new_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size);
+	/* Upsizing the buddy tree can always go through (vs downsizing) */
+	buddy_tree_resize(buddy_tree(buddy), new_buddy_tree_order);
+	if (buddy_tree_order(buddy_tree(buddy)) != new_buddy_tree_order) {
+		/* Resizing failed, restore the tree and virtual blocks */
+		buddy_tree_resize(buddy_tree(buddy), old_buddy_tree_order);
+		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 1);
+		return NULL;
+	}
+
+	/* Store the new memory size and reconstruct any virtual slots */
+	buddy->memory_size = new_memory_size;
+	buddy_toggle_virtual_slots(buddy, buddy->memory_size, 1);
+
+	/* Resize successful */
+	return buddy;
+}
+
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size) {
-	(void)(buddy);
-	(void)(new_memory_size);
-	return NULL; /* not implemented (yet) */
+	/* Ensure that the embedded allocator can fit */
+	struct buddy_embed_check result = buddy_embed_offset(new_memory_size);
+	if (! result.can_fit) {
+		return NULL;
+	}
+
+	/* Resize the allocator in the normal way */
+	struct buddy *resized = buddy_resize_standard(buddy, result.offset);
+	if (resized == NULL) {
+		return NULL;
+	}
+
+	/* Get the absolute main address. The relative will be invalid after relocation. */
+	unsigned char *main = buddy_main(buddy);
+
+	/* Relocate the allocator */
+	unsigned char *buddy_destination = buddy_main(buddy) + result.offset;
+	memmove(buddy_destination, resized, result.buddy_size);
+
+	/* Update the main offset in the allocator */
+	struct buddy *relocated = (struct buddy *) buddy_destination;
+	relocated->main_offset = buddy_destination - main;
+
+	return relocated;
 }
 
 static size_t buddy_tree_order_for_memory(size_t memory_size) {
@@ -413,4 +431,29 @@ static _Bool buddy_is_free(struct buddy *buddy, size_t from) {
 
 	/* Blocks are free */
 	return 1;
+}
+
+static struct buddy_embed_check buddy_embed_offset(size_t memory_size) {
+	struct buddy_embed_check result = {0};
+	result.can_fit = 1;
+
+	size_t buddy_size = buddy_sizeof(memory_size);
+	if (buddy_size >= memory_size) {
+		result.can_fit = 0;
+	}
+
+	size_t offset = memory_size - buddy_size;
+	if (offset % alignof(struct buddy) != 0) {
+		buddy_size += offset % alignof(struct buddy);
+		if (buddy_size >= memory_size) {
+			result.can_fit = 0;
+		}
+		offset = memory_size - buddy_size;
+	}
+
+	if (result.can_fit) {
+		result.offset = offset;
+		result.buddy_size = buddy_size;
+	}
+	return result;
 }

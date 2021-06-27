@@ -317,16 +317,6 @@ void test_buddy_resize_down_before_reserved() {
 	assert(buddy_resize(buddy, 448) == buddy);
 }
 
-void test_buddy_resize_not_implemented() {
-	start_test;
-	{
-		alignas(max_align_t) unsigned char buddy_buf[4096] = {0};
-		struct buddy *buddy = buddy_embed(buddy_buf, 4096);
-		assert(buddy_resize(buddy, 2048) == NULL); /* not implemented */
-		assert(buddy_resize(buddy, 8192) == NULL); /* not implemented */
-	}
-}
-
 void test_buddy_resize_down_already_used() {
 	start_test;
 	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
@@ -336,6 +326,85 @@ void test_buddy_resize_down_already_used() {
 	void *r1024 = buddy_malloc(buddy, 1024);
 	assert(r1024 == data_buf);
 	assert(buddy_resize(buddy, 256) == NULL);
+}
+
+void test_buddy_resize_embedded_up_within_reserved() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
+	assert(buddy != NULL);
+	assert(buddy_resize(buddy, 896 + buddy_sizeof(896)) != NULL);
+}
+
+void test_buddy_resize_embedded_up_at_reserved() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
+	assert(buddy != NULL);
+	assert(buddy_resize(buddy, 1024 + buddy_sizeof(1024)) != NULL);
+}
+
+void test_buddy_resize_embedded_up_after_reserved() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
+	assert(buddy != NULL);
+	assert(buddy_resize(buddy, 2048 + buddy_sizeof(2048)) != NULL);
+}
+
+void test_buddy_resize_embedded_down_within_reserved() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
+	assert(buddy != NULL);
+	assert(buddy_resize(buddy, 640 + buddy_sizeof(640)) != NULL);
+}
+
+void test_buddy_resize_embedded_down_within_reserved_failure() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
+	assert(buddy != NULL);
+	void *r512 = buddy_malloc(buddy, 512);
+	assert(r512 != NULL);
+	void *r256 = buddy_malloc(buddy, 256);
+	assert(r256 != NULL);
+	buddy_free(buddy, r512);
+	assert(buddy_resize(buddy, 640 + buddy_sizeof(640)) == NULL);
+}
+
+void test_buddy_resize_embedded_down_at_reserved() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
+	assert(buddy != NULL);
+	assert(buddy_resize(buddy, 512 + buddy_sizeof(512)) != NULL);
+}
+
+void test_buddy_resize_embedded_down_before_reserved() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
+	assert(buddy != NULL);
+	assert(buddy_resize(buddy, 448 + buddy_sizeof(448)) != NULL);
+}
+
+void test_buddy_resize_embedded_down_already_used() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_embed(data_buf, 4096);
+	assert(buddy != NULL);
+	void *r1024 = buddy_malloc(buddy, 1024);
+	assert(r1024 == data_buf);
+	assert(buddy_resize(buddy, 256 + buddy_sizeof(256)) == NULL);
+}
+
+void test_buddy_resize_embedded_too_small() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_embed(data_buf, 4096);
+	assert(buddy != NULL);
+	assert(buddy_resize(buddy, 1) == NULL);
 }
 
 void test_buddy_malloc_null() {
@@ -1254,7 +1323,15 @@ int main() {
 		test_buddy_resize_down_before_reserved();
 		test_buddy_resize_down_already_used();
 
-		test_buddy_resize_not_implemented();
+		test_buddy_resize_embedded_up_within_reserved();
+		test_buddy_resize_embedded_up_at_reserved();
+		test_buddy_resize_embedded_up_after_reserved();
+		test_buddy_resize_embedded_down_within_reserved();
+		test_buddy_resize_embedded_down_within_reserved_failure();
+		test_buddy_resize_embedded_down_at_reserved();
+		test_buddy_resize_embedded_down_before_reserved();
+		test_buddy_resize_embedded_down_already_used();
+		test_buddy_resize_embedded_too_small();
 
 		test_buddy_malloc_null();
 		test_buddy_malloc_zero();
