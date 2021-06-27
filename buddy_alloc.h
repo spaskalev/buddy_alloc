@@ -28,7 +28,6 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 struct buddy *buddy_embed(unsigned char *main, size_t memory_size);
 
 /* Resizes the arena and metadata to a new size. */
-/* Not implemented for embedded mode */
 struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size);
 
 /* Use the specified buddy to allocate memory. See malloc. */

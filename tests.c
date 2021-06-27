@@ -350,7 +350,11 @@ void test_buddy_resize_embedded_up_at_reserved() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
 	assert(buddy != NULL);
-	assert(buddy_resize(buddy, 1024 + buddy_sizeof(1024)) != NULL);
+	assert(buddy_malloc(buddy, 1024) == NULL);
+	buddy = buddy_resize(buddy, 1024 + buddy_sizeof(1024));
+	assert(buddy != NULL);
+	assert(buddy_malloc(buddy, 1024) == data_buf);
+	assert(buddy_malloc(buddy, 1024) == NULL);
 }
 
 void test_buddy_resize_embedded_up_after_reserved() {
@@ -358,7 +362,12 @@ void test_buddy_resize_embedded_up_after_reserved() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
 	assert(buddy != NULL);
-	assert(buddy_resize(buddy, 2048 + buddy_sizeof(2048)) != NULL);
+	assert(buddy_malloc(buddy, 1024) == NULL);
+	buddy = buddy_resize(buddy, 2048 + buddy_sizeof(2048));
+	assert(buddy != NULL);
+	assert(buddy_malloc(buddy, 1024) == data_buf);
+	assert(buddy_malloc(buddy, 1024) == data_buf+1024);
+	assert(buddy_malloc(buddy, 1024) == NULL);
 }
 
 void test_buddy_resize_embedded_down_within_reserved() {
@@ -366,7 +375,12 @@ void test_buddy_resize_embedded_down_within_reserved() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
 	assert(buddy != NULL);
-	assert(buddy_resize(buddy, 640 + buddy_sizeof(640)) != NULL);
+	buddy = buddy_resize(buddy, 640 + buddy_sizeof(640));
+	assert(buddy != NULL);
+	assert(buddy_malloc(buddy, 512) == data_buf);
+	assert(buddy_malloc(buddy, 64) == data_buf+512);
+	assert(buddy_malloc(buddy, 64) == data_buf+512+64);
+	assert(buddy_malloc(buddy, 64) == NULL);
 }
 
 void test_buddy_resize_embedded_down_within_reserved_failure() {
