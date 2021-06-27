@@ -16,6 +16,7 @@
 
 struct buddy {
 	size_t memory_size;
+	size_t virtual_slots;
 	union {
 		unsigned char *main;
 		ptrdiff_t main_offset;
@@ -34,6 +35,7 @@ static struct buddy_tree *buddy_tree(struct buddy *buddy);
 static void buddy_toggle_virtual_slots(struct buddy *buddy, size_t memory_size, _Bool state);
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size);
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
+static _Bool buddy_is_free(struct buddy *buddy, size_t from);
 
 size_t buddy_sizeof(size_t memory_size) {
 	if (memory_size < BUDDY_ALIGN) {
@@ -115,10 +117,20 @@ static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memor
 	size_t new_effective_memory_size = ceiling_power_of_two(new_memory_size);
 
 	if (current_effective_memory_size == new_effective_memory_size) {
-		/* No resize needed, just update the reserved blocks and memory size*/
+		/* As the tree is not resized we need to check if any allocated slots
+		will be impacted by reducing the memory */
+		if ((new_memory_size < buddy->memory_size) &&
+				! buddy_is_free(buddy, new_memory_size)) {
+			return NULL;
+		}
+
+		/* Release the virtual slots */
 		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 0);
-		buddy_toggle_virtual_slots(buddy, new_memory_size, 1);
+
+		/* Store the new memory size and reconstruct any virtual slots */
 		buddy->memory_size = new_memory_size;
+		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 1);
+
 		return buddy;
 	} else {
 		/* Resize required */
@@ -345,7 +357,6 @@ static unsigned char *buddy_main(struct buddy *buddy) {
 
 static void buddy_toggle_virtual_slots(struct buddy *buddy, size_t memory_size, _Bool state) {
 	/* Unmask the virtual space if memory is not a power of two */
-	size_t buddy_tree_order = buddy_tree_order_for_memory(memory_size);
 	size_t effective_memory_size = ceiling_power_of_two(memory_size);
 	if (effective_memory_size != memory_size) {
 		size_t delta = effective_memory_size - memory_size;
@@ -353,10 +364,11 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, size_t memory_size, 
 		if (delta < BUDDY_ALIGN) {
 			delta_count = 1;
 		}
-		buddy_tree_pos pos = buddy_tree_root(buddy_tree(buddy));
-		for(size_t i = 0; i < buddy_tree_order-1; i++) {
-			pos = buddy_tree_right_child(buddy_tree(buddy), pos);
-		}
+
+		/* Update the virtual slot count */
+		buddy->virtual_slots = state ? delta_count : 0;
+
+		buddy_tree_pos pos = buddy_tree_rightmost_child(buddy_tree(buddy));
 		while (delta_count) {
 			if (state) {
 				buddy_tree_mark(buddy_tree(buddy), pos);
@@ -366,5 +378,39 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, size_t memory_size, 
 			pos = buddy_tree_left_adjacent(buddy_tree(buddy), pos);
 			delta_count--;
 		}
+	} else {
+		/* Update the virtual slot count */
+		buddy->virtual_slots = 0;
 	}
+}
+
+/* Internal function that checks if there are any allocations
+ after the indicated relative memory index. Used to check if
+ the arena can be downsized. */
+static _Bool buddy_is_free(struct buddy *buddy, size_t from) {
+	size_t delta = buddy->memory_size - from;
+	size_t delta_count = delta / BUDDY_ALIGN;
+
+	buddy_tree_pos pos = buddy_tree_rightmost_child(buddy_tree(buddy));
+
+	/* Account for virtual slots */
+	if (buddy->virtual_slots) {
+		size_t virtual_slots = buddy->virtual_slots;
+		while (virtual_slots) {
+			pos = buddy_tree_left_adjacent(buddy_tree(buddy), pos);
+			virtual_slots--;
+		}
+	}
+
+	/* Check for use */
+	while (delta_count) {
+		if (! buddy_tree_is_free(buddy_tree(buddy), pos)) {
+			return 0;
+		}
+		pos = buddy_tree_left_adjacent(buddy_tree(buddy), pos);
+		delta_count--;
+	}
+
+	/* Blocks are free */
+	return 1;
 }

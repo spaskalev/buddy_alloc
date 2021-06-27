@@ -520,8 +520,11 @@ _Bool buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos) {
 	while(buddy_tree_valid(t, pos)) {
 		struct internal_position internal = buddy_tree_internal_position(t->order, pos);
 		size_t value = read_from_internal_position(t->bits, internal);
-		if (value == internal.max_value) {
-			return 0;
+		if (value) {
+			if (value == internal.max_value) {
+				return 0;
+			}
+			return 1;
 		}
 		pos = buddy_tree_parent(t, pos);
 	}

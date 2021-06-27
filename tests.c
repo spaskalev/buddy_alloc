@@ -212,6 +212,14 @@ void test_buddy_init() {
 	}
 }
 
+void test_buddy_init_virtual_slots() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(1024)];
+	alignas(max_align_t) unsigned char data_buf[1024];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1020);
+	assert(buddy != NULL);
+}
+
 void test_buddy_init_non_power_of_two_memory() {
 	start_test;
 	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
@@ -275,6 +283,20 @@ void test_buddy_resize_down_within_reserved() {
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 640) == buddy);
+}
+
+void test_buddy_resize_down_within_reserved_failure() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(1024)];
+	alignas(max_align_t) unsigned char data_buf[1024];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 768);
+	assert(buddy != NULL);
+	void *r512 = buddy_malloc(buddy, 512);
+	assert(r512 != NULL);
+	void *r256 = buddy_malloc(buddy, 256);
+	assert(r256 != NULL);
+	buddy_free(buddy, r512);
+	assert(buddy_resize(buddy, 640) == NULL);
 }
 
 void test_buddy_resize_down_at_reserved() {
@@ -1218,6 +1240,7 @@ int main() {
 		test_buddy_invalid_datasize();
 
 		test_buddy_init();
+		test_buddy_init_virtual_slots();
 		test_buddy_init_non_power_of_two_memory();
 
 		test_buddy_resize_null();
@@ -1226,6 +1249,7 @@ int main() {
 		test_buddy_resize_up_at_reserved();
 		test_buddy_resize_up_after_reserved();
 		test_buddy_resize_down_within_reserved();
+		test_buddy_resize_down_within_reserved_failure();
 		test_buddy_resize_down_at_reserved();
 		test_buddy_resize_down_before_reserved();
 		test_buddy_resize_down_already_used();
