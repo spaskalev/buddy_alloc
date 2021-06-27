@@ -30,6 +30,16 @@ struct buddy *buddy_embed(unsigned char *main, size_t memory_size);
 /* Resizes the arena and metadata to a new size. */
 struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size);
 
+/* Tests if the allocation can be shrank in half */
+_Bool buddy_can_shrink(struct buddy *buddy);
+
+/* Reports the arena size */
+size_t buddy_arena_size(struct buddy *buddy);
+
+/*
+ * Allocation functions
+ */
+
 /* Use the specified buddy to allocate memory. See malloc. */
 void *buddy_malloc(struct buddy *buddy, size_t requested_size);
 

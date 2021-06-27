@@ -165,14 +165,8 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
 		if (desired_order == 0) {
 			return; /* Cannot shrink to zero */
 		}
-		if (buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root(t))) != 0) {
-			return; /* Refusing to shrink with right subtree still used! */
-		}
-		struct internal_position root_internal =
-			buddy_tree_internal_position(t->order, buddy_tree_root(t));
-		size_t root_value = read_from_internal_position(t->bits, root_internal);
-		if (root_value == root_internal.max_value) {
-			return; /* Refusing to shrink with the root fully-allocated! */
+		if (!buddy_tree_can_shrink(t)) {
+			return;
 		}
 
 		/* Shrink the tree a single order at a time */
@@ -531,6 +525,21 @@ _Bool buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos) {
 	return 1;
 }
 
+_Bool buddy_tree_can_shrink(struct buddy_tree *t) {
+	if (t == NULL) {
+		return 0;
+	}
+	if (buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root(t))) != 0) {
+		return 0; /* Refusing to shrink with right subtree still used! */
+	}
+	struct internal_position root_internal =
+		buddy_tree_internal_position(t->order, buddy_tree_root(t));
+	size_t root_value = read_from_internal_position(t->bits, root_internal);
+	if (root_value == root_internal.max_value) {
+		return 0; /* Refusing to shrink with the root fully-allocated! */
+	}
+	return 1;
+}
 
 void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos) {
 	if (!buddy_tree_valid(t, pos)) {

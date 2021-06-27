@@ -39,7 +39,7 @@ static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos);
 static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr);
 static unsigned char *buddy_main(struct buddy *buddy);
 static struct buddy_tree *buddy_tree(struct buddy *buddy);
-static void buddy_toggle_virtual_slots(struct buddy *buddy, size_t memory_size, _Bool state);
+static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state);
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size);
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
 static _Bool buddy_is_free(struct buddy *buddy, size_t from);
@@ -77,7 +77,7 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 	buddy->memory_size = memory_size;
 	buddy->relative_mode = 0;
 	buddy_tree_init(buddy->buddy_tree, buddy_tree_order);
-	buddy_toggle_virtual_slots(buddy, memory_size, 1);
+	buddy_toggle_virtual_slots(buddy, 1);
 	return buddy;
 }
 
@@ -117,11 +117,11 @@ struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size) {
 		}
 
 		/* Release the virtual slots */
-		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 0);
+		buddy_toggle_virtual_slots(buddy, 0);
 
 		/* Store the new memory size and reconstruct any virtual slots */
 		buddy->memory_size = new_memory_size;
-		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 1);
+		buddy_toggle_virtual_slots(buddy, 1);
 
 		return buddy;
 	}
@@ -135,7 +135,7 @@ struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size) {
 
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size) {
 	/* Release the virtual slots */
-	buddy_toggle_virtual_slots(buddy, buddy->memory_size, 0);
+	buddy_toggle_virtual_slots(buddy, 0);
 
 	/* Calculate new tree size and adjust it */
 	size_t old_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size);
@@ -145,13 +145,13 @@ static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memor
 	if (buddy_tree_order(buddy_tree(buddy)) != new_buddy_tree_order) {
 		/* Resizing failed, restore the tree and virtual blocks */
 		buddy_tree_resize(buddy_tree(buddy), old_buddy_tree_order);
-		buddy_toggle_virtual_slots(buddy, buddy->memory_size, 1);
+		buddy_toggle_virtual_slots(buddy, 1);
 		return NULL;
 	}
 
 	/* Store the new memory size and reconstruct any virtual slots */
 	buddy->memory_size = new_memory_size;
-	buddy_toggle_virtual_slots(buddy, buddy->memory_size, 1);
+	buddy_toggle_virtual_slots(buddy, 1);
 
 	/* Resize successful */
 	return buddy;
@@ -182,6 +182,23 @@ static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memor
 	relocated->main_offset = buddy_destination - main;
 
 	return relocated;
+}
+
+_Bool buddy_can_shrink(struct buddy *buddy) {
+	if (buddy == NULL) {
+		return 0;
+	}
+	buddy_toggle_virtual_slots(buddy, 0);
+	_Bool result = buddy_tree_can_shrink(buddy_tree(buddy));
+	buddy_toggle_virtual_slots(buddy, 1);
+	return result;
+}
+
+size_t buddy_arena_size(struct buddy *buddy) {
+	if (buddy == NULL) {
+		return 0;
+	}
+	return buddy->memory_size;
 }
 
 static size_t buddy_tree_order_for_memory(size_t memory_size) {
@@ -374,7 +391,8 @@ static unsigned char *buddy_main(struct buddy *buddy) {
 	return buddy->main;
 }
 
-static void buddy_toggle_virtual_slots(struct buddy *buddy, size_t memory_size, _Bool state) {
+static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state) {
+	size_t memory_size = buddy->memory_size;
 	/* Mask/unmask the virtual space if memory is not a power of two */
 	size_t effective_memory_size = ceiling_power_of_two(memory_size);
 	if (effective_memory_size != memory_size) {

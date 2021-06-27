@@ -15,6 +15,7 @@
 #include "bitset.h"
 #include "buddy_alloc_tree.h"
 #include "buddy_alloc.h"
+#include "buddy_brk.h"
 #include "buddy_global.h"
 
 void test_highest_bit_position() {
@@ -436,6 +437,26 @@ void test_buddy_debug() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_embed(data_buf, 256);
 	buddy_debug(buddy); /* code coverage */
+}
+
+void test_buddy_can_shrink() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096] = {0};
+	struct buddy *buddy = NULL;
+	assert(buddy_can_shrink(buddy) == 0);
+	buddy = buddy_embed(data_buf, 4096);
+	buddy_debug(buddy);
+	assert(buddy_can_shrink(buddy) == 1);
+}
+
+void test_buddy_arena_size() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096];
+	alignas(max_align_t) unsigned char buddy_buf[4096];
+	struct buddy *buddy = NULL;
+	assert(buddy_arena_size(buddy) == 0);
+	buddy = buddy_init(buddy_buf, data_buf, 4096);
+	assert(buddy_arena_size(buddy) == 4096);
 }
 
 void test_buddy_malloc_null() {
@@ -1193,7 +1214,6 @@ void test_buddy_tree_resize_04() {
 	assert(buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root(t))) == 1);
 }
 
-
 void test_buddy_tree_resize_03() {
 	start_test;
 	unsigned char buddy_tree_buf[4096] = {0};
@@ -1204,6 +1224,12 @@ void test_buddy_tree_resize_03() {
 	assert(buddy_tree_status(t, buddy_tree_root(t)) == 1);
 	assert(buddy_tree_status(t, buddy_tree_left_child(t, buddy_tree_root(t))) == 1);
 	assert(buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root(t))) == 0);
+}
+
+void test_buddy_tree_can_shrink_null() {
+	start_test;
+	struct buddy_tree *t = NULL;
+	assert(buddy_tree_can_shrink(t) == 0);
 }
 
 void test_buddy_tree_leftmost_child() {
@@ -1322,6 +1348,13 @@ void test_posix_malloc_free() {
 	free(r64);
 }
 
+void test_posix_malloc_free_large() {
+	start_test;
+	void *large = malloc(BUDDY_BRK_DEFAULT_SIZE*4);
+	assert(large != NULL);
+	free(large);
+}
+
 void test_posix_calloc_free() {
 	start_test;
 	unsigned char *r64 = calloc(1, 64);
@@ -1396,6 +1429,9 @@ int main() {
 		test_buddy_resize_embedded_too_small();
 
 		test_buddy_debug();
+
+		test_buddy_can_shrink();
+		test_buddy_arena_size();
 
 		test_buddy_malloc_null();
 		test_buddy_malloc_zero();
@@ -1473,6 +1509,7 @@ int main() {
 		test_buddy_tree_resize_02();
 		test_buddy_tree_resize_03();
 		test_buddy_tree_resize_04();
+		test_buddy_tree_can_shrink_null();
 		test_buddy_tree_leftmost_child();
 		test_buddy_tree_rightmost_child();
 		test_buddy_tree_is_free_01();
@@ -1483,6 +1520,7 @@ int main() {
 	}
 	{
 		test_posix_malloc_free();
+		test_posix_malloc_free_large();
 		test_posix_calloc_free();
 		test_posix_realloc_free();
 		test_non_standard_reallocarray_free();

@@ -88,6 +88,9 @@ buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth);
 /* Tests if the incidated position is available for allocation */
 _Bool buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos);
 
+/* Tests if the tree can be shrank in half */
+_Bool buddy_tree_can_shrink(struct buddy_tree *t);
+
 /*
  * Debug functions
  */
