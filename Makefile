@@ -20,12 +20,14 @@ ALL_SRC=$(wildcard *.c *.h)
 C_SRC=$(wildcard *.c)
 STATIC=$(subst .c,.static,$(C_SRC))
 OBJECTS=$(subst .c,.o,$(C_SRC))
+GCOV_EXCLUDE=buddy_brk.c buddy_brk.h buddy_global.h
+GCOV_SRC=$(filter-out $(GCOV_EXCLUDE), $(ALL_SRC))
 
 tests.out: $(OBJECTS) $(STATIC)
 	$(CC) $(CFLAGS) $(OBJECTS) -o $@
 	rm -f *.gcda
 	./$@
-	$(LLVM_COV) gcov -b $(ALL_SRC) | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
+	$(LLVM_COV) gcov -b $(GCOV_SRC) | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
 	! grep  '#####:' *.gcov
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
 
