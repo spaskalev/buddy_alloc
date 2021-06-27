@@ -13,6 +13,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 struct buddy {
 	size_t memory_size;
@@ -374,13 +375,13 @@ static unsigned char *buddy_main(struct buddy *buddy) {
 }
 
 static void buddy_toggle_virtual_slots(struct buddy *buddy, size_t memory_size, _Bool state) {
-	/* Unmask the virtual space if memory is not a power of two */
+	/* Mask/unmask the virtual space if memory is not a power of two */
 	size_t effective_memory_size = ceiling_power_of_two(memory_size);
 	if (effective_memory_size != memory_size) {
 		size_t delta = effective_memory_size - memory_size;
 		size_t delta_count = delta / BUDDY_ALIGN;
-		if (delta < BUDDY_ALIGN) {
-			delta_count = 1;
+		if (delta % BUDDY_ALIGN) {
+			delta_count += 1;
 		}
 
 		/* Update the virtual slot count */
@@ -456,4 +457,13 @@ static struct buddy_embed_check buddy_embed_offset(size_t memory_size) {
 		result.buddy_size = buddy_size;
 	}
 	return result;
+}
+
+void buddy_debug(struct buddy *buddy) {
+	printf("buddy allocator at: %p arena at: %p\n", (void *)buddy, (void *)buddy_main(buddy));
+	printf("memory size: %zu\n", buddy->memory_size);
+	printf("mode: ");printf(buddy->relative_mode ? "embedded" : "standard");printf("\n");
+	printf("virtual slots: %zu\n", buddy->virtual_slots);
+	printf("allocator tree follows:\n");
+	buddy_tree_debug(buddy_tree(buddy), buddy_tree_root(buddy_tree(buddy)));
 }

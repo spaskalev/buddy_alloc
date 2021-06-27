@@ -157,7 +157,7 @@ void test_bitset_debug() {
 	unsigned char buf[4096] = {0};
 	bitset_set(buf, 0);
 	bitset_clear(buf, 1);
-	bitset_debug(buf, 2);
+	bitset_debug(buf, 2); /* code coverage */
 }
 
 void test_buddy_init_null() {
@@ -333,7 +333,16 @@ void test_buddy_resize_embedded_up_within_reserved() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
 	assert(buddy != NULL);
-	assert(buddy_resize(buddy, 896 + buddy_sizeof(896)) != NULL);
+	buddy = buddy_resize(buddy, 896 + buddy_sizeof(896));
+	assert(buddy != NULL);
+	assert(buddy_malloc(buddy, 512) == data_buf);
+	assert(buddy_malloc(buddy, 256) == data_buf+512);
+	assert(buddy_malloc(buddy, 128) == data_buf+512+256);
+	/* No more space */
+	assert(buddy_malloc(buddy, 64) == NULL);
+	assert(buddy_malloc(buddy, 32) == NULL);
+	assert(buddy_malloc(buddy, 16) == NULL);
+	assert(buddy_malloc(buddy, 8) == NULL);
 }
 
 void test_buddy_resize_embedded_up_at_reserved() {
@@ -405,6 +414,13 @@ void test_buddy_resize_embedded_too_small() {
 	struct buddy *buddy = buddy_embed(data_buf, 4096);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 1) == NULL);
+}
+
+void test_buddy_debug() {
+	start_test;
+	alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_embed(data_buf, 256);
+	buddy_debug(buddy); /* code coverage */
 }
 
 void test_buddy_malloc_null() {
@@ -1101,7 +1117,7 @@ void test_buddy_tree_debug() {
 	unsigned char buddy_tree_buf[4096] = {0};
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_mark(t, buddy_tree_root(t));
-	buddy_tree_debug(t, buddy_tree_root(t));printf("\n");
+	buddy_tree_debug(t, buddy_tree_root(t));printf("\n"); /* code coverage */
 }
 
 void test_buddy_tree_resize_buddy_null() {
@@ -1332,6 +1348,8 @@ int main() {
 		test_buddy_resize_embedded_down_before_reserved();
 		test_buddy_resize_embedded_down_already_used();
 		test_buddy_resize_embedded_too_small();
+
+		test_buddy_debug();
 
 		test_buddy_malloc_null();
 		test_buddy_malloc_zero();

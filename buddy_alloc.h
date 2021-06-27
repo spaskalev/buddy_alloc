@@ -46,3 +46,10 @@ void *buddy_reallocarray(struct buddy *buddy, void *ptr,
 
 /* Use the specified buddy to free memory. See free. */
 void buddy_free(struct buddy *buddy, void *ptr);
+
+/*
+ * Debug functions
+ */
+
+/* Implementation defined */
+void buddy_debug(struct buddy *buddy);
