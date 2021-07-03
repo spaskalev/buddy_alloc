@@ -854,59 +854,6 @@ void test_buddy_mixed_sizes_01() {
 	assert(buddy_malloc(buddy, 1) == NULL);
 }
 
-void test_buddy_tree_sizeof() {
-	start_test;
-	assert(buddy_tree_sizeof(0) == 0);
-	assert(buddy_tree_sizeof(1) == 2);
-	assert(buddy_tree_sizeof(2) == 2);
-	assert(buddy_tree_sizeof(3) == 3);
-	assert(buddy_tree_sizeof(4) == 4);
-	assert(buddy_tree_sizeof(5) == 8);
-	assert(buddy_tree_sizeof(6) == 14);
-	assert(buddy_tree_sizeof(7) == 27);
-	assert(buddy_tree_sizeof(8) == 53);
-	assert(buddy_tree_sizeof(9) == 106);
-	assert(buddy_tree_sizeof(10) == 210);
-	assert(buddy_tree_sizeof(11) == 419);
-	assert(buddy_tree_sizeof(12) == 837);
-	assert(buddy_tree_sizeof(13) == 1673);
-	assert(buddy_tree_sizeof(14) == 3345);
-	assert(buddy_tree_sizeof(15) == 6689);
-	assert(buddy_tree_sizeof(16) == 13377);
-	assert(buddy_tree_sizeof(17) == 26753);
-	assert(buddy_tree_sizeof(18) == 53506);
-	assert(buddy_tree_sizeof(19) == 107011);
-	assert(buddy_tree_sizeof(20) == 214021);
-	assert(buddy_tree_sizeof(21) == 428041);
-	assert(buddy_tree_sizeof(22) == 856081);
-	assert(buddy_tree_sizeof(23) == 1712161);
-	assert(buddy_tree_sizeof(24) == 3424321);
-	assert(buddy_tree_sizeof(25) == 6848641);
-	assert(buddy_tree_sizeof(26) == 13697281);
-	assert(buddy_tree_sizeof(27) == 27394561);
-	assert(buddy_tree_sizeof(28) == 54789121);
-	assert(buddy_tree_sizeof(29) == 109578241);
-	assert(buddy_tree_sizeof(30) == 219156481);
-	assert(buddy_tree_sizeof(31) == 438312961);
-	assert(buddy_tree_sizeof(32) == 876625921);
-	assert(buddy_tree_sizeof(33) == 1753251841);
-	assert(buddy_tree_sizeof(34) == 3506503682); /* 3 GB */
-	assert(buddy_tree_sizeof(35) == 7013007363);
-	assert(buddy_tree_sizeof(36) == 14026014725);
-	assert(buddy_tree_sizeof(37) == 28052029449);
-	assert(buddy_tree_sizeof(38) == 56104058897);
-	assert(buddy_tree_sizeof(39) == 112208117793);
-	assert(buddy_tree_sizeof(40) == 224416235585);
-	assert(buddy_tree_sizeof(41) == 448832471169);
-	assert(buddy_tree_sizeof(42) == 897664942337);
-	assert(buddy_tree_sizeof(43) == 1795329884673);
-	assert(buddy_tree_sizeof(44) == 3590659769345);
-	assert(buddy_tree_sizeof(45) == 7181319538689);
-	assert(buddy_tree_sizeof(46) == 14362639077377);
-	assert(buddy_tree_sizeof(47) == 28725278154753);
-	assert(buddy_tree_sizeof(48) == 57450556309505); /* 52 TB .. */
-}
-
 void test_buddy_tree_init() {
 	start_test;
 	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
@@ -919,7 +866,6 @@ void test_buddy_tree_valid() {
 	start_test;
 	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 8);
-	assert(buddy_tree_valid(NULL, 1) == 0);
 	assert(buddy_tree_valid(t, 0) == 0);
 	assert(buddy_tree_valid(t, 256) == 0);
 	assert(buddy_tree_valid(t, 1) == 1);
@@ -1479,7 +1425,6 @@ int main() {
 	}
 	
 	{
-		test_buddy_tree_sizeof();
 		test_buddy_tree_init();
 		test_buddy_tree_valid();
 		test_buddy_tree_order();

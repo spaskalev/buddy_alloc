@@ -17,6 +17,7 @@
 
 struct buddy_tree {
 	uint8_t order;
+	size_t upper_pos_bound;
 	unsigned char bits[];
 };
 
@@ -86,6 +87,7 @@ struct buddy_tree *buddy_tree_init(unsigned char *at, uint8_t order) {
 	struct buddy_tree *t = (struct buddy_tree*) at;
 	memset(at, 0, size);
 	t->order = order;
+	t->upper_pos_bound = 1u << t->order;
 	return t;
 }
 
@@ -156,6 +158,7 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
 
 		/* Advance the order and refrest the root */
 		t->order = next_order;
+		t->upper_pos_bound = 1u << t->order;
 		update_parent_chain(t, buddy_tree_root(t));
 	}
 }
@@ -201,20 +204,12 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
 
 		/* Advance the order */
 		t->order = next_order;
+		t->upper_pos_bound = 1u << t->order;
 	}	
 }
 
 _Bool buddy_tree_valid(struct buddy_tree *t, buddy_tree_pos pos) {
-	if (t == NULL) {
-		return 0;
-	}
-	if (pos == 0) {
-		return 0;
-	}
-	if (pos >= 1u << t->order) {
-		return 0;
-	}
-	return 1;
+	return pos && (pos < t->upper_pos_bound);
 }
 
 uint8_t buddy_tree_order(struct buddy_tree *t) {
