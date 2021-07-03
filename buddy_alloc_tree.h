@@ -12,6 +12,11 @@ struct buddy_tree;
 
 typedef size_t buddy_tree_pos;
 
+struct buddy_tree_interval {
+    buddy_tree_pos from;
+    buddy_tree_pos to;    
+};
+
 /*
  * Initialization functions
  */
@@ -65,6 +70,9 @@ buddy_tree_pos buddy_tree_right_adjacent(buddy_tree_pos pos);
 
 /* Returns the at-depth index of the indicated position */
 size_t buddy_tree_index(buddy_tree_pos pos);
+
+/* Return the interval of the deepest positions spanning the indicated position */
+struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, buddy_tree_pos pos);
 
 /*
  * Allocation functions
