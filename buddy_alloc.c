@@ -282,20 +282,20 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
 	buddy_tree_release(buddy_tree(buddy), origin);
 	buddy_tree_pos new_pos = buddy_tree_find_free(buddy_tree(buddy), target_depth);
 
-	if (buddy_tree_valid(buddy_tree(buddy), new_pos)) {
-		/* Copy the content */
-		void *source = address_for_position(buddy, origin);
-		void *destination = address_for_position(buddy, new_pos);
-		memmove(destination, source, size_for_depth(buddy,
-			current_depth < target_depth ? current_depth : target_depth));
-		/* Allocate and return */
-		buddy_tree_mark(buddy_tree(buddy), new_pos);
-		return destination;
+	if (! buddy_tree_valid(buddy_tree(buddy), new_pos)) {
+        /* allocation failure, restore mark and return null */
+        buddy_tree_mark(buddy_tree(buddy), origin);
+        return NULL;
 	}
 
-	/* allocation failure, restore mark and return null */
-	buddy_tree_mark(buddy_tree(buddy), origin);
-	return NULL;
+    /* Copy the content */
+    void *source = address_for_position(buddy, origin);
+    void *destination = address_for_position(buddy, new_pos);
+    memmove(destination, source, size_for_depth(buddy,
+        current_depth < target_depth ? current_depth : target_depth));
+    /* Allocate and return */
+    buddy_tree_mark(buddy_tree(buddy), new_pos);
+    return destination;
 }
 
 void *buddy_reallocarray(struct buddy *buddy, void *ptr,
@@ -392,29 +392,30 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state) {
 	size_t memory_size = buddy->memory_size;
 	/* Mask/unmask the virtual space if memory is not a power of two */
 	size_t effective_memory_size = ceiling_power_of_two(memory_size);
-	if (effective_memory_size != memory_size) {
-		size_t delta = effective_memory_size - memory_size;
-		size_t delta_count = delta / BUDDY_ALIGN;
-		if (delta % BUDDY_ALIGN) {
-			delta_count += 1;
-		}
+	if (effective_memory_size == memory_size) {
+        /* Update the virtual slot count */
+        buddy->virtual_slots = 0;
+        return;
+    }
 
-		/* Update the virtual slot count */
-		buddy->virtual_slots = state ? delta_count : 0;
+	size_t delta = effective_memory_size - memory_size;
+	size_t delta_count = delta / BUDDY_ALIGN;
+	if (delta % BUDDY_ALIGN) {
+		delta_count += 1;
+	}
 
-		buddy_tree_pos pos = buddy_tree_rightmost_child(buddy_tree(buddy));
-		while (delta_count) {
-			if (state) {
-				buddy_tree_mark(buddy_tree(buddy), pos);
-			} else {
-				buddy_tree_release(buddy_tree(buddy), pos);
-			}
-			pos = buddy_tree_left_adjacent(buddy_tree(buddy), pos);
-			delta_count--;
+	/* Update the virtual slot count */
+	buddy->virtual_slots = state ? delta_count : 0;
+
+	buddy_tree_pos pos = buddy_tree_rightmost_child(buddy_tree(buddy));
+	while (delta_count) {
+		if (state) {
+			buddy_tree_mark(buddy_tree(buddy), pos);
+		} else {
+			buddy_tree_release(buddy_tree(buddy), pos);
 		}
-	} else {
-		/* Update the virtual slot count */
-		buddy->virtual_slots = 0;
+		pos = buddy_tree_left_adjacent(buddy_tree(buddy), pos);
+		delta_count--;
 	}
 }
 
