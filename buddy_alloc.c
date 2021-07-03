@@ -483,5 +483,5 @@ void buddy_debug(struct buddy *buddy) {
 	printf("mode: ");printf(buddy->relative_mode ? "embedded" : "standard");printf("\n");
 	printf("virtual slots: %zu\n", buddy->virtual_slots);
 	printf("allocator tree follows:\n");
-	buddy_tree_debug(buddy_tree(buddy), buddy_tree_root(buddy_tree(buddy)));
+	buddy_tree_debug(buddy_tree(buddy), buddy_tree_root());
 }

@@ -36,8 +36,8 @@ void buddy_tree_resize(struct buddy_tree *t, uint8_t desired_order);
  * Navigation functions
  */
 
-/* Returns a position at the root of the buddy allocation tree */
-buddy_tree_pos buddy_tree_root(struct buddy_tree *t);
+/* Returns a position at the root of a buddy allocation tree */
+buddy_tree_pos buddy_tree_root(void);
 
 /* Returns the leftmost child node */
 buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t);

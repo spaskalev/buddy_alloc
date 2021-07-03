@@ -159,7 +159,7 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
 		/* Advance the order and refrest the root */
 		t->order = next_order;
 		t->upper_pos_bound = 1u << t->order;
-		update_parent_chain(t, buddy_tree_root(t));
+		update_parent_chain(t, buddy_tree_root());
 	}
 }
 
@@ -216,10 +216,7 @@ uint8_t buddy_tree_order(struct buddy_tree *t) {
 	return t->order;
 }
 
-buddy_tree_pos buddy_tree_root(struct buddy_tree *t) {
-	if (t == NULL) {
-		return 0;
-	}
+buddy_tree_pos buddy_tree_root(void) {
 	return 1;
 }
 
@@ -461,7 +458,7 @@ buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth) {
 	if (depth > t->order) {
 		return 0;
 	}
-	return buddy_tree_find_free_internal(t, buddy_tree_root(t), depth, depth-1);
+	return buddy_tree_find_free_internal(t, buddy_tree_root(), depth, depth-1);
 }
 
 static buddy_tree_pos buddy_tree_find_free_internal(struct buddy_tree *t, buddy_tree_pos start,
@@ -521,11 +518,11 @@ _Bool buddy_tree_can_shrink(struct buddy_tree *t) {
 	if (t == NULL) {
 		return 0;
 	}
-	if (buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root(t))) != 0) {
+	if (buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root())) != 0) {
 		return 0; /* Refusing to shrink with right subtree still used! */
 	}
 	struct internal_position root_internal =
-		buddy_tree_internal_position(t->order, buddy_tree_root(t));
+		buddy_tree_internal_position(t->order, buddy_tree_root());
 	size_t root_value = read_from_internal_position(t->bits, root_internal);
 	if (root_value == root_internal.max_value) {
 		return 0; /* Refusing to shrink with the root fully-allocated! */
