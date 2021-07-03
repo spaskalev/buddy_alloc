@@ -1178,11 +1178,6 @@ void test_buddy_tree_leftmost_child() {
 void test_buddy_tree_rightmost_child() {
 	start_test;
 	{
-		struct buddy_tree *t = NULL;
-		buddy_tree_pos rightmost = buddy_tree_rightmost_child(t);
-		assert(rightmost == 0);
-	}
-	{
 		unsigned char buddy_tree_buf[4096] = {0};
 		struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
 		buddy_tree_pos leftmost = buddy_tree_rightmost_child(t);

@@ -220,14 +220,10 @@ buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t) {
 }
 
 static buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order) {
-	buddy_tree_pos pos = 1u << (tree_order - 1u);
-	return pos;
+	return 1u << (tree_order - 1u);
 }
 
 buddy_tree_pos buddy_tree_rightmost_child(struct buddy_tree *t) {
-	if (t == NULL) {
-		return 0; /* invalid */
-	}
 	return buddy_tree_rightmost_child_internal(t->order);
 }
 
