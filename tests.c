@@ -859,6 +859,343 @@ void test_buddy_mixed_sizes_01() {
 	assert(buddy_malloc(buddy, 1) == NULL);
 }
 
+void test_buddy_tree_init() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	assert(buddy_tree_init(buddy_tree_buf, 8) != NULL);
+}
+
+void test_buddy_tree_valid() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 8);
+	assert(buddy_tree_valid(t, 0) == 0);
+	assert(buddy_tree_valid(t, 256) == 0);
+	assert(buddy_tree_valid(t, 1) == 1);
+	assert(buddy_tree_valid(t, 255) == 1);
+}
+
+void test_buddy_tree_order() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 8);
+	assert(buddy_tree_order(t) == 8);
+}
+
+void test_buddy_tree_depth() {
+	start_test;
+	assert(buddy_tree_depth(0) == 0);
+	assert(buddy_tree_depth(1) == 1);
+    assert(buddy_tree_depth(2) == 2);
+    assert(buddy_tree_depth(3) == 2);
+}
+
+void test_buddy_tree_left_child() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root();
+	pos = buddy_tree_left_child(t, pos);
+	assert(buddy_tree_depth(pos) == 2);
+	pos = buddy_tree_left_child(t, pos);
+	assert(buddy_tree_valid(t, pos) == 0);
+	pos = buddy_tree_left_child(t, pos);
+	assert(buddy_tree_valid(t, pos) == 0);
+}
+
+void test_buddy_tree_right_child() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root();
+	pos = buddy_tree_right_child(t, pos);
+	assert(buddy_tree_depth(pos) == 2);
+	pos = buddy_tree_right_child(t, pos);
+	assert(buddy_tree_valid(t, pos) == 0);
+}
+
+void test_buddy_tree_parent() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root();
+	assert(buddy_tree_parent(pos) == 0);
+	assert(buddy_tree_parent(0) == 0);
+	assert(buddy_tree_parent(buddy_tree_left_child(t, pos)) == pos);
+	assert(buddy_tree_parent(buddy_tree_right_child(t, pos)) == pos);
+}
+
+void test_buddy_tree_right_adjacent() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root();
+	assert(buddy_tree_right_adjacent(0) == 0);
+	assert(buddy_tree_right_adjacent(pos) == 0);
+	assert(buddy_tree_right_adjacent(buddy_tree_right_child(t, pos)) == 0);
+	assert(buddy_tree_right_adjacent(buddy_tree_left_child(t, pos)) == buddy_tree_right_child(t, pos));
+}
+
+void test_buddy_tree_index() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root();
+	assert(buddy_tree_index(0) == 0);
+	assert(buddy_tree_index(pos) == 0);
+	assert(buddy_tree_index(buddy_tree_left_child(t, pos)) == 0);
+	assert(buddy_tree_index(buddy_tree_right_child(t, pos)) == 1);
+}
+
+void test_buddy_tree_mark_status_release_01() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
+
+	assert(buddy_tree_status(t, 0) == 0);
+	buddy_tree_mark(t, 0); /* coverage */
+	buddy_tree_release(t, 0); /* coverage */
+
+	buddy_tree_pos pos = buddy_tree_root();
+	assert(buddy_tree_status(t, pos) == 0);
+	buddy_tree_mark(t, pos);
+	assert(buddy_tree_status(t, pos) == 1);
+	buddy_tree_release(t, pos);
+	assert(buddy_tree_status(t, pos) == 0);
+}
+
+void test_buddy_tree_mark_status_release_02() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root();
+	assert(buddy_tree_status(t, pos) == 0);
+	buddy_tree_mark(t, pos);
+	assert(buddy_tree_status(t, pos) == 2);
+}
+
+void test_buddy_tree_mark_status_release_03() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_root();
+	assert(buddy_tree_status(t, pos) == 0);
+	buddy_tree_mark(t, pos);
+	assert(buddy_tree_status(t, pos) == 3);
+}
+
+void test_buddy_tree_mark_status_release_04() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 4);
+	buddy_tree_pos pos = buddy_tree_root();
+	assert(buddy_tree_status(t, pos) == 0);
+	buddy_tree_mark(t, pos);
+	assert(buddy_tree_status(t, pos) == 4);
+}
+
+void test_buddy_tree_duplicate_mark() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
+	buddy_tree_pos pos = buddy_tree_root();
+	buddy_tree_mark(t, pos);
+	buddy_tree_mark(t, pos);
+}
+
+void test_buddy_tree_duplicate_free() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
+	buddy_tree_pos pos = buddy_tree_root();
+	buddy_tree_release(t, pos);
+}
+
+void test_buddy_tree_propagation_01() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_pos pos = buddy_tree_root();
+	buddy_tree_pos left = buddy_tree_left_child(t, pos);
+	assert(buddy_tree_status(t, left) == 0);
+	buddy_tree_mark(t, left);
+	assert(buddy_tree_status(t, left) == 1);
+	assert(buddy_tree_status(t, pos) == 1);
+}
+
+void test_buddy_tree_propagation_02() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_root();
+	buddy_tree_pos left = buddy_tree_left_child(t, buddy_tree_left_child(t, pos));
+	buddy_tree_mark(t, left);
+	assert(buddy_tree_status(t, left) == 1);
+	assert(buddy_tree_status(t, pos) == 1);
+}
+
+void test_buddy_tree_find_free_01() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_find_free(t, 4);
+	assert(buddy_tree_valid(t, pos) == 0);
+}
+
+void test_buddy_tree_find_free_02() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_find_free(t, 1);
+	assert(buddy_tree_valid(t, pos) == 1);
+	pos = buddy_tree_find_free(t, 2);
+	assert(buddy_tree_valid(t, pos) == 1);
+
+	buddy_tree_mark(t, pos);
+	pos = buddy_tree_find_free(t, 2);
+	assert(buddy_tree_valid(t, pos) == 1);
+
+	buddy_tree_mark(t, pos);
+	pos = buddy_tree_find_free(t, 2);
+	assert(buddy_tree_valid(t, pos) == 0);
+}
+
+void test_buddy_tree_debug() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_mark(t, buddy_tree_root());
+	buddy_tree_debug(t, buddy_tree_root());printf("\n"); /* code coverage */
+}
+
+void test_buddy_tree_resize_same_size() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
+	buddy_tree_resize(t, 1);
+}
+
+void test_buddy_tree_resize_01() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
+	buddy_tree_mark(t, buddy_tree_root());
+	buddy_tree_resize(t, 2);
+	assert(buddy_tree_order(t) == 2);
+	assert(buddy_tree_status(t, buddy_tree_root()) == 1);
+	assert(buddy_tree_status(t, buddy_tree_left_child(t, buddy_tree_root())) == 1);
+	assert(buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root())) == 0);
+	buddy_tree_resize(t, 3);
+	unsigned char expected[] = {0 /*ignored */, 1, 1, 0, 1, 0, 0, 0};
+	for (size_t i = 1; i < 8; i++) {
+		assert(buddy_tree_status(t, i) == expected[i]);
+	}
+}
+
+void test_buddy_tree_resize_02() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_mark(t, buddy_tree_left_child(t, buddy_tree_root()));
+	buddy_tree_resize(t, 2);
+	assert(buddy_tree_status(t, buddy_tree_root()) == 2);
+	assert(buddy_tree_status(t, buddy_tree_left_child(t, buddy_tree_root())) == 0);
+	assert(buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root())) == 0);
+	buddy_tree_resize(t, 1);
+	assert(buddy_tree_order(t) == 2); /* cannot shrink */
+	assert(buddy_tree_status(t, buddy_tree_root()) == 2);
+	assert(buddy_tree_status(t, buddy_tree_left_child(t, buddy_tree_root())) == 0);
+	assert(buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root())) == 0);
+}
+
+void test_buddy_tree_resize_03() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_mark(t, buddy_tree_right_child(t, buddy_tree_root()));
+	buddy_tree_resize(t, 1);
+	assert(buddy_tree_order(t) == 2);
+	assert(buddy_tree_status(t, buddy_tree_root()) == 1);
+	assert(buddy_tree_status(t, buddy_tree_left_child(t, buddy_tree_root())) == 0);
+	assert(buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root())) == 1);
+}
+
+void test_buddy_tree_leftmost_child() {
+	start_test;
+	{
+		unsigned char buddy_tree_buf[4096] = {0};
+		struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
+		buddy_tree_pos leftmost = buddy_tree_leftmost_child(t);
+		assert(buddy_tree_valid(t, leftmost));
+		assert(leftmost == buddy_tree_root());
+	}
+	{
+		unsigned char buddy_tree_buf[4096] = {0};
+		struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+		buddy_tree_pos leftmost = buddy_tree_leftmost_child(t);
+		assert(buddy_tree_valid(t, leftmost));
+		assert(leftmost == buddy_tree_left_child(t, buddy_tree_root()));
+	}
+}
+
+void test_buddy_tree_is_free_01() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+}
+
+void test_buddy_tree_is_free_02() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	buddy_tree_mark(t, pos);
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+}
+void test_buddy_tree_is_free_03() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	buddy_tree_mark(t, buddy_tree_parent(pos));
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 1);
+}
+
+void test_buddy_tree_is_free_04() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_mark(t, buddy_tree_root());
+	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 0);
+	pos = buddy_tree_right_adjacent(pos);
+	assert(buddy_tree_is_free(t, pos) == 0);
+}
+
 void test_posix_malloc_free() {
 	start_test;
 	void *r64 = malloc(64);
@@ -905,6 +1242,7 @@ int main() {
 		test_highest_bit();
 		test_ceiling_power_of_two();
 	}
+
 	{
 		test_bitset_basic();
 		test_bitset_range();
@@ -914,6 +1252,7 @@ int main() {
 
 		test_bitset_debug();
 	}
+
 	{
 		test_buddy_init_null();
 		test_buddy_misalignment();
@@ -991,6 +1330,38 @@ int main() {
 		test_buddy_mixed_use_03();
 
 		test_buddy_mixed_sizes_01();
+	}
+	
+	{
+		test_buddy_tree_init();
+		test_buddy_tree_valid();
+		test_buddy_tree_order();
+		test_buddy_tree_depth();
+		test_buddy_tree_left_child();
+		test_buddy_tree_right_child();
+		test_buddy_tree_parent();
+		test_buddy_tree_right_adjacent();
+		test_buddy_tree_index();
+		test_buddy_tree_mark_status_release_01();
+		test_buddy_tree_mark_status_release_02();
+		test_buddy_tree_mark_status_release_03();
+		test_buddy_tree_mark_status_release_04();
+		test_buddy_tree_duplicate_mark();
+		test_buddy_tree_duplicate_free();
+		test_buddy_tree_propagation_01();
+		test_buddy_tree_propagation_02();
+		test_buddy_tree_find_free_01();
+		test_buddy_tree_find_free_02();
+		test_buddy_tree_debug();
+		test_buddy_tree_resize_same_size();
+		test_buddy_tree_resize_01();
+		test_buddy_tree_resize_02();
+		test_buddy_tree_resize_03();
+		test_buddy_tree_leftmost_child();
+		test_buddy_tree_is_free_01();
+		test_buddy_tree_is_free_02();
+		test_buddy_tree_is_free_03();
+		test_buddy_tree_is_free_04();
 	}
 	{
 		test_posix_malloc_free();
