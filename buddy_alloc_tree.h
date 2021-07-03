@@ -45,8 +45,8 @@ buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t);
 /* Returns the rightmost child node */
 buddy_tree_pos buddy_tree_rightmost_child(struct buddy_tree *t);
 
-/* Returns the depth at the indicated position */
-size_t buddy_tree_depth(struct buddy_tree *t, buddy_tree_pos pos);
+/* Returns the tree depth of the indicated position */
+size_t buddy_tree_depth(buddy_tree_pos pos);
 
 /* Returns the left child node position or an invalid position if there is no left child node */
 buddy_tree_pos buddy_tree_left_child(struct buddy_tree *t, buddy_tree_pos pos);

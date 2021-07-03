@@ -270,7 +270,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
 
 	/* Find the position tracking this address */
 	buddy_tree_pos origin = position_for_address(buddy, ptr);
-	size_t current_depth = buddy_tree_depth(buddy_tree(buddy), origin);
+	size_t current_depth = buddy_tree_depth(origin);
 	size_t target_depth = depth_for_size(buddy, requested_size);
 
 	/* If the new size fits in the same slot do nothing */
@@ -353,7 +353,7 @@ static struct buddy_tree *buddy_tree(struct buddy *buddy) {
 }
 
 static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos) {
-	size_t block_size = size_for_depth(buddy, buddy_tree_depth(buddy_tree(buddy), pos));
+	size_t block_size = size_for_depth(buddy, buddy_tree_depth(pos));
 	size_t addr = block_size * buddy_tree_index(buddy_tree(buddy), pos);
 	return buddy_main(buddy) + addr;
 }

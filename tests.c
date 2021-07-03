@@ -875,10 +875,10 @@ void test_buddy_tree_order() {
 
 void test_buddy_tree_depth() {
 	start_test;
-	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
-	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 8);
-	assert(buddy_tree_depth(t, 0) == 0);
-	assert(buddy_tree_depth(t, 1) == 1);
+	assert(buddy_tree_depth(0) == 0);
+	assert(buddy_tree_depth(1) == 1);
+    assert(buddy_tree_depth(2) == 2);
+    assert(buddy_tree_depth(3) == 2);
 }
 
 void test_buddy_tree_left_child() {
@@ -887,7 +887,7 @@ void test_buddy_tree_left_child() {
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_pos pos = buddy_tree_root();
 	pos = buddy_tree_left_child(t, pos);
-	assert(buddy_tree_depth(t, pos) == 2);
+	assert(buddy_tree_depth(pos) == 2);
 	pos = buddy_tree_left_child(t, pos);
 	assert(buddy_tree_valid(t, pos) == 0);
 	pos = buddy_tree_left_child(t, pos);
@@ -900,7 +900,7 @@ void test_buddy_tree_right_child() {
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_pos pos = buddy_tree_root();
 	pos = buddy_tree_right_child(t, pos);
-	assert(buddy_tree_depth(t, pos) == 2);
+	assert(buddy_tree_depth(pos) == 2);
 	pos = buddy_tree_right_child(t, pos);
 	assert(buddy_tree_valid(t, pos) == 0);
 	pos = buddy_tree_right_child(t, pos);
