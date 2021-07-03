@@ -454,31 +454,37 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state) {
  after the indicated relative memory index. Used to check if
  the arena can be downsized. */
 static _Bool buddy_is_free(struct buddy *buddy, size_t from) {
-	size_t delta = buddy->memory_size - from;
-	size_t delta_count = delta / BUDDY_ALIGN;
+    /* Adjust from for alignment */
+    if (from % BUDDY_ALIGN) {
+        from -= (from % BUDDY_ALIGN);
+    }
 
-	buddy_tree_pos pos = buddy_tree_rightmost_child(buddy_tree(buddy));
+    size_t effective_memory_size = ceiling_power_of_two(buddy->memory_size);
+    size_t to = effective_memory_size - (buddy->virtual_slots * BUDDY_ALIGN);
 
-	/* Account for virtual slots */
-	if (buddy->virtual_slots) {
-		size_t virtual_slots = buddy->virtual_slots;
-		while (virtual_slots) {
-			pos = buddy_tree_left_adjacent(pos);
-			virtual_slots--;
-		}
-	}
+    struct buddy_tree *t = buddy_tree(buddy);
 
-	/* Check for use */
-	while (delta_count) {
-		if (! buddy_tree_is_free(buddy_tree(buddy), pos)) {
-			return 0;
-		}
-		pos = buddy_tree_left_adjacent(pos);
-		delta_count--;
-	}
+    struct buddy_tree_interval query_range = {0};
+    query_range.from = deepest_position_for_offset(buddy, from);
+    query_range.to = deepest_position_for_offset(buddy, to);
 
-	/* Blocks are free */
-	return 1;
+    buddy_tree_pos pos = deepest_position_for_offset(buddy, from);
+    while(pos < query_range.to) {
+        struct buddy_tree_interval current_test_range = {0};
+        struct buddy_tree_interval parent_test_range = buddy_tree_interval(t, buddy_tree_parent(pos));
+        while(buddy_tree_interval_contains(query_range, parent_test_range)) {
+            pos = buddy_tree_parent(pos);
+            current_test_range = parent_test_range;
+            parent_test_range = buddy_tree_interval(t, buddy_tree_parent(pos));
+        }
+        /* pos is now tracking an overlapping segment */
+        if (! buddy_tree_is_free(t, pos)) {
+            return 0;
+        }
+        /* Advance check */
+        pos = buddy_tree_right_adjacent(current_test_range.to);
+    }
+    return 1;
 }
 
 static struct buddy_embed_check buddy_embed_offset(size_t memory_size) {

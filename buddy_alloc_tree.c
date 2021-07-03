@@ -213,10 +213,6 @@ static buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order) {
 	return 1u << (tree_order - 1u);
 }
 
-buddy_tree_pos buddy_tree_rightmost_child(struct buddy_tree *t) {
-	return buddy_tree_rightmost_child_internal(t->order);
-}
-
 static buddy_tree_pos buddy_tree_rightmost_child_internal(size_t tree_order) {
 	size_t up_to = tree_order - 1;
 	buddy_tree_pos pos = 1u;
@@ -255,10 +251,6 @@ buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos) {
 		return parent;
 	}
 	return 0; /* root node has no parent node */
-}
-
-buddy_tree_pos buddy_tree_left_adjacent(buddy_tree_pos pos) {
-	return pos - 1;
 }
 
 buddy_tree_pos buddy_tree_right_adjacent(buddy_tree_pos pos) {
@@ -311,22 +303,23 @@ static size_t read_from_internal_position(unsigned char *bitset, struct internal
 
 struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, buddy_tree_pos pos) {
 	struct buddy_tree_interval result = {0};
-	buddy_tree_pos temp;
-	while ((temp = buddy_tree_left_child(t, pos))) {
-		/* empty */
+	result.from = pos;
+	result.to = pos;
+	size_t depth = buddy_tree_depth(pos);
+	while (depth != t->order) {
+		result.from = buddy_tree_left_child(t, result.from);
+		result.to = buddy_tree_right_child(t, result.to);
+		depth += 1;
 	}
-	result.from = temp;
-	while ((temp = buddy_tree_right_child(t, pos))) {
-		/* empty */
-	}
-	result.to = temp;
 	return result;
 }
 
-_Bool buddy_tree_interval_overlap(struct buddy_tree_interval a, struct buddy_tree_interval b) {
-	buddy_tree_pos max_from = a.from >= b.from ? a.from : b.from;
-	buddy_tree_pos min_to = a.to <= b.to ? a.to : b.to;
-	return max_from <= min_to;
+_Bool buddy_tree_interval_contains(struct buddy_tree_interval outer,
+		struct buddy_tree_interval inner) {
+	return (inner.from >= outer.from)
+		&& (inner.from <= outer.to)
+		&& (inner.to >= outer.from)
+		&& (inner.to <= outer.to);
 }
 
 size_t buddy_tree_status(struct buddy_tree *t, buddy_tree_pos pos) {

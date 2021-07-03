@@ -47,9 +47,6 @@ buddy_tree_pos buddy_tree_root(void);
 /* Returns the leftmost child node */
 buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t);
 
-/* Returns the rightmost child node */
-buddy_tree_pos buddy_tree_rightmost_child(struct buddy_tree *t);
-
 /* Returns the tree depth of the indicated position */
 size_t buddy_tree_depth(buddy_tree_pos pos);
 
@@ -62,9 +59,6 @@ buddy_tree_pos buddy_tree_right_child(struct buddy_tree *t, buddy_tree_pos pos);
 /* Returns the parent node position or an invalid position if there is no parent node */
 buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos);
 
-/* Returns the left adjacent node position or an invalid position if there is no left adjacent node */
-buddy_tree_pos buddy_tree_left_adjacent(buddy_tree_pos pos);
-
 /* Returns the right adjacent node position or an invalid position if there is no right adjacent node */
 buddy_tree_pos buddy_tree_right_adjacent(buddy_tree_pos pos);
 
@@ -74,8 +68,9 @@ size_t buddy_tree_index(buddy_tree_pos pos);
 /* Return the interval of the deepest positions spanning the indicated position */
 struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, buddy_tree_pos pos);
 
-/* Checks if the two intervals overlap */
-_Bool buddy_tree_interval_overlap(struct buddy_tree_interval a, struct buddy_tree_interval b);
+/* Checks if one interval contains another */
+_Bool buddy_tree_interval_contains(struct buddy_tree_interval outer,
+    struct buddy_tree_interval inner);
 
 /*
  * Allocation functions
