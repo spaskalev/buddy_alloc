@@ -852,7 +852,6 @@ void test_buddy_mixed_sizes_01() {
 void test_buddy_tree_init() {
 	start_test;
 	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
-	assert(buddy_tree_init(NULL, 8) == NULL);
 	assert(buddy_tree_init(buddy_tree_buf, 0) == NULL);
 	assert(buddy_tree_init(buddy_tree_buf, 8) != NULL);
 }

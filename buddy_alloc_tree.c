@@ -77,9 +77,6 @@ size_t buddy_tree_sizeof(uint8_t order) {
 }
 
 struct buddy_tree *buddy_tree_init(unsigned char *at, uint8_t order) {
-	if (! at) {
-		return NULL;
-	}
 	size_t size = buddy_tree_sizeof(order);
 	if (! size) {
 		return NULL;
