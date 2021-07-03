@@ -398,25 +398,51 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state) {
         return;
     }
 
-	size_t delta = effective_memory_size - memory_size;
-	size_t delta_count = delta / BUDDY_ALIGN;
-	if (delta % BUDDY_ALIGN) {
-		delta_count += 1;
-	}
+    /* Get the area that we need to mask and pad it to alignment */
+    size_t delta = effective_memory_size - memory_size;
+    if (delta < BUDDY_ALIGN) {
+        delta = BUDDY_ALIGN;
+    }
+    if (delta % BUDDY_ALIGN) {
+        delta += BUDDY_ALIGN - (delta % BUDDY_ALIGN);
+    }
 
-	/* Update the virtual slot count */
-	buddy->virtual_slots = state ? delta_count : 0;
+    /* Update the virtual slot count */
+    buddy->virtual_slots = state ? (delta / BUDDY_ALIGN) : 0;
 
-	buddy_tree_pos pos = buddy_tree_rightmost_child(buddy_tree(buddy));
-	while (delta_count) {
-		if (state) {
-			buddy_tree_mark(buddy_tree(buddy), pos);
-		} else {
-			buddy_tree_release(buddy_tree(buddy), pos);
-		}
-		pos = buddy_tree_left_adjacent(buddy_tree(buddy), pos);
-		delta_count--;
-	}
+    /* Determine whether to mark or release */
+    void (*toggle)(struct buddy_tree *, buddy_tree_pos) =
+        state ? &buddy_tree_mark : &buddy_tree_release;
+
+    struct buddy_tree *tree = buddy_tree(buddy);
+    buddy_tree_pos pos = buddy_tree_right_child(tree, buddy_tree_root());
+    while (delta) {
+        size_t current_pos_size = size_for_depth(buddy, buddy_tree_depth(pos));
+        if (delta == current_pos_size) {
+            // toggle current pos
+            (*toggle)(tree, pos);
+            break;
+        }
+        if (delta == (current_pos_size / 2)) {
+            // toggle right child
+            (*toggle)(tree, buddy_tree_right_child(tree, pos));
+            break;
+        }
+        if (delta > current_pos_size / 2) {
+            // toggle right child
+            (*toggle)(tree, buddy_tree_right_child(tree, pos));
+            // reduce delta
+            delta -= current_pos_size / 2;
+            // re-run for left child
+            pos = buddy_tree_left_child(tree, pos);
+            continue;
+        }
+        if (delta < current_pos_size / 2) {
+            // re-run for right child
+            pos = buddy_tree_right_child(tree, pos);
+            continue;
+        }
+    }
 }
 
 /* Internal function that checks if there are any allocations
