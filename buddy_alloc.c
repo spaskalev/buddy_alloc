@@ -44,6 +44,7 @@ static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memor
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
 static _Bool buddy_is_free(struct buddy *buddy, size_t from);
 static struct buddy_embed_check buddy_embed_offset(size_t memory_size);
+static buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, size_t offset);
 
 size_t buddy_sizeof(size_t memory_size) {
 	if (memory_size < BUDDY_ALIGN) {
@@ -254,7 +255,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
 	 * - Zero size degrades into free
 	 * - Same size as previous malloc/calloc/realloc is a no-op or a rellocation
 	 * - Smaller size than previous *alloc decrease the allocated size with an optional rellocation
-	 * - If the new allocation cannot be satisfied NULL is returned BUT the slot
+	 * - If the new allocation cannot be satisfied NULL is returned BUT the slot is preserved
 	 * - Larger size than previous *alloc increase tha allocated size with an optional rellocation
 	 */
 	if (ptr == NULL) {
@@ -358,6 +359,16 @@ static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos) {
 	return buddy_main(buddy) + addr;
 }
 
+static buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, size_t offset) {
+    size_t index = offset / BUDDY_ALIGN;
+    buddy_tree_pos pos = buddy_tree_leftmost_child(buddy_tree(buddy));
+    while (index > 0) {
+        pos = buddy_tree_right_adjacent(pos);
+        index--;
+    }
+    return pos;
+}
+
 static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr) {
 	/* Find the deepest position tracking this address */
 	unsigned char *main = buddy_main(buddy);
@@ -365,13 +376,7 @@ static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned c
 	if (offset % BUDDY_ALIGN) {
 		return 0; /* invalid alignment */
 	}
-	size_t index = offset / BUDDY_ALIGN;
-
-	buddy_tree_pos pos = buddy_tree_leftmost_child(buddy_tree(buddy));
-	while (index > 0) {
-		pos = buddy_tree_right_adjacent(pos);
-		index--;
-	}
+	buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
 
 	/* Find the actual allocated position tracking this address */
 	while ((! buddy_tree_status(buddy_tree(buddy), pos)) && buddy_tree_valid(buddy_tree(buddy), pos)) {
