@@ -354,7 +354,7 @@ static struct buddy_tree *buddy_tree(struct buddy *buddy) {
 
 static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos) {
 	size_t block_size = size_for_depth(buddy, buddy_tree_depth(pos));
-	size_t addr = block_size * buddy_tree_index(buddy_tree(buddy), pos);
+	size_t addr = block_size * buddy_tree_index(pos);
 	return buddy_main(buddy) + addr;
 }
 
@@ -369,13 +369,13 @@ static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned c
 
 	buddy_tree_pos pos = buddy_tree_leftmost_child(buddy_tree(buddy));
 	while (index > 0) {
-		pos = buddy_tree_right_adjacent(buddy_tree(buddy), pos);
+		pos = buddy_tree_right_adjacent(pos);
 		index--;
 	}
 
 	/* Find the actual allocated position tracking this address */
 	while ((! buddy_tree_status(buddy_tree(buddy), pos)) && buddy_tree_valid(buddy_tree(buddy), pos)) {
-		pos = buddy_tree_parent(buddy_tree(buddy), pos);
+		pos = buddy_tree_parent(pos);
 	}
 
 	return pos;
@@ -458,7 +458,7 @@ static _Bool buddy_is_free(struct buddy *buddy, size_t from) {
 	if (buddy->virtual_slots) {
 		size_t virtual_slots = buddy->virtual_slots;
 		while (virtual_slots) {
-			pos = buddy_tree_left_adjacent(buddy_tree(buddy), pos);
+			pos = buddy_tree_left_adjacent(pos);
 			virtual_slots--;
 		}
 	}
@@ -468,7 +468,7 @@ static _Bool buddy_is_free(struct buddy *buddy, size_t from) {
 		if (! buddy_tree_is_free(buddy_tree(buddy), pos)) {
 			return 0;
 		}
-		pos = buddy_tree_left_adjacent(buddy_tree(buddy), pos);
+		pos = buddy_tree_left_adjacent(pos);
 		delta_count--;
 	}
 

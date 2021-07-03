@@ -55,19 +55,16 @@ buddy_tree_pos buddy_tree_left_child(struct buddy_tree *t, buddy_tree_pos pos);
 buddy_tree_pos buddy_tree_right_child(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the parent node position or an invalid position if there is no parent node */
-buddy_tree_pos buddy_tree_parent(struct buddy_tree *t, buddy_tree_pos pos);
-
-/* Returns the sibling node position or an invalid position if there is no sibling node */
-buddy_tree_pos buddy_tree_sibling(struct buddy_tree *t, buddy_tree_pos pos);
+buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos);
 
 /* Returns the left adjacent node position or an invalid position if there is no left adjacent node */
-buddy_tree_pos buddy_tree_left_adjacent(struct buddy_tree *t, buddy_tree_pos pos);
+buddy_tree_pos buddy_tree_left_adjacent(buddy_tree_pos pos);
 
 /* Returns the right adjacent node position or an invalid position if there is no right adjacent node */
-buddy_tree_pos buddy_tree_right_adjacent(struct buddy_tree *t, buddy_tree_pos pos);
+buddy_tree_pos buddy_tree_right_adjacent(buddy_tree_pos pos);
 
 /* Returns the at-depth index of the indicated position */
-size_t buddy_tree_index(struct buddy_tree *t, buddy_tree_pos pos);
+size_t buddy_tree_index(buddy_tree_pos pos);
 
 /*
  * Allocation functions

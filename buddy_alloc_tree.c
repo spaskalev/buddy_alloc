@@ -64,9 +64,6 @@ static struct internal_position buddy_tree_internal_position(size_t tree_order, 
 }
 
 size_t buddy_tree_sizeof(uint8_t order) {
-	if (order == 0) {
-		return 0;
-	}
 	size_t result = 0;
 	result = size_for_order(order, 0);
 	result /= 8; /* convert bits to bytes */
@@ -77,9 +74,6 @@ size_t buddy_tree_sizeof(uint8_t order) {
 
 struct buddy_tree *buddy_tree_init(unsigned char *at, uint8_t order) {
 	size_t size = buddy_tree_sizeof(order);
-	if (! size) {
-		return NULL;
-	}
 	struct buddy_tree *t = (struct buddy_tree*) at;
 	memset(at, 0, size);
 	t->order = order;
@@ -159,9 +153,6 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
 
 static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
 	while (desired_order < t->order) {
-		if (desired_order == 0) {
-			return; /* Cannot shrink to zero */
-		}
 		if (!buddy_tree_can_shrink(t)) {
 			return;
 		}
@@ -242,9 +233,6 @@ size_t buddy_tree_depth(buddy_tree_pos pos) {
 }
 
 buddy_tree_pos buddy_tree_left_child(struct buddy_tree *t, buddy_tree_pos pos) {
-	if (!buddy_tree_valid(t, pos)) {
-		return 0; /* invalid pos */
-	}
 	if (buddy_tree_depth(pos) == t->order) {
 		return 0;
 	}
@@ -253,9 +241,6 @@ buddy_tree_pos buddy_tree_left_child(struct buddy_tree *t, buddy_tree_pos pos) {
 }
 
 buddy_tree_pos buddy_tree_right_child(struct buddy_tree *t, buddy_tree_pos pos) {
-	if (!buddy_tree_valid(t, pos)) {
-		return 0; /* invalid pos */
-	}
 	if (buddy_tree_depth(pos) == t->order) {
 		return 0;
 	}
@@ -264,10 +249,7 @@ buddy_tree_pos buddy_tree_right_child(struct buddy_tree *t, buddy_tree_pos pos) 
 	return pos;
 }
 
-buddy_tree_pos buddy_tree_parent(struct buddy_tree *t, buddy_tree_pos pos) {
-	if (!buddy_tree_valid(t, pos)) {
-		return 0; /* invalid pos */
-	}
+buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos) {
 	size_t parent = pos / 2;
 	if ((parent != pos) && parent != 0) {
 		return parent;
@@ -275,39 +257,11 @@ buddy_tree_pos buddy_tree_parent(struct buddy_tree *t, buddy_tree_pos pos) {
 	return 0; /* root node has no parent node */
 }
 
-buddy_tree_pos buddy_tree_sibling(struct buddy_tree *t, buddy_tree_pos pos) {
-	if (!buddy_tree_valid(t, pos)) {
-		return 0; /* invalid pos */
-	}
-	if (pos == 1) {
-		return 0; /* root node has no sibling node */
-	}
-	/* Flip first bit to get the sibling pos */
-	pos ^= 1u;
-	return pos;
+buddy_tree_pos buddy_tree_left_adjacent(buddy_tree_pos pos) {
+	return pos - 1;
 }
 
-buddy_tree_pos buddy_tree_left_adjacent(struct buddy_tree *t, buddy_tree_pos pos) {
-	if (!buddy_tree_valid(t, pos)) {
-		return 0; /* invalid pos */
-	}
-	if (pos == 1) {
-		return 0; /* root node has no adjacent nodes */
-	}
-	if (highest_bit_position(pos) != highest_bit_position(pos - 1)) {
-		return 0;
-	}
-	pos -= 1;
-	return pos;
-}
-
-buddy_tree_pos buddy_tree_right_adjacent(struct buddy_tree *t, buddy_tree_pos pos) {
-	if (!buddy_tree_valid(t, pos)) {
-		return 0; /* invalid pos */
-	}
-	if (pos == 1) {
-		return 0; /* root node has no adjacent nodes */
-	}
+buddy_tree_pos buddy_tree_right_adjacent(buddy_tree_pos pos) {
 	if (highest_bit_position(pos) != highest_bit_position(pos + 1)) {
 		return 0;
 	}
@@ -315,10 +269,7 @@ buddy_tree_pos buddy_tree_right_adjacent(struct buddy_tree *t, buddy_tree_pos po
 	return pos;
 }
 
-size_t buddy_tree_index(struct buddy_tree *t, buddy_tree_pos pos) {
-	if (!buddy_tree_valid(t, pos)) {
-		return 0; /* invalid pos */
-	}
+size_t buddy_tree_index(buddy_tree_pos pos) {
 	return buddy_tree_index_internal(pos);
 }
 
@@ -373,16 +324,17 @@ void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos) {
 	}
 
 	struct internal_position internal = buddy_tree_internal_position(t->order, pos);
-	if (read_from_internal_position(t->bits, internal)) {
-		/* Calling mark on a used position is likely a bug in caller */
-		return;
-	}
+
+	/*
+	 * Calling mark on a used position is likely a bug in caller.
+	 * Caller should handle such check if needed.
+	 */
 
 	/* Mark the node as used */
 	write_to_internal_position(t->bits, internal, internal.max_value);
 
 	/* Update the tree upwards */
-	update_parent_chain(t, buddy_tree_parent(t, pos));
+	update_parent_chain(t, buddy_tree_parent(pos));
 }
 
 void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
@@ -392,17 +344,16 @@ void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
 
 	struct internal_position internal = buddy_tree_internal_position(t->order, pos);
 
-	if (read_from_internal_position(t->bits, internal) != internal.max_value) {
-		/* Calling release on an unused or a partially-used position is
-		   likely a bug in caller */
-		return;
-	}
+	/*
+	 * Calling release on an unused or a partially-used position is
+	 * likely a bug in caller. Caller should handle such check if needed.
+	 */
 
 	/* Mark the node as unused */
 	write_to_internal_position(t->bits, internal, 0);
 
 	/* Update the tree upwards */
-	update_parent_chain(t, buddy_tree_parent(t, pos));
+	update_parent_chain(t, buddy_tree_parent(pos));
 }
 
 static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
@@ -424,20 +375,11 @@ static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
 		write_to_internal_position(t->bits, buddy_tree_internal_position(t->order, pos), free);
 
 		/* Advance upwards */
-		pos = buddy_tree_parent(t, pos);
+		pos = buddy_tree_parent(pos);
 	}
 }
 
 buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth) {
-	if (depth == 0) {
-		return 0;
-	}
-	if (t == NULL) {
-		return 0;
-	}
-	if (depth > t->order) {
-		return 0;
-	}
 	return buddy_tree_find_free_internal(t, buddy_tree_root(), depth, depth-1);
 }
 
@@ -473,28 +415,21 @@ static buddy_tree_pos buddy_tree_find_free_internal(struct buddy_tree *t, buddy_
 }
 
 _Bool buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos) {
-	if (buddy_tree_status(t, pos)) {
-		return 0;
-	}
-	pos = buddy_tree_parent(t, pos);
+	_Bool result = 0;
+	pos = buddy_tree_parent(pos);
 	while(buddy_tree_valid(t, pos)) {
 		struct internal_position internal = buddy_tree_internal_position(t->order, pos);
 		size_t value = read_from_internal_position(t->bits, internal);
 		if (value) {
-			if (value == internal.max_value) {
-				return 0;
-			}
-			return 1;
+			result = value == internal.max_value ? 0 : 1;
+			break;
 		}
-		pos = buddy_tree_parent(t, pos);
+		pos = buddy_tree_parent(pos);
 	}
-	return 1;
+	return result;
 }
 
 _Bool buddy_tree_can_shrink(struct buddy_tree *t) {
-	if (t == NULL) {
-		return 0;
-	}
 	if (buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root())) != 0) {
 		return 0; /* Refusing to shrink with right subtree still used! */
 	}
