@@ -13,7 +13,7 @@ This is a simple buddy memory allocator that might be suitable for use in applic
 
 Here is an example of initializing and using the buddy allocator with metadata external to the arena.
 
-```
+```c
 size_t arena_size = 65536;
 /* You need space for the metadata and for the arena */
 void *buddy_metadata = malloc(buddy_sizeof(arena_size));
@@ -31,7 +31,7 @@ free(buddy_arena);
 
 Here is an example of initializing and using the buddy allocator with metadata internal to the arena.
 
-```
+```c
 size_t arena_size = 65536;
 /* You need space for arena and builtin metadata */
 void *buddy_arena = malloc(arena_size);
