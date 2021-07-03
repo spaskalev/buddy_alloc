@@ -312,15 +312,21 @@ static size_t read_from_internal_position(unsigned char *bitset, struct internal
 struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, buddy_tree_pos pos) {
 	struct buddy_tree_interval result = {0};
 	buddy_tree_pos temp;
-	while (temp = buddy_tree_left_child(t, pos)) {
+	while ((temp = buddy_tree_left_child(t, pos))) {
 		/* empty */
 	}
 	result.from = temp;
-	while (temp = buddy_tree_right_child(t, pos)) {
+	while ((temp = buddy_tree_right_child(t, pos))) {
 		/* empty */
 	}
 	result.to = temp;
 	return result;
+}
+
+_Bool buddy_tree_interval_overlap(struct buddy_tree_interval a, struct buddy_tree_interval b) {
+	buddy_tree_pos max_from = a.from >= b.from ? a.from : b.from;
+	buddy_tree_pos min_to = a.to <= b.to ? a.to : b.to;
+	return max_from <= min_to;
 }
 
 size_t buddy_tree_status(struct buddy_tree *t, buddy_tree_pos pos) {

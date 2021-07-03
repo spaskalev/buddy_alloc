@@ -74,6 +74,9 @@ size_t buddy_tree_index(buddy_tree_pos pos);
 /* Return the interval of the deepest positions spanning the indicated position */
 struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, buddy_tree_pos pos);
 
+/* Checks if the two intervals overlap */
+_Bool buddy_tree_interval_overlap(struct buddy_tree_interval a, struct buddy_tree_interval b);
+
 /*
  * Allocation functions
  */
