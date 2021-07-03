@@ -237,11 +237,6 @@ void test_buddy_init_non_power_of_two_memory() {
 	assert(buddy_malloc(buddy, BUDDY_ALIGN) == NULL);
 }
 
-void test_buddy_resize_null() {
-	start_test;
-	assert(buddy_resize(NULL, 1024) == NULL);
-}
-
 void test_buddy_resize_noop() {
 	start_test;
 	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(1024)];
@@ -1093,12 +1088,6 @@ void test_buddy_tree_debug() {
 	buddy_tree_debug(t, buddy_tree_root());printf("\n"); /* code coverage */
 }
 
-void test_buddy_tree_resize_buddy_null() {
-	start_test;
-	struct buddy_tree *t = NULL;
-	buddy_tree_resize(t, 3);
-}
-
 void test_buddy_tree_resize_same_size() {
 	start_test;
 	unsigned char buddy_tree_buf[4096] = {0};
@@ -1339,7 +1328,6 @@ int main() {
 		test_buddy_init_virtual_slots();
 		test_buddy_init_non_power_of_two_memory();
 
-		test_buddy_resize_null();
 		test_buddy_resize_noop();
 		test_buddy_resize_up_within_reserved();
 		test_buddy_resize_up_at_reserved();
@@ -1433,7 +1421,6 @@ int main() {
 		test_buddy_tree_find_free_01();
 		test_buddy_tree_find_free_02();
 		test_buddy_tree_debug();
-		test_buddy_tree_resize_buddy_null();
 		test_buddy_tree_resize_same_size();
 		test_buddy_tree_resize_01();
 		test_buddy_tree_resize_02();

@@ -92,12 +92,10 @@ struct buddy_tree *buddy_tree_init(unsigned char *at, uint8_t order) {
 }
 
 void buddy_tree_resize(struct buddy_tree *t, uint8_t desired_order) {
-	if (t == NULL) {
-		return;
-	}
 	if (t->order == desired_order) {
 		return;
-	} else if (t->order < desired_order) {
+	}
+	if (t->order < desired_order) {
 		buddy_tree_grow(t, desired_order);
 	} else {
 		buddy_tree_shrink(t, desired_order);
@@ -493,9 +491,6 @@ static buddy_tree_pos buddy_tree_find_free_internal(struct buddy_tree *t, buddy_
 }
 
 _Bool buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos) {
-	if (!buddy_tree_valid(t, pos)) {
-		return 0;
-	}
 	if (buddy_tree_status(t, pos)) {
 		return 0;
 	}

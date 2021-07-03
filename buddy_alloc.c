@@ -98,9 +98,6 @@ struct buddy *buddy_embed(unsigned char *main, size_t memory_size) {
 }
 
 struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size) {
-	if (buddy == NULL) {
-		return NULL;
-	}
 	if (new_memory_size == buddy->memory_size) {
 		return buddy;
 	}
