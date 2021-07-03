@@ -213,9 +213,6 @@ _Bool buddy_tree_valid(struct buddy_tree *t, buddy_tree_pos pos) {
 }
 
 uint8_t buddy_tree_order(struct buddy_tree *t) {
-	if (t == NULL) {
-		return 0;
-	}
 	return t->order;
 }
 

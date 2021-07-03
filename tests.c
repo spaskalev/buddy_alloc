@@ -876,7 +876,6 @@ void test_buddy_tree_order() {
 	start_test;
 	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 8);
-	assert(buddy_tree_order(NULL) == 0);
 	assert(buddy_tree_order(t) == 8);
 }
 
