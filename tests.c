@@ -1196,6 +1196,32 @@ void test_buddy_tree_is_free_04() {
 	assert(buddy_tree_is_free(t, pos) == 0);
 }
 
+void test_buddy_tree_interval() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	struct buddy_tree_interval interval = buddy_tree_interval(t, pos);
+	assert(interval.from == pos);
+	assert(interval.to == pos);
+	interval = buddy_tree_interval(t, buddy_tree_parent(pos));
+	assert(interval.from == pos);
+	assert(interval.to == buddy_tree_right_adjacent(pos));
+}
+
+void test_buddy_tree_interval_contains() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	struct buddy_tree_interval interval_low = buddy_tree_interval(t, pos);
+	struct buddy_tree_interval interval_high = buddy_tree_interval(t, buddy_tree_parent(pos));
+	assert(buddy_tree_interval_contains(interval_low, interval_low) == 1);
+	assert(buddy_tree_interval_contains(interval_high, interval_low) == 1);
+	assert(buddy_tree_interval_contains(interval_high, interval_high) == 1);
+	assert(buddy_tree_interval_contains(interval_low, interval_high) == 0);
+}
+
 void test_posix_malloc_free() {
 	start_test;
 	void *r64 = malloc(64);
@@ -1362,6 +1388,8 @@ int main() {
 		test_buddy_tree_is_free_02();
 		test_buddy_tree_is_free_03();
 		test_buddy_tree_is_free_04();
+		test_buddy_tree_interval();
+		test_buddy_tree_interval_contains();
 	}
 	{
 		test_posix_malloc_free();
