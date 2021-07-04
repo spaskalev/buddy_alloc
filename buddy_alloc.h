@@ -10,10 +10,12 @@
 #define BUDDY_ALLOC_H
 
 #include <limits.h>
-
 #include <stdalign.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
 
 #define BUDDY_ALIGN (sizeof(size_t) * CHAR_BIT)
 
@@ -166,16 +168,8 @@ _Bool buddy_tree_can_shrink(struct buddy_tree *t);
 void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos);
 
 /*
- Bitset
-*/
-
-
-/*
  * A char-backed bitset implementation
  */
-
-#include <limits.h>
-#include <stddef.h>
 
 size_t bitset_size(size_t elements);
 
@@ -206,9 +200,6 @@ void bitset_debug(unsigned char *bitset, size_t length);
  Bits
 */
 
-#include <stddef.h>
-#include <stdint.h>
-
 /* Returns the index of the highest bit set (1-based) */
 size_t highest_bit_position(size_t value);
 
@@ -229,18 +220,8 @@ size_t ceiling_power_of_two(size_t value);
 */
 
 /*
- * Copyright 2021 Stanislav Paskalev <spaskalev@protonmail.com>
- */
-
-/*
  * A binary buddy memory allocator
  */
-
-
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
 
 struct buddy {
     size_t memory_size;
@@ -761,12 +742,6 @@ void buddy_debug(struct buddy *buddy) {
  * A buddy allocation tree
  */
 
-#include <stdalign.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-
 struct buddy_tree {
     uint8_t order;
     size_t upper_pos_bound;
@@ -1222,20 +1197,8 @@ void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos) {
 }
 
 /*
- Bitset
-*/
-/*
- * Copyright 2021 Stanislav Paskalev <spaskalev@protonmail.com>
- */
-
-/*
  * A char-backed bitset implementation
  */
-
-#include <limits.h>
-#include <stddef.h>
-#include <sys/types.h>
-#include <stdio.h>
 
 size_t bitset_size(size_t elements) {
     return ((elements) + CHAR_BIT - 1u) / CHAR_BIT;
