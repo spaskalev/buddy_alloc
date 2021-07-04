@@ -69,10 +69,10 @@ void buddy_free(struct buddy *buddy, void *ptr);
 /* Implementation defined */
 void buddy_debug(struct buddy *buddy);
 
-/*
- buddy alloc tree (pending merge)
-*/
+#endif /* BUDDY_ALLOC_H */
 
+#ifdef BUDDY_ALLOC_IMPLEMENTATION
+#undef BUDDY_ALLOC_IMPLEMENTATION
 
 struct buddy_tree;
 
@@ -208,12 +208,6 @@ size_t highest_bit(size_t value);
 
 /* Returns the nearest larger or equal power of two */
 size_t ceiling_power_of_two(size_t value);
-
-#endif /* BUDDY_ALLOC_H */
-
-
-#ifdef BUDDY_ALLOC_IMPLEMENTATION
-#undef BUDDY_ALLOC_IMPLEMENTATION
 
 /*
  Implementation
@@ -732,11 +726,6 @@ void buddy_debug(struct buddy *buddy) {
     printf("allocator tree follows:\n");
     buddy_tree_debug(buddy_tree(buddy), buddy_tree_root());
 }
-
-/*
- buddy alloc tree (pending merge)
-*/
-
 
 /*
  * A buddy allocation tree
