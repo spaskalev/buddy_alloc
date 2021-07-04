@@ -11,7 +11,10 @@
 
 #include "tests.h"
 
+#define BUDDY_ALLOC_IMPLEMENTATION
 #include "buddy_alloc.h"
+#undef BUDDY_ALLOC_IMPLEMENTATION
+
 #include "buddy_brk.h"
 #include "buddy_global.h"
 
@@ -91,6 +94,9 @@ void test_bitset_range() {
 void test_bitset_shift() {
 	start_test;
 	unsigned char buf[bitset_size(16)];
+	for (size_t i = 0; i < bitset_size(16); i++) {
+		buf[i] = 0;
+	}
 	for (size_t i = 0; i < 16; i++) {
 		bitset_clear(buf, i);
 	}
@@ -183,6 +189,15 @@ void test_buddy_misalignment() {
 	}
 	{
 		struct buddy *buddy = buddy_init(buddy_buf, data_buf+1, 4096);
+		assert(buddy == NULL);
+	}
+}
+
+void test_buddy_embed_misalignment() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)+4096];
+	{
+		struct buddy *buddy = buddy_embed(buddy_buf+1, 4096);
 		assert(buddy == NULL);
 	}
 }
@@ -1279,6 +1294,7 @@ int main() {
 	{
 		test_buddy_init_null();
 		test_buddy_misalignment();
+		test_buddy_embed_misalignment();
 		test_buddy_invalid_datasize();
 
 		test_buddy_init();
