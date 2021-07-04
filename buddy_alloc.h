@@ -161,3 +161,41 @@ _Bool buddy_tree_can_shrink(struct buddy_tree *t);
 
 /* Implementation defined */
 void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos);
+
+/*
+ Bitset
+*/
+
+
+/*
+ * A char-backed bitset implementation
+ */
+#pragma once
+
+#include <limits.h>
+#include <stddef.h>
+
+size_t bitset_size(size_t elements);
+
+void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_pos);
+
+void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to_pos);
+
+void bitset_set(unsigned char *bitset, size_t pos);
+
+void bitset_clear(unsigned char *bitset, size_t pos);
+
+void bitset_flip(unsigned char *bitset, size_t pos);
+
+_Bool bitset_test(const unsigned char *bitset, size_t pos);
+
+void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by);
+
+void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by);
+
+/*
+ * Debug functions
+ */
+
+/* Implementation defined */
+void bitset_debug(unsigned char *bitset, size_t length);
