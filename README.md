@@ -69,9 +69,17 @@ The allocator uses a bitset-backed perfect binary tree to track allocations. The
 
 The binary tree nodes are labeled with the largest allocation slot available under them. This allows allocation to happen with a limited number of operations. Allocations that cannot be satisfied are fast to fail. Once a free node of the desired size is found it is marked as used and the nodes leading to root of the tree are updated to account for any difference in the largest available size. Deallocation works in a similar way - the smallest used block size for the given address is found, marked as a free and the same node update as with allocation is used to update the tree. 
 
-### Space requirement
+### Space requirements
 
 The tree is stored in a bitset with each node using just enough bits to store the maximum allocation slot available under it. For leaf nodes this is a single bit. Other nodes sizes depend on the height of the tree.
+
+### Non-power-of-two arena sizes
+
+The perfect binary tree always tracks an arena which size is a power-of-two. When the allocator is initialized or resized with an arena that is not a perfect fit the binary tree is updated to mask out the virtual arena complement to next power-of-two.
+
+### Resizing
+
+Resizing is available for both split and embedded allocator modes and supports both growing the arena and shrinking it. Checks are present that prevent shrinking the arena when memory that is to be reduced is still allocated.
 
 ### Resiliency
 
