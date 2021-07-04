@@ -343,6 +343,7 @@ static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
 }
 
 static size_t size_for_depth(struct buddy *buddy, size_t depth) {
+	depth = depth ? depth : 1; /* Silences a clang warning about undefined right shift */
 	size_t result = ceiling_power_of_two(buddy->memory_size) >> (depth-1);
 	return result;
 }
