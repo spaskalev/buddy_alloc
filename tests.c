@@ -13,7 +13,6 @@
 
 #include "bits.h"
 #include "bitset.h"
-#include "buddy_alloc_tree.h"
 #include "buddy_alloc.h"
 #include "buddy_brk.h"
 #include "buddy_global.h"
