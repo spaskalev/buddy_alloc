@@ -347,7 +347,7 @@ static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memor
     buddy_toggle_virtual_slots(buddy, 0);
 
     /* Calculate new tree size and adjust it */
-    size_t old_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size);
+    size_t old_buddy_tree_order = buddy_tree_order_for_memory(buddy->memory_size);
     size_t new_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size);
     /* Upsizing the buddy tree can always go through (vs downsizing) */
     buddy_tree_resize(buddy_tree(buddy), new_buddy_tree_order);
