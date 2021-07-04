@@ -6,7 +6,6 @@
  * A binary buddy memory allocator
  */
 
-#include "bits.h"
 #include "buddy_alloc.h"
 
 #include <stddef.h>
@@ -528,7 +527,6 @@ void buddy_debug(struct buddy *buddy) {
 /*
  * A buddy allocation tree
  */
-#include "bits.h"
 
 #include <stdalign.h>
 #include <stddef.h>
@@ -1086,4 +1084,39 @@ void bitset_debug(unsigned char *bitset, size_t length) {
     for (size_t i = 0; i < length; i++) {
         printf("%zu: %d\n", i, bitset_test(bitset, i));
     }
+}
+
+/*
+ Bits
+*/
+
+size_t highest_bit_position(size_t value) {
+       size_t pos = ((_Bool) value) & 1u;
+       while ( value >>= 1u ) {
+                pos += 1;
+        }
+       return pos;
+}
+
+size_t highest_bit(size_t value) {
+	if (value == 0) {
+		return 0;
+	}
+	size_t count = 0;
+	while ( value > 0 ) {
+		count += 1;
+		value >>= 1u;
+	}
+	return 1ul << (count - 1);
+}
+
+size_t ceiling_power_of_two(size_t value) {
+	if (value == 0) {
+		return 1;
+	}
+	size_t hb = highest_bit(value);
+	if (hb == value) {
+		return hb;
+	}
+	return hb << 1u;
 }

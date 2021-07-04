@@ -199,3 +199,19 @@ void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to_pos, s
 
 /* Implementation defined */
 void bitset_debug(unsigned char *bitset, size_t length);
+
+/*
+ Bits
+*/
+
+#include <stddef.h>
+#include <stdint.h>
+
+/* Returns the index of the highest bit set (1-based) */
+size_t highest_bit_position(size_t value);
+
+/* Returns the the highest bit set */
+size_t highest_bit(size_t value);
+
+/* Returns the nearest larger or equal power of two */
+size_t ceiling_power_of_two(size_t value);
