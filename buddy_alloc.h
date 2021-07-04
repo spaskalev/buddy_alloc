@@ -753,7 +753,6 @@ struct internal_position {
 static size_t size_for_order(uint8_t order, uint8_t to);
 static size_t buddy_tree_index_internal(buddy_tree_pos pos);
 static buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order);
-static buddy_tree_pos buddy_tree_rightmost_child_internal(size_t tree_order);
 static struct internal_position buddy_tree_internal_position(size_t tree_order, buddy_tree_pos pos);
 static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order);
 static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order);
@@ -818,56 +817,27 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
     while (desired_order > t->order) {
         /* Grow the tree a single order at a time */
         size_t current_order = t->order;
-        size_t next_order = current_order + 1;
+        while(current_order) {
+            /* Get handles into the rows at the tracked depth */
+            struct internal_position current_internal = buddy_tree_internal_position(
+                current_order, buddy_tree_leftmost_child_internal(current_order));
+            struct internal_position next_internal = buddy_tree_internal_position(
+                current_order + 1u, buddy_tree_leftmost_child_internal(current_order + 1u));
 
-        /* Store the rightmost nodes. They will be needed both as
-        a starting point for the clear/copy as well as for traversing
-        upwards to the next upper-rightmost nodes. */
-        buddy_tree_pos current_rightmost = buddy_tree_rightmost_child_internal(current_order);
-        buddy_tree_pos next_rightmost = buddy_tree_rightmost_child_internal(next_order);
+            /* There are this many nodes at the current level */
+            size_t node_count = 1u << (current_order - 1);
 
-        /* Iterators for the current and next orders */
-        buddy_tree_pos current_pos = current_rightmost;
-        buddy_tree_pos next_pos = next_rightmost;
+            /* Transfer the bits*/
+            bitset_shift_right(t->bits,
+                current_internal.bitset_location /* from here */,
+                current_internal.local_offset * node_count /* up to here */,
+                next_internal.bitset_location - current_internal.bitset_location/* at here */);
 
-        /* Depth iterator for clear/copy */
-        size_t new_depth = buddy_tree_depth(next_pos);
-
-        while (new_depth != 1) {
-            /* Node count on the 'next' order */
-            size_t next_node_count = 1u << (new_depth - 1u);
-
-            for (size_t i = next_node_count; i > 0; i--) {
-                struct internal_position next_internal =
-                    buddy_tree_internal_position(next_order, next_pos);
-                if (buddy_tree_index_internal(next_pos) >= (next_node_count/2)) {
-                    /* Clear the position */
-                    write_to_internal_position(t->bits, next_internal, 0);
-                } else {
-                    /* Fill-in with current value */
-                    struct internal_position current_internal =
-                        buddy_tree_internal_position(current_order, current_pos);
-                    size_t value = read_from_internal_position(t->bits, current_internal);
-                    write_to_internal_position(t->bits, next_internal, value);
-                    /* Advance the 'current' position */
-                    current_pos -= 1u; /* warn :) */
-                }
-                /* Advance the 'next' position */
-                next_pos -= 1u; /* warn :) */
-            }
-
-            /* Decrease the depth */
-            new_depth -= 1;
-            /* Advance rightmost nodes */
-            current_rightmost = current_rightmost / 2; /* warn :) */
-            next_rightmost = next_rightmost / 2; /* warn :) */
-            /* Reset iterators */
-            current_pos = current_rightmost;
-            next_pos = next_rightmost;
+            /* Handle the upper level */
+            current_order -= 1u;
         }
-
         /* Advance the order and refrest the root */
-        t->order = next_order;
+        t->order += 1u;
         t->upper_pos_bound = 1u << t->order;
         update_parent_chain(t, buddy_tree_root());
     }
@@ -933,17 +903,6 @@ buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t) {
 
 static buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order) {
     return 1u << (tree_order - 1u);
-}
-
-static buddy_tree_pos buddy_tree_rightmost_child_internal(size_t tree_order) {
-    size_t up_to = tree_order - 1;
-    buddy_tree_pos pos = 1u;
-    while (up_to) {
-        pos <<= 1u;
-        pos |= 1u;
-        up_to -= 1u;
-    }
-    return pos;
 }
 
 size_t buddy_tree_depth(buddy_tree_pos pos) {
