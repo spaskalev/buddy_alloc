@@ -59,6 +59,18 @@ The following were not design goals
 - multithreading use
 - malloc() replacement
 
+## Rationale
+
+### Why use a custom allocator (like buddy_alloc) ?
+
+A custom allocator is useful where there is no system allocator (e.g. bare-metal) or when the system allocator does not meet some particular requirements, usually in terms of performance or features. The buddy_alloc custom allocator has bounded performance and bounded storage overhead for its metadata. The bounded performance is important in time-sensitive systems that must perform some action in a given amount of time. The bounded storage overhead is important for ensuring system reliability and allows for upfront system resource planing.
+
+A common example of systems that require both bound performance and bounded storage overhead from their components are games and gaming consoles. Games are time-sensitive in multiple aspects - they have to render frames fast to ensure a smooth display and sample input regularly to account for player input. But just fast is not enough - if an allocator is fast on average but occasionally an operation happens to be an order of magniture slower this will impact both the display of the game as well as the input and may frustrate the player. Games and game consoles are also sensitive to their storage requirements - game consoles usualy ship with fixed hardware and game developers have to optimize their games to perform well on the given machines.
+
+A custom allocator can suplement the system allocator where needed. A parser that is parsing some structured data (e.g. a json file) may need to allocate objects based on the input's structure. Using the system allocator for this is a risk as the parser may have a bug that causes it to allocate too much or the input may be crafted in such a way. Using a custom allocator with a fixed size for this sort of operations allows the operation to fail safely without impacting the application or the overall system stability.
+
+An application developer may also need object allocation that is relocatable. Using memory representation as serialization output is a valid technique and it is used for persistance and replication. The buddy_alloc embedded mode is relocatable allowing it to be serialized and restored to a different memory location, a different process or a different machine altogether (provided matching architecture and binaries).
+
 ## Implementation
 
 ### Metadata
