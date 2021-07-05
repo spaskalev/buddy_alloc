@@ -1,6 +1,10 @@
 # buddy_alloc
 A buddy memory allocator for C
 
+# Status
+
+[![cicd](https://github.com/spaskalev/buddy_alloc/workflows/cicd/badge.svg)](https://github.com/spaskalev/buddy_alloc/actions)
+
 ## Licensing
 
 This project is licensed under the 0BSD license. See the LICENSE.md file for details.
@@ -96,3 +100,5 @@ Resizing is available for both split and embedded allocator modes and supports b
 ### Resiliency
 
 - Calling free in a wrong way (double free, out of arena, unaligned) will not corrupt the allocator's metadata.
+- Complete line and branch test coverage. (Not MCDC though)
+- Bounded call stack use, no recursion
