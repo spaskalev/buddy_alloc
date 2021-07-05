@@ -6,11 +6,12 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
-CC=clang
-CFLAGS=-g -fstrict-aliasing -fstack-protector-all -pedantic -Wall -Wextra -Werror -Wfatal-errors --coverage
-LLVM_COV=llvm-cov-7
-CTIDY_CHECKS='*,-llvm-header-guard,-llvm-include-order,-bugprone-assert-side-effect,-readability-else-after-return'
-MAKEFLAGS += --output-sync=target --jobs 4
+CC=clang-11
+CFLAGS=-std=c11 -g -fstrict-aliasing -fstack-protector-all -pedantic -Wall -Wextra -Werror -Wfatal-errors --coverage
+LLVM_COV=llvm-cov-11
+CTIDY=clang-tidy-11
+CTIDY_CHECKS='bugprone-*,performance-*,readability-*,-readability-magic-numbers,-clang-analyzer-security.*'
+CTIDY_EXTRA='-std=c11'
 TESTS_SRC=tests.c
 LIB_SRC=buddy_alloc.h
 
@@ -25,7 +26,7 @@ tests.out: $(TESTS_SRC) $(LIB_SRC) test-clang-tidy test-cppcheck
 	$(CC) $(CFLAGS) $(TESTS_SRC) -o $@
 
 test-clang-tidy: $(TESTS_SRC)
-	clang-tidy -checks=$(CTIDY_CHECKS) -warnings-as-errors='*' $^ --
+	$(CTIDY) -checks=$(CTIDY_CHECKS) -warnings-as-errors='*' --extra-arg=$(CTIDY_EXTRA) $^ --
 
 test-cppcheck: $(TESTS_SRC)
 	cppcheck --error-exitcode=1 --quiet $^

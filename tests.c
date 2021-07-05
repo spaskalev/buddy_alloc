@@ -38,8 +38,8 @@ void test_highest_bit() {
 	assert(highest_bit(6) == 4);
 	assert(highest_bit(7) == 4);
 	assert(highest_bit(8) == 8);
-	assert(highest_bit(SIZE_MAX-1) == (1ul << ((sizeof(size_t) * CHAR_BIT) -1)));
-	assert(highest_bit(SIZE_MAX) == (1ul << ((sizeof(size_t) * CHAR_BIT) -1)));
+	assert(highest_bit(SIZE_MAX-1) == (1UL << ((sizeof(size_t) * CHAR_BIT) -1)));
+	assert(highest_bit(SIZE_MAX) == (1UL << ((sizeof(size_t) * CHAR_BIT) -1)));
 }
 
 void test_ceiling_power_of_two() {
