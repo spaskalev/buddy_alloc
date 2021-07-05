@@ -1078,6 +1078,8 @@ void test_buddy_tree_debug() {
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_mark(t, buddy_tree_root());
 	buddy_tree_debug(t, buddy_tree_root());printf("\n"); /* code coverage */
+	buddy_tree_pos invalid_pos = 0;
+	buddy_tree_debug(t, invalid_pos); /* code coverage */
 }
 
 void test_buddy_tree_resize_same_size() {

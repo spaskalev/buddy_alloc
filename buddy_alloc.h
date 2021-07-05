@@ -1136,12 +1136,33 @@ void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos) {
     if (!buddy_tree_valid(t, pos)) {
         return;
     }
-    for (size_t j = buddy_tree_depth(pos); j > 0; j--) {
-        printf(" ");
+
+    buddy_tree_pos start = pos;
+    _Bool going_up = 0;
+    while (1) {
+        if (going_up) {
+            if (! (pos & 1u /* bit-wise */) /* left node */) {
+                pos = buddy_tree_right_adjacent(pos);
+                going_up = 0;
+            } else {
+                pos = buddy_tree_parent(pos);
+                if (pos == start) {
+                    break;
+                }
+            }
+        } else {
+            printf("%.*s",
+                (int) buddy_tree_depth(pos),
+                "                                                               ");
+            printf("pos: %zu status: %zu\n", pos, buddy_tree_status(t, pos));
+            if (buddy_tree_valid(t, buddy_tree_left_child(t, pos))) {
+                pos = buddy_tree_left_child(t, pos);
+            } else {
+                going_up = 1;
+            }
+        }
     }
-    printf("pos: %zu status: %zu\n", pos, buddy_tree_status(t, pos));
-    buddy_tree_debug(t, buddy_tree_left_child(t, pos));
-    buddy_tree_debug(t, buddy_tree_right_child(t, pos));
+
     fflush(stdout);
 }
 
