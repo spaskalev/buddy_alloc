@@ -6,10 +6,11 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
-CC=clang-11
+LLVM_VERSION?=11
+CC=clang-$(LLVM_VERSION)
 CFLAGS=-std=c11 -g -fstrict-aliasing -fstack-protector-all -pedantic -Wall -Wextra -Werror -Wfatal-errors --coverage
-LLVM_COV=llvm-cov-11
-CTIDY=clang-tidy-11
+LLVM_COV=llvm-cov-$(LLVM_VERSION)
+CTIDY=clang-tidy-$(LLVM_VERSION)
 CTIDY_CHECKS='bugprone-*,performance-*,readability-*,-readability-magic-numbers,-clang-analyzer-security.*'
 CTIDY_EXTRA='-std=c11'
 TESTS_SRC=tests.c

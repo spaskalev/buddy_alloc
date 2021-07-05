@@ -12,5 +12,5 @@ jobs:
     - name: setup
       run: sudo apt-get update && sudo apt-get -y -qq install clang-tidy cppcheck cflow
     - name: make
-      run: make
+      run: make LLVM_VERSION=10
       working-directory: .
