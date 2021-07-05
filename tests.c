@@ -2,14 +2,15 @@
  * Copyright 2020-2021 Stanislav Paskalev <spaskalev@protonmail.com>
  */
 
+
+#define start_test printf("Running test: %s in %s:%d\n", __func__, __FILE__, __LINE__);
+
 #include <assert.h>
 #include <errno.h>
 #include <stdalign.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "tests.h"
 
 #define BUDDY_ALLOC_IMPLEMENTATION
 #include "buddy_alloc.h"
