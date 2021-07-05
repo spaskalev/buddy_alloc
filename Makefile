@@ -22,7 +22,7 @@ test: tests.out
 	! grep  '#####:' *.gcov
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
 
-tests.out: $(TESTS_SRC) $(LIB_SRC) test-clang-tidy test-cppcheck
+tests.out: $(TESTS_SRC) $(LIB_SRC) test-clang-tidy test-cppcheck check-recursion
 	$(CC) $(CFLAGS) $(TESTS_SRC) -o $@
 
 test-clang-tidy: $(TESTS_SRC)
@@ -30,6 +30,9 @@ test-clang-tidy: $(TESTS_SRC)
 
 test-cppcheck: $(TESTS_SRC)
 	cppcheck --error-exitcode=1 --quiet $^
+
+check-recursion: $(LIB_SRC)
+	[ $$( cflow --no-main $(LIB_SRC) | grep -c 'recursive:' ) -eq "0" ]
 
 clean:
 	rm -f *.gcda *.gcno *.gcov tests.out
