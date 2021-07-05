@@ -16,9 +16,6 @@
 #include "buddy_alloc.h"
 #undef BUDDY_ALLOC_IMPLEMENTATION
 
-#include "buddy_brk.h"
-#include "buddy_global.h"
-
 void test_highest_bit_position() {
 	assert(highest_bit_position(0) == 0);
 	assert(highest_bit_position(1) == 1);
@@ -1237,44 +1234,6 @@ void test_buddy_tree_interval_contains() {
 	assert(buddy_tree_interval_contains(interval_low, interval_high) == 0);
 }
 
-void test_posix_malloc_free() {
-	start_test;
-	void *r64 = malloc(64);
-	assert(r64 != NULL);
-	free(r64);
-}
-
-void test_posix_malloc_free_large() {
-	start_test;
-	void *large = malloc(BUDDY_BRK_DEFAULT_SIZE*4);
-	assert(large != NULL);
-	free(large);
-}
-
-void test_posix_calloc_free() {
-	start_test;
-	unsigned char *r64 = calloc(1, 64);
-	assert(r64 != NULL);
-	for (size_t i = 0; i < 64; i++) {
-		assert(r64[i] == 0);
-	}
-	free(r64);
-}
-
-void test_posix_realloc_free() {
-	start_test;
-	void *r64 = realloc(NULL, 64);
-	assert(r64 != NULL);
-	free(r64);
-}
-
-void test_non_standard_reallocarray_free() {
-	start_test;
-	void *r64 = reallocarray(NULL, 1, 64);
-	assert(r64 != NULL);
-	free(r64);
-}
-
 int main() {
 	setvbuf(stdout, NULL, _IONBF, 0);
 
@@ -1406,12 +1365,5 @@ int main() {
 		test_buddy_tree_is_free_04();
 		test_buddy_tree_interval();
 		test_buddy_tree_interval_contains();
-	}
-	{
-		test_posix_malloc_free();
-		test_posix_malloc_free_large();
-		test_posix_calloc_free();
-		test_posix_realloc_free();
-		test_non_standard_reallocarray_free();
 	}
 }

@@ -1014,10 +1014,11 @@ void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos) {
 
     struct internal_position internal = buddy_tree_internal_position(t->order, pos);
 
-    /*
-     * Calling mark on a used position is likely a bug in caller.
-     * Caller should handle such check if needed.
-     */
+    /* Calling mark on a used position is a bug in caller */
+    size_t value = read_from_internal_position(t->bits, internal);
+    if (value != 0) {
+        return;
+    }
 
     /* Mark the node as used */
     write_to_internal_position(t->bits, internal, internal.max_value);
@@ -1033,10 +1034,11 @@ void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
 
     struct internal_position internal = buddy_tree_internal_position(t->order, pos);
 
-    /*
-     * Calling release on an unused or a partially-used position is
-     * likely a bug in caller. Caller should handle such check if needed.
-     */
+    /* Calling release on an unused or a partially-used position a bug in caller */
+    size_t value = read_from_internal_position(t->bits, internal);
+    if (value != internal.max_value) {
+        return;
+    }
 
     /* Mark the node as unused */
     write_to_internal_position(t->bits, internal, 0);
