@@ -424,8 +424,7 @@ void test_buddy_resize_embedded_down_already_used() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_embed(data_buf, 4096);
 	assert(buddy != NULL);
-	void *r1024 = buddy_malloc(buddy, 1024);
-	assert(r1024 == data_buf);
+	buddy_malloc(buddy, 1024);
 	assert(buddy_resize(buddy, 256 + buddy_sizeof(256)) == NULL);
 }
 

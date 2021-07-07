@@ -1089,15 +1089,27 @@ static buddy_tree_pos buddy_tree_find_free_internal(struct buddy_tree *t, buddy_
             /* Advance criteria */
             target_status -= 1;
             current_depth += 1;
-            /* Test the left branch */
+            /* Do an optimal fit followed by left-first fit */
             buddy_tree_pos left_pos = buddy_tree_left_child(t, start);
-            current_status = buddy_tree_status(t, left_pos);
-            if (current_status <= target_status) {
+            buddy_tree_pos right_pos = buddy_tree_right_child(t, start);
+            size_t left_status = buddy_tree_status(t, left_pos);
+            size_t right_status = buddy_tree_status(t, right_pos);
+            if (left_status > target_status) { /* left branch is busy, pick right */
+                start = right_pos;
+                current_status = right_status;
+            } else if (right_status > target_status) { /* right branch is busy, pick left */
                 start = left_pos;
-                continue;
+                current_status = left_status;
+            } else {
+                /* Both branches are good, pick the more-used one */
+                if (left_status >= right_status) {
+                    start = left_pos;
+                    current_status = left_status;
+                } else {
+                    start = right_pos;
+                    current_status = right_status;
+                }
             }
-            start = buddy_tree_right_child(t, start);
-            current_status = buddy_tree_status(t, start);
         } else {
             /* No position available down the tree */
             return 0;
