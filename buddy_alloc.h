@@ -397,10 +397,7 @@ _Bool buddy_can_shrink(struct buddy *buddy) {
     if (buddy == NULL) {
         return 0;
     }
-    buddy_toggle_virtual_slots(buddy, 0);
-    _Bool result = buddy_tree_can_shrink(buddy_tree(buddy));
-    buddy_toggle_virtual_slots(buddy, 1);
-    return result;
+    return buddy_is_free(buddy, buddy->memory_size / 2);
 }
 
 size_t buddy_arena_size(struct buddy *buddy) {
@@ -672,7 +669,8 @@ static _Bool buddy_is_free(struct buddy *buddy, size_t from) {
     }
 
     size_t effective_memory_size = ceiling_power_of_two(buddy->memory_size);
-    size_t to = effective_memory_size - (buddy->virtual_slots * BUDDY_ALIGN);
+    size_t to = effective_memory_size -
+        ((buddy->virtual_slots ? buddy->virtual_slots : 1) * BUDDY_ALIGN);
 
     struct buddy_tree *t = buddy_tree(buddy);
 
@@ -681,7 +679,7 @@ static _Bool buddy_is_free(struct buddy *buddy, size_t from) {
     query_range.to = deepest_position_for_offset(buddy, to);
 
     buddy_tree_pos pos = deepest_position_for_offset(buddy, from);
-    while(pos < query_range.to) {
+    while(buddy_tree_valid(t, pos) && (pos < query_range.to)) {
         struct buddy_tree_interval current_test_range = {0};
         struct buddy_tree_interval parent_test_range = buddy_tree_interval(t, buddy_tree_parent(pos));
         while(buddy_tree_interval_contains(query_range, parent_test_range)) {
