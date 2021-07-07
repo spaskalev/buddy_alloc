@@ -3,7 +3,9 @@ A buddy memory allocator for C
 
 # Status
 
-[![cicd](https://github.com/spaskalev/buddy_alloc/workflows/cicd/badge.svg)](https://github.com/spaskalev/buddy_alloc/actions)
+- [![cicd](https://github.com/spaskalev/buddy_alloc/workflows/cicd/badge.svg)](https://github.com/spaskalev/buddy_alloc/actions)
+- [Latest release](https://github.com/spaskalev/buddy_alloc/releases/latest)
+- [Changes](CHANGES.md)
 
 ## Licensing
 
