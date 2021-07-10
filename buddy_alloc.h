@@ -501,7 +501,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
     void *source = address_for_position(buddy, origin);
     void *destination = address_for_position(buddy, new_pos);
     memmove(destination, source, size_for_depth(buddy,
-        current_depth < target_depth ? current_depth : target_depth));
+        current_depth > target_depth ? current_depth : target_depth));
     /* Allocate and return */
     buddy_tree_mark(buddy_tree(buddy), new_pos);
     return destination;
