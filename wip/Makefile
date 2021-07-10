@@ -16,7 +16,7 @@ perf: buddy_shared.so
 	sudo chown $(shell whoami) perf.data
 	perf script | ~/dev/FlameGraph/stackcollapse-perf.pl > out.perf-folded
 	~/dev/FlameGraph/flamegraph.pl out.perf-folded > perf-kernel.svg
-	x-www-browser file://$(shell pwd)/perf-kernel.svg
+	x-www-browser file://$(shell pwd)/perf-kernel.svg &
 
 debug: buddy_shared.so
 	gdb -x gdbinit.cfg --args $(STRESS_NG) --malloc 1 --malloc-ops 1 2>&1

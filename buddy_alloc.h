@@ -429,7 +429,7 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
     size_t target_depth = depth_for_size(buddy, requested_size);
     buddy_tree_pos pos = buddy_tree_find_free(buddy_tree(buddy), target_depth);
 
-    if (! buddy_tree_valid(buddy_tree(buddy), pos)) {
+    if (!pos) {
         return NULL; /* no slot found */
     }
 
@@ -753,8 +753,6 @@ static struct internal_position buddy_tree_internal_position(size_t tree_order, 
 static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order);
 static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order);
 static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos);
-static buddy_tree_pos buddy_tree_find_free_internal(struct buddy_tree *t, buddy_tree_pos start,
-    uint8_t target_depth, uint8_t target_status);
 
 static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value);
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos);
@@ -1071,12 +1069,9 @@ static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
     }
 }
 
-buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth) {
-    return buddy_tree_find_free_internal(t, buddy_tree_root(), depth, depth-1);
-}
-
-static buddy_tree_pos buddy_tree_find_free_internal(struct buddy_tree *t, buddy_tree_pos start,
-        uint8_t target_depth, uint8_t target_status) {
+buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth) {
+    buddy_tree_pos start = buddy_tree_root();
+    uint8_t target_status = target_depth - 1;
     size_t current_depth = buddy_tree_depth(start);
     size_t current_status = buddy_tree_status(t, start);
     while (1) {
@@ -1092,7 +1087,7 @@ static buddy_tree_pos buddy_tree_find_free_internal(struct buddy_tree *t, buddy_
             current_depth += 1;
             /* Do an optimal fit followed by left-first fit */
             buddy_tree_pos left_pos = buddy_tree_left_child(t, start);
-            buddy_tree_pos right_pos = buddy_tree_right_child(t, start);
+            buddy_tree_pos right_pos = left_pos + 1;
             size_t left_status = 0;
             size_t right_status = 0;
             if ((left_status = buddy_tree_status(t, left_pos)) > target_status) {
