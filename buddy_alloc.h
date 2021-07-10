@@ -1044,12 +1044,12 @@ void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
 }
 
 static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
+    size_t size_a = buddy_tree_status(t, buddy_tree_left_child(t, pos));
+    size_t size_b = buddy_tree_status(t, buddy_tree_right_child(t, pos));
     while (pos) {
-        size_t left = buddy_tree_status(t, buddy_tree_left_child(t, pos));
-        size_t right = buddy_tree_status(t, buddy_tree_right_child(t, pos));
         size_t free = 0;
-        if (left || right) {
-            free = (left <= right ? left : right) + 1;
+        if (size_a || size_b) {
+            free = (size_a <= size_b ? size_a : size_b) + 1;
         }
 
         size_t current = buddy_tree_status(t, pos);
@@ -1060,7 +1060,13 @@ static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
         /* Update the node */
         write_to_internal_position(t->bits, buddy_tree_internal_position(t->order, pos), free);
 
+        if (pos == 1) {
+            break;
+        }
+
         /* Advance upwards */
+        size_a = free; /* A remains the current position */
+        size_b = buddy_tree_status(t, pos ^= 1u); /* B is the sibling position */
         pos = buddy_tree_parent(pos);
     }
 }
