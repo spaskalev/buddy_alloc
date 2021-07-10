@@ -571,11 +571,7 @@ static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos) {
 static buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, size_t offset) {
     size_t index = offset / BUDDY_ALIGN;
     buddy_tree_pos pos = buddy_tree_leftmost_child(buddy_tree(buddy));
-    while (index > 0) {
-        pos = buddy_tree_right_adjacent(pos);
-        index--;
-    }
-    return pos;
+    return pos + index;
 }
 
 static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr) {
