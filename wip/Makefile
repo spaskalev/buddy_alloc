@@ -10,10 +10,18 @@ test: buddy_shared.so
 trace: buddy_shared.so
 	ltrace -S -l buddy_shared.so env LD_PRELOAD=./buddy_shared.so $(STRESS_NG) --malloc 1 --malloc-ops 1 2>&1
 
+perf: buddy_shared.so
+	rm -f rm perf.data out.perf-folded perf-kernel.svg
+	sudo perf record -F 99 -g -- env LD_PRELOAD=./buddy_shared.so $(STRESS_NG) --malloc 1 --malloc-ops 15000 2>&1
+	sudo chown $(shell whoami) perf.data
+	perf script | ~/dev/FlameGraph/stackcollapse-perf.pl > out.perf-folded
+	~/dev/FlameGraph/flamegraph.pl out.perf-folded > perf-kernel.svg
+	x-www-browser file://$(shell pwd)/perf-kernel.svg
+
 debug: buddy_shared.so
 	gdb -x gdbinit.cfg --args $(STRESS_NG) --malloc 1 --malloc-ops 1 2>&1
 
 clean:
 	rm -f buddy_shared.so
 
-.PHONY: test trace debug clean
+.PHONY: test trace perf debug clean
