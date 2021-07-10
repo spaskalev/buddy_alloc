@@ -417,7 +417,15 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
         return NULL;
     }
     if (requested_size == 0) {
-        return NULL;
+        /*
+         * Batshit crazy code exists that calls malloc(0) and expects
+         * a result that can be safely passed to free().
+         * And even though this allocator will safely handle a free(NULL)
+         * the particular batshit code will expect a non-NULL malloc(0) result!
+         *
+         * See also https://wiki.sei.cmu.edu/confluence/display/c/MEM04-C.+Beware+of+zero-length+allocations
+         */
+        requested_size = 1;
     }
     if (requested_size > buddy->memory_size) {
         return NULL;
@@ -438,11 +446,10 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
 }
 
 void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size) {
-    if (members_count == 0) {
-        return NULL;
-    }
-    if (member_size == 0) {
-        return NULL;
+    if (members_count == 0 || member_size == 0) {
+        /* See the gleeful remark in malloc */
+        members_count = 1;
+        member_size = 1;
     }
     /* Check for overflow */
     if (((members_count * member_size)/members_count) != member_size) {

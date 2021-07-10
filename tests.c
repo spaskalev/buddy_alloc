@@ -484,7 +484,8 @@ void test_buddy_malloc_zero() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
-	assert(buddy_malloc(buddy, 0) == NULL);
+	/* This is implementation-defined in the standard! */
+	assert(buddy_malloc(buddy, 0) != NULL);
 }
 
 void test_buddy_malloc_larger() {
@@ -623,7 +624,8 @@ void test_buddy_calloc_no_members() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	char *result = buddy_calloc(buddy, 0, 4096);
-	assert(result == NULL);
+	/* This is implementation-defined in the standard! */
+	assert(result != NULL);
 }
 
 void test_buddy_calloc_no_size() {
@@ -632,7 +634,8 @@ void test_buddy_calloc_no_size() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	char *result = buddy_calloc(buddy, sizeof(char), 0);
-	assert(result == NULL);
+	/* This is implementation-defined in the standard! */
+	assert(result != NULL);
 }
 
 void test_buddy_calloc_overflow() {
@@ -650,8 +653,9 @@ void test_buddy_realloc_01() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
+	/* This is implementation-defined! */
 	void *result = buddy_realloc(buddy, NULL, 0);
-	assert(result == NULL);
+	assert(result != NULL);
 }
 
 void test_buddy_realloc_02() {
@@ -743,7 +747,8 @@ void test_buddy_reallocarray_01() {
 	alignas(max_align_t) unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	void *result = buddy_reallocarray(buddy, NULL, 0, 0);
-	assert(result == NULL);
+	/* This is implementation-defined! */
+	assert(result != NULL);
 }
 
 void test_buddy_reallocarray_02() {
@@ -861,7 +866,6 @@ void test_buddy_mixed_sizes_01() {
 	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
-	assert(buddy_malloc(buddy, 0) == NULL);
 	for(size_t i = 1; i <= 64; i++) {
 		assert(buddy_malloc(buddy, i) == data_buf+((i-1)*64));
 	}
