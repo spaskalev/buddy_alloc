@@ -1265,11 +1265,15 @@ void bitset_debug(unsigned char *bitset, size_t length) {
 */
 
 size_t highest_bit_position(size_t value) {
-       size_t pos = ((_Bool) value) & 1u;
-       while ( value >>= 1u ) {
-                pos += 1;
-        }
-       return pos;
+    /*size_t pos = ((_Bool) value) & 1u;
+    while ( value >>= 1u ) {
+        pos += 1;
+    }
+    return pos;*/
+    if (value == 0) {
+        return 0;
+    }
+    return ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value));
 }
 
 size_t highest_bit(size_t value) {
