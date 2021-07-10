@@ -12,7 +12,7 @@ trace: buddy_shared.so
 
 perf: buddy_shared.so
 	rm -f rm perf.data out.perf-folded perf-kernel.svg
-	sudo perf record -F 99 -g -- env LD_PRELOAD=./buddy_shared.so $(STRESS_NG) --malloc 1 --malloc-ops 15000 2>&1
+	sudo perf record -F 99 -g -- env LD_PRELOAD=./buddy_shared.so $(STRESS_NG) --malloc 1 --malloc-ops 100000 2>&1
 	sudo chown $(shell whoami) perf.data
 	perf script | ~/dev/FlameGraph/stackcollapse-perf.pl > out.perf-folded
 	~/dev/FlameGraph/flamegraph.pl out.perf-folded > perf-kernel.svg

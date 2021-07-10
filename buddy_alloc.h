@@ -1203,9 +1203,33 @@ void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
     if (to_pos < from_pos) {
         return;
     }
-    while (from_pos <= to_pos) {
-        bitset_clear(bitset, from_pos);
-        from_pos += 1;
+
+    size_t from_bucket = from_pos / CHAR_BIT;
+    size_t to_bucket = to_pos / CHAR_BIT;
+
+    if (from_bucket == to_bucket) {
+        while (from_pos <= to_pos) {
+            size_t index = from_pos % CHAR_BIT;
+            bitset[from_bucket] &= ~(1u << index);
+            from_pos++;
+        }
+    } else {
+        size_t from_mod = 0;
+        while ((from_mod = (from_pos % CHAR_BIT))) {
+            bitset[from_bucket] &= ~(1u << from_mod);
+            from_pos++;
+        }
+
+        from_bucket = from_pos / CHAR_BIT;
+        size_t to_bucket = to_pos / CHAR_BIT;
+        memset(bitset+from_bucket, 0, to_bucket-from_bucket);
+
+        from_pos = (to_pos / CHAR_BIT) * CHAR_BIT;
+        while (from_pos <= to_pos) {
+            size_t index = from_pos % CHAR_BIT;
+            bitset[to_bucket] &= ~(1u << index);
+            from_pos++;
+        }
     }
 }
 
