@@ -4,4 +4,4 @@
 
 #include <unistd.h>
 
-#define BUDDY_BRK_DEFAULT_SIZE (1u << 20u)
+#define BUDDY_BRK_DEFAULT_SIZE (1u << 26u)

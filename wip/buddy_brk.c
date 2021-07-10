@@ -56,7 +56,7 @@ void buddy_brk_init() {
 
 void buddy_bump_brk() {
     /* Double the break */
-    void *new_brk = sbrk(global_brk.break_at - global_brk.break_start);
+    (void) sbrk(global_brk.break_at - global_brk.break_start);
     if (errno == ENOMEM) {
         return;
     }
@@ -65,7 +65,6 @@ void buddy_bump_brk() {
         return;
     }
 
-    global_brk.break_at = new_brk;
     global_brk.buddy = buddy_resize(global_brk.buddy,
         global_brk.break_at - global_brk.break_start);
 }
@@ -76,7 +75,7 @@ void buddy_lower_brk(void) {
 
 void *malloc(size_t size) {
     if (size == 0) {
-        return NULL;
+        size = 1;
     }
     buddy_brk_init();
     void *result = NULL;
@@ -92,9 +91,6 @@ void free(void *ptr) {
 }
 
 void *calloc(size_t nmemb, size_t size) {
-    if ((nmemb == 0) || (size == 0)) {
-        return NULL;
-    }
     buddy_brk_init();
     void *result = NULL;
     while (!(result = buddy_calloc(global_brk.buddy, nmemb, size))) {
@@ -106,24 +102,20 @@ void *calloc(size_t nmemb, size_t size) {
 }
 
 void *realloc(void *ptr, size_t size) {
-    if (size == 0) {
-        return NULL;
-    }
     buddy_brk_init();
     void *result = NULL;
     while (!(result = buddy_realloc(global_brk.buddy, ptr, size))) {
+        assert(buddy_arena_size(global_brk.buddy));
         buddy_bump_brk();
     }
     return result;
 }
 
 void *reallocarray(void *ptr, size_t nmemb, size_t size) {
-    if ((nmemb == 0) || (size == 0)) {
-        return NULL;
-    }
     buddy_brk_init();
     void *result = NULL;
     while (!(result = buddy_reallocarray(global_brk.buddy, ptr, nmemb, size))) {
+        assert(buddy_arena_size(global_brk.buddy));
         buddy_bump_brk();
     }
     return result;

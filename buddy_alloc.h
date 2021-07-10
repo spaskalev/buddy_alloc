@@ -445,7 +445,7 @@ void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size
         return NULL;
     }
     /* Check for overflow */
-    if ((members_count * member_size)/members_count != member_size) {
+    if (((members_count * member_size)/members_count) != member_size) {
         return NULL;
     }
     size_t total_size = members_count * member_size;
