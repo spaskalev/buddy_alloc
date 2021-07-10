@@ -74,9 +74,6 @@ void buddy_lower_brk(void) {
 }
 
 void *malloc(size_t size) {
-    if (size == 0) {
-        size = 1;
-    }
     buddy_brk_init();
     void *result = NULL;
     while (!(result = buddy_malloc(global_brk.buddy, size))) {
