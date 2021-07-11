@@ -742,7 +742,6 @@ struct buddy_tree {
 struct internal_position {
     size_t max_value;
     size_t local_offset;
-    size_t local_index;
     size_t bitset_location;
 };
 
@@ -772,9 +771,9 @@ static inline struct internal_position buddy_tree_internal_position(size_t tree_
     struct internal_position p = {0};
     p.max_value = tree_order - buddy_tree_depth(pos) + 1;
     size_t total_offset = size_for_order(tree_order, p.max_value);
+    size_t local_index = buddy_tree_index_internal(pos);
     p.local_offset = highest_bit_position(p.max_value);
-    p.local_index = buddy_tree_index_internal(pos);
-    p.bitset_location = total_offset + (p.local_offset*p.local_index);
+    p.bitset_location = total_offset + (p.local_offset * local_index);
     return p;
 }
 
@@ -935,7 +934,7 @@ size_t buddy_tree_index(buddy_tree_pos pos) {
     return buddy_tree_index_internal(pos);
 }
 
-static size_t buddy_tree_index_internal(buddy_tree_pos pos) {
+static inline size_t buddy_tree_index_internal(buddy_tree_pos pos) {
     /* Clear out the highest bit, this gives us the index
      * in a row of sibling nodes */
     /* % ((sizeof(size_t) * CHAR_BIT)-1) ensures we don't shift into
