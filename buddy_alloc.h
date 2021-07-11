@@ -171,7 +171,7 @@ _Bool buddy_tree_can_shrink(struct buddy_tree *t);
  */
 
 /* Implementation defined */
-void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos);
+void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos, size_t start_size);
 
 /*
  * A char-backed bitset implementation
@@ -697,7 +697,7 @@ void buddy_debug(struct buddy *buddy) {
     printf("mode: ");printf(buddy->relative_mode ? "embedded" : "standard");printf("\n");
     printf("virtual slots: %zu\n", buddy->virtual_slots);
     printf("allocator tree follows:\n");
-    buddy_tree_debug(buddy_tree(buddy), buddy_tree_root());
+    buddy_tree_debug(buddy_tree(buddy), buddy_tree_root(), ceiling_power_of_two(buddy->memory_size));
 }
 
 /*
@@ -1094,7 +1094,8 @@ _Bool buddy_tree_can_shrink(struct buddy_tree *t) {
     return 1;
 }
 
-void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos) {
+void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos,
+        size_t start_size) {
     if (!buddy_tree_valid(t, pos)) {
         return;
     }
@@ -1116,7 +1117,11 @@ void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos) {
             printf("%.*s",
                 (int) buddy_tree_depth(pos),
                 "                                                               ");
-            printf("pos: %zu status: %zu\n", pos, buddy_tree_status(t, pos));
+            printf("pos: %zu status: %zu size: %zu\n",
+                pos,
+                buddy_tree_status(t, pos),
+                start_size 
+                    >> ((buddy_tree_depth(pos) - 1u) % ((sizeof(size_t) * CHAR_BIT)-1)));
             if (buddy_tree_valid(t, buddy_tree_left_child(t, pos))) {
                 pos = buddy_tree_left_child(t, pos);
             } else {
