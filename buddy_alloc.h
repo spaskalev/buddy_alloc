@@ -177,7 +177,7 @@ void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos);
  * A char-backed bitset implementation
  */
 
-size_t bitset_size(size_t elements);
+size_t bitset_sizeof(size_t elements);
 
 void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_pos);
 
@@ -735,7 +735,7 @@ void buddy_debug(struct buddy *buddy) {
 struct buddy_tree {
     uint8_t order;
     size_t upper_pos_bound;
-    unsigned char bits[];
+    size_t data[];
 };
 
 struct internal_position {
@@ -777,11 +777,8 @@ static inline struct internal_position buddy_tree_internal_position(size_t tree_
 }
 
 size_t buddy_tree_sizeof(uint8_t order) {
-    size_t result = 0;
-    result = size_for_order(order, 0);
-    result /= 8; /* convert bits to bytes */
-    result += 1; /* any bits not landing on byte boundary */
-    result += sizeof(struct buddy_tree);
+    size_t result = sizeof(struct buddy_tree);
+    result += bitset_sizeof(size_for_order(order, 0));
     return result;
 }
 
@@ -941,7 +938,7 @@ static inline size_t buddy_tree_index_internal(buddy_tree_pos pos) {
 }
 
 static inline unsigned char *buddy_tree_bits(struct buddy_tree *t) {
-    return t->bits;
+    return (unsigned char *) t->data;
 }
 
 static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
@@ -1163,7 +1160,7 @@ void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos) {
  * A char-backed bitset implementation
  */
 
-size_t bitset_size(size_t elements) {
+size_t bitset_sizeof(size_t elements) {
     return ((elements) + CHAR_BIT - 1u) / CHAR_BIT;
 }
 

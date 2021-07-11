@@ -41,7 +41,9 @@ void test_ceiling_power_of_two() {
 void test_bitset_basic() {
 	start_test;
 	unsigned char buf[4] = {0};
-	assert(bitset_size(8) == 1);
+	assert(bitset_sizeof(7) == 1);
+	assert(bitset_sizeof(8) == 1);
+	assert(bitset_sizeof(9) == 2);
 	assert(bitset_test(buf, 0) == 0);
 	bitset_set(buf, 0);
 	assert(bitset_test(buf, 0) == 1);
@@ -72,8 +74,8 @@ void test_bitset_range() {
 
 void test_bitset_shift() {
 	start_test;
-	unsigned char buf[bitset_size(16)];
-	for (size_t i = 0; i < bitset_size(16); i++) {
+	unsigned char buf[bitset_sizeof(16)];
+	for (size_t i = 0; i < bitset_sizeof(16); i++) {
 		buf[i] = 0;
 	}
 	for (size_t i = 0; i < 16; i++) {
