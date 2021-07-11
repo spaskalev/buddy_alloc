@@ -129,7 +129,7 @@ buddy_tree_pos buddy_tree_left_child(struct buddy_tree *t, buddy_tree_pos pos);
 buddy_tree_pos buddy_tree_right_child(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the parent node position or an invalid position if there is no parent node */
-buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos);
+static inline buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos);
 
 /* Returns the right adjacent node position or an invalid position if there is no right adjacent node */
 buddy_tree_pos buddy_tree_right_adjacent(buddy_tree_pos pos);
@@ -208,7 +208,7 @@ void bitset_debug(unsigned char *bitset, size_t length);
 static inline size_t highest_bit_position(size_t value);
 
 /* Returns the nearest larger or equal power of two */
-size_t ceiling_power_of_two(size_t value);
+static inline size_t ceiling_power_of_two(size_t value);
 
 /*
  Implementation
@@ -237,7 +237,7 @@ struct buddy_embed_check {
 
 static size_t buddy_tree_order_for_memory(size_t memory_size);
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size);
-static size_t size_for_depth(struct buddy *buddy, size_t depth);
+static inline size_t size_for_depth(struct buddy *buddy, size_t depth);
 static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos);
 static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr);
 static unsigned char *buddy_main(struct buddy *buddy);
@@ -554,10 +554,9 @@ static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
     return depth;
 }
 
-static size_t size_for_depth(struct buddy *buddy, size_t depth) {
-    depth = depth ? depth : 1; /* Silences a clang warning about undefined right shift */
-    size_t result = ceiling_power_of_two(buddy->memory_size) >> (depth-1);
-    return result;
+static inline size_t size_for_depth(struct buddy *buddy, size_t depth) {
+    depth += !depth; /* Silences a clang warning about undefined right shift */
+    return ceiling_power_of_two(buddy->memory_size) >> (depth-1);
 }
 
 static struct buddy_tree *buddy_tree(struct buddy *buddy) {
@@ -742,7 +741,6 @@ struct buddy_tree {
 struct internal_position {
     size_t max_value;
     size_t local_offset;
-    size_t local_index;
     size_t bitset_location;
 };
 
@@ -772,9 +770,9 @@ static inline struct internal_position buddy_tree_internal_position(size_t tree_
     struct internal_position p = {0};
     p.max_value = tree_order - buddy_tree_depth(pos) + 1;
     size_t total_offset = size_for_order(tree_order, p.max_value);
+    size_t local_index = buddy_tree_index_internal(pos);
     p.local_offset = highest_bit_position(p.max_value);
-    p.local_index = buddy_tree_index_internal(pos);
-    p.bitset_location = total_offset + (p.local_offset*p.local_index);
+    p.bitset_location = total_offset + (p.local_offset * local_index);
     return p;
 }
 
@@ -915,12 +913,8 @@ buddy_tree_pos buddy_tree_right_child(struct buddy_tree *t, buddy_tree_pos pos) 
     return pos;
 }
 
-buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos) {
-    size_t parent = pos / 2;
-    if ((parent != pos) && parent != 0) {
-        return parent;
-    }
-    return 0; /* root node has no parent node */
+static inline buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos) {
+    return pos/2;
 }
 
 buddy_tree_pos buddy_tree_right_adjacent(buddy_tree_pos pos) {
@@ -935,7 +929,7 @@ size_t buddy_tree_index(buddy_tree_pos pos) {
     return buddy_tree_index_internal(pos);
 }
 
-static size_t buddy_tree_index_internal(buddy_tree_pos pos) {
+static inline size_t buddy_tree_index_internal(buddy_tree_pos pos) {
     /* Clear out the highest bit, this gives us the index
      * in a row of sibling nodes */
     /* % ((sizeof(size_t) * CHAR_BIT)-1) ensures we don't shift into
@@ -947,26 +941,19 @@ static size_t buddy_tree_index_internal(buddy_tree_pos pos) {
 }
 
 static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
-    while (pos.local_offset) {
-        if (value & 1u) {
-            bitset_set(bitset, pos.bitset_location);
+    for (size_t shift = 0; shift < pos.local_offset; shift++) {
+        if (value & (1u << shift)) {
+            bitset_set(bitset, pos.bitset_location+shift);
         } else {
-            bitset_clear(bitset, pos.bitset_location);
+            bitset_clear(bitset, pos.bitset_location+shift);
         }
-        value >>= 1u;
-        pos.bitset_location += 1;
-        pos.local_offset -= 1;
     }
 }
 
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos) {
     size_t result = 0;
-    size_t shift = 0;
-    while (pos.local_offset) {
-        result |= (size_t) (bitset_test(bitset, pos.bitset_location) << shift);
-        pos.bitset_location += 1;
-        pos.local_offset -= 1;
-        shift += 1;
+    for (size_t shift = 0; shift < pos.local_offset; shift++) {
+        result |= (size_t) (bitset_test(bitset, pos.bitset_location + shift) << shift);
     }
     return result;
 }
@@ -1283,15 +1270,9 @@ static inline size_t highest_bit_position(size_t value) {
     return ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value));
 }
 
-size_t ceiling_power_of_two(size_t value) {
-    if (value == 0) {
-        return 1;
-    }
-    size_t hb = 1ul << ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value)-1);
-    if (hb == value) {
-        return hb;
-    }
-    return hb << 1u;
+static inline size_t ceiling_power_of_two(size_t value) {
+    value += !value; /* branchless x -> { 1 for 0, x for x } */
+    return 1u << ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value + value - 1)-1);
 }
 
 #endif /* BUDDY_ALLOC_IMPLEMENTATION */
