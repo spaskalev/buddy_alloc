@@ -946,15 +946,12 @@ static inline size_t buddy_tree_index_internal(buddy_tree_pos pos) {
 }
 
 static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
-    while (pos.local_offset) {
-        if (value & 1u) {
-            bitset_set(bitset, pos.bitset_location);
+    for (size_t shift = 0; shift < pos.local_offset; shift++) {
+        if (value & (1u << shift)) {
+            bitset_set(bitset, pos.bitset_location+shift);
         } else {
-            bitset_clear(bitset, pos.bitset_location);
+            bitset_clear(bitset, pos.bitset_location+shift);
         }
-        value >>= 1u;
-        pos.bitset_location += 1;
-        pos.local_offset -= 1;
     }
 }
 
