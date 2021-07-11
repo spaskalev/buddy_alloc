@@ -1113,14 +1113,21 @@ void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos,
                 }
             }
         } else {
+            struct internal_position pos_internal =
+                buddy_tree_internal_position(t->order, pos);
+            size_t pos_status = read_from_internal_position(buddy_tree_bits(t), pos_internal);
+            size_t pos_size = start_size 
+                >> ((buddy_tree_depth(pos) - 1u)
+                    % ((sizeof(size_t) * CHAR_BIT)-1));
             printf("%.*s",
                 (int) buddy_tree_depth(pos),
                 "                                                               ");
-            printf("pos: %zu status: %zu size: %zu\n",
-                pos,
-                buddy_tree_status(t, pos),
-                start_size 
-                    >> ((buddy_tree_depth(pos) - 1u) % ((sizeof(size_t) * CHAR_BIT)-1)));
+            printf("pos: %zu status: %zu", pos, pos_status);
+            if (pos_status == pos_internal.max_value) {
+                printf(" size: %zu\n", pos_size);
+            } else {
+                printf("\n");
+            }
             if (buddy_tree_valid(t, buddy_tree_left_child(t, pos))) {
                 pos = buddy_tree_left_child(t, pos);
             } else {
