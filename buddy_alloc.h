@@ -269,6 +269,10 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
     if (main_alignment != 0) {
         return NULL;
     }
+    /* Trim down memory to alignment */
+    if (memory_size % BUDDY_ALIGN) {
+        memory_size -= (memory_size % BUDDY_ALIGN);
+    }
     size_t size = buddy_sizeof(memory_size);
     if (size == 0) {
         return NULL;
@@ -317,6 +321,11 @@ struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size) {
 }
 
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size) {
+    /* Trim down memory to alignment */
+    if (new_memory_size % BUDDY_ALIGN) {
+        new_memory_size -= (new_memory_size % BUDDY_ALIGN);
+    }
+
     /* Account for tree use */
     if (!buddy_is_free(buddy, new_memory_size)) {
         return NULL;
@@ -344,13 +353,11 @@ static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memor
         return NULL;
     }
 
-    /* Account for tree use */
-    if (!buddy_is_free(buddy, result.offset)) {
-        return NULL;
-    }
-
     /* Resize the allocator in the normal way */
     struct buddy *resized = buddy_resize_standard(buddy, result.offset);
+    if (! resized) {
+        return NULL;
+    }
 
     /* Get the absolute main address. The relative will be invalid after relocation. */
     unsigned char *main = buddy_main(buddy);
@@ -588,13 +595,8 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state) {
     }
 
     /* Get the area that we need to mask and pad it to alignment */
+    /* Node memory size is already aligned to BUDDY_ALIGN */
     size_t delta = effective_memory_size - memory_size;
-    if (delta < BUDDY_ALIGN) {
-        delta = BUDDY_ALIGN;
-    }
-    if (delta % BUDDY_ALIGN) {
-        delta += BUDDY_ALIGN - (delta % BUDDY_ALIGN);
-    }
 
     /* Update the virtual slot count */
     buddy->virtual_slots = state ? (delta / BUDDY_ALIGN) : 0;
@@ -632,10 +634,7 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state) {
  after the indicated relative memory index. Used to check if
  the arena can be downsized. */
 static _Bool buddy_is_free(struct buddy *buddy, size_t from) {
-    /* Adjust from for alignment */
-    if (from % BUDDY_ALIGN) {
-        from -= (from % BUDDY_ALIGN);
-    }
+    /* from is already adjusted for alignment */
 
     size_t effective_memory_size = ceiling_power_of_two(buddy->memory_size);
     size_t to = effective_memory_size -
