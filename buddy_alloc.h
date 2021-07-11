@@ -648,8 +648,9 @@ static _Bool buddy_is_free(struct buddy *buddy, size_t from) {
 
     buddy_tree_pos pos = deepest_position_for_offset(buddy, from);
     while(buddy_tree_valid(t, pos) && (pos < query_range.to)) {
-        struct buddy_tree_interval current_test_range = {0};
-        struct buddy_tree_interval parent_test_range = buddy_tree_interval(t, buddy_tree_parent(pos));
+        struct buddy_tree_interval current_test_range = buddy_tree_interval(t, pos);
+        struct buddy_tree_interval parent_test_range =
+            buddy_tree_interval(t, buddy_tree_parent(pos));
         while(buddy_tree_interval_contains(query_range, parent_test_range)) {
             pos = buddy_tree_parent(pos);
             current_test_range = parent_test_range;
