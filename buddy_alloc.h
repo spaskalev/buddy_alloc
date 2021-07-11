@@ -208,7 +208,7 @@ void bitset_debug(unsigned char *bitset, size_t length);
 static inline size_t highest_bit_position(size_t value);
 
 /* Returns the nearest larger or equal power of two */
-size_t ceiling_power_of_two(size_t value);
+static inline size_t ceiling_power_of_two(size_t value);
 
 /*
  Implementation
@@ -1281,15 +1281,9 @@ static inline size_t highest_bit_position(size_t value) {
     return ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value));
 }
 
-size_t ceiling_power_of_two(size_t value) {
-    if (value == 0) {
-        return 1;
-    }
-    size_t hb = 1ul << ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value)-1);
-    if (hb == value) {
-        return hb;
-    }
-    return hb << 1u;
+static inline size_t ceiling_power_of_two(size_t value) {
+    value += !value; /* branchless x -> { 1 for 0, x for x } */
+    return 1u << ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value + value - 1)-1);
 }
 
 #endif /* BUDDY_ALLOC_IMPLEMENTATION */

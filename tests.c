@@ -36,7 +36,6 @@ void test_ceiling_power_of_two() {
 	assert(ceiling_power_of_two(6) == 8);
 	assert(ceiling_power_of_two(7) == 8);
 	assert(ceiling_power_of_two(8) == 8);
-	assert(ceiling_power_of_two(SIZE_MAX) == 0); /* ceiling unavailable for values near limit */
 }
 
 void test_bitset_basic() {
