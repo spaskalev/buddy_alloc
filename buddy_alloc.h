@@ -237,7 +237,7 @@ struct buddy_embed_check {
 
 static size_t buddy_tree_order_for_memory(size_t memory_size);
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size);
-static size_t size_for_depth(struct buddy *buddy, size_t depth);
+static inline size_t size_for_depth(struct buddy *buddy, size_t depth);
 static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos);
 static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr);
 static unsigned char *buddy_main(struct buddy *buddy);
@@ -554,10 +554,9 @@ static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
     return depth;
 }
 
-static size_t size_for_depth(struct buddy *buddy, size_t depth) {
-    depth = depth ? depth : 1; /* Silences a clang warning about undefined right shift */
-    size_t result = ceiling_power_of_two(buddy->memory_size) >> (depth-1);
-    return result;
+static inline size_t size_for_depth(struct buddy *buddy, size_t depth) {
+    depth += !depth; /* Silences a clang warning about undefined right shift */
+    return ceiling_power_of_two(buddy->memory_size) >> (depth-1);
 }
 
 static struct buddy_tree *buddy_tree(struct buddy *buddy) {
