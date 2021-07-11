@@ -215,12 +215,42 @@ void test_buddy_init_virtual_slots() {
 	assert(buddy != NULL);
 }
 
-void test_buddy_init_non_power_of_two_memory() {
+void test_buddy_init_non_power_of_two_memory_01() {
 	start_test;
 	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
 	alignas(max_align_t) unsigned char data_buf[4096];
 
 	size_t cutoff = 256;
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096-cutoff);
+	assert(buddy != NULL);
+
+	for (size_t i = 0; i < 60; i++) {
+		assert(buddy_malloc(buddy, BUDDY_ALIGN) != NULL);
+	}
+	assert(buddy_malloc(buddy, BUDDY_ALIGN) == NULL);
+}
+
+void test_buddy_init_non_power_of_two_memory_02() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
+
+	size_t cutoff = 256+(sizeof(size_t)/2);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096-cutoff);
+	assert(buddy != NULL);
+
+	for (size_t i = 0; i < 59; i++) {
+		assert(buddy_malloc(buddy, BUDDY_ALIGN) != NULL);
+	}
+	assert(buddy_malloc(buddy, BUDDY_ALIGN) == NULL);
+}
+
+void test_buddy_init_non_power_of_two_memory_03() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	alignas(max_align_t) unsigned char data_buf[4096];
+
+	size_t cutoff = 256-(sizeof(size_t)/2);
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096-cutoff);
 	assert(buddy != NULL);
 
@@ -264,6 +294,24 @@ void test_buddy_resize_up_after_reserved() {
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 2048) == buddy);
+}
+
+void test_buddy_resize_down_to_virtual() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(1024)];
+	alignas(max_align_t) unsigned char data_buf[1024];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1024);
+	assert(buddy != NULL);
+	assert(buddy_resize(buddy, 832) == buddy);
+}
+
+void test_buddy_resize_down_to_virtual_partial() {
+	start_test;
+	alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(1024)];
+	alignas(max_align_t) unsigned char data_buf[1024];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1024);
+	assert(buddy != NULL);
+	assert(buddy_resize(buddy, 832-1) == buddy);
 }
 
 void test_buddy_resize_down_within_reserved() {
@@ -1246,12 +1294,16 @@ int main() {
 
 		test_buddy_init();
 		test_buddy_init_virtual_slots();
-		test_buddy_init_non_power_of_two_memory();
+		test_buddy_init_non_power_of_two_memory_01();
+		test_buddy_init_non_power_of_two_memory_02();
+		test_buddy_init_non_power_of_two_memory_03();
 
 		test_buddy_resize_noop();
 		test_buddy_resize_up_within_reserved();
 		test_buddy_resize_up_at_reserved();
 		test_buddy_resize_up_after_reserved();
+		test_buddy_resize_down_to_virtual();
+		test_buddy_resize_down_to_virtual_partial();
 		test_buddy_resize_down_within_reserved();
 		test_buddy_resize_down_within_reserved_failure();
 		test_buddy_resize_down_at_reserved();
