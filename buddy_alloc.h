@@ -129,7 +129,7 @@ buddy_tree_pos buddy_tree_left_child(struct buddy_tree *t, buddy_tree_pos pos);
 buddy_tree_pos buddy_tree_right_child(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the parent node position or an invalid position if there is no parent node */
-buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos);
+static inline buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos);
 
 /* Returns the right adjacent node position or an invalid position if there is no right adjacent node */
 buddy_tree_pos buddy_tree_right_adjacent(buddy_tree_pos pos);
@@ -914,12 +914,8 @@ buddy_tree_pos buddy_tree_right_child(struct buddy_tree *t, buddy_tree_pos pos) 
     return pos;
 }
 
-buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos) {
-    size_t parent = pos / 2;
-    if ((parent != pos) && parent != 0) {
-        return parent;
-    }
-    return 0; /* root node has no parent node */
+static inline buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos) {
+    return pos/2;
 }
 
 buddy_tree_pos buddy_tree_right_adjacent(buddy_tree_pos pos) {

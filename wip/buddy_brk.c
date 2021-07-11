@@ -21,7 +21,7 @@ static struct {
     struct buddy *buddy;
 } global_brk = {0};
 
-void buddy_brk_init() {
+static void buddy_brk_init() {
     if (global_brk.buddy) {
         return;
     }
@@ -54,7 +54,7 @@ void buddy_brk_init() {
         global_brk.break_at - global_brk.break_start);
 }
 
-void buddy_bump_brk() {
+static void buddy_bump_brk() {
     /* Double the break */
     (void) sbrk(global_brk.break_at - global_brk.break_start);
     if (errno == ENOMEM) {
@@ -69,7 +69,7 @@ void buddy_bump_brk() {
         global_brk.break_at - global_brk.break_start);
 }
 
-void buddy_lower_brk(void) {
+static void buddy_lower_brk(void) {
 
 }
 
