@@ -970,7 +970,7 @@ static void write_to_internal_position(unsigned char *bitset, struct internal_po
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos) {
     size_t result = 0;
     for (size_t shift = 0; shift < pos.local_offset; shift++) {
-        result |= (size_t) (bitset_test(bitset, pos.bitset_location + shift) << shift);
+        result |= (((size_t) bitset_test(bitset, pos.bitset_location + shift)) << shift);
     }
     return result;
 }
