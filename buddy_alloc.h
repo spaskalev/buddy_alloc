@@ -1203,40 +1203,6 @@ void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
     }
 }
 
-void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
-    if (to_pos < from_pos) {
-        return;
-    }
-
-    size_t from_bucket = from_pos / CHAR_BIT;
-    size_t to_bucket = to_pos / CHAR_BIT;
-
-    if (from_bucket == to_bucket) {
-        while (from_pos <= to_pos) {
-            size_t index = from_pos % CHAR_BIT;
-            bitset[from_bucket] &= ~(1u << index);
-            from_pos++;
-        }
-    } else {
-        size_t from_mod = 0;
-        while ((from_mod = (from_pos % CHAR_BIT))) {
-            bitset[from_bucket] &= ~(1u << from_mod);
-            from_pos++;
-        }
-
-        from_bucket = from_pos / CHAR_BIT;
-        size_t to_bucket = to_pos / CHAR_BIT;
-        memset(bitset+from_bucket, 0, to_bucket-from_bucket);
-
-        from_pos = (to_pos / CHAR_BIT) * CHAR_BIT;
-        while (from_pos <= to_pos) {
-            size_t index = from_pos % CHAR_BIT;
-            bitset[to_bucket] &= ~(1u << index);
-            from_pos++;
-        }
-    }
-}
-
 static inline void bitset_set(unsigned char *bitset, size_t pos) {
     size_t bucket = pos / CHAR_BIT;
     size_t index = pos % CHAR_BIT;
@@ -1253,6 +1219,37 @@ static inline _Bool bitset_test(const unsigned char *bitset, size_t pos) {
     size_t bucket = pos / CHAR_BIT;
     size_t index = pos % CHAR_BIT;
     return (_Bool)(bitset[bucket] & (1u << index));
+}
+
+static uint8_t bitset_char_mask[8][8] = {
+    {1, 3, 7, 15, 31, 63, 127, 255},
+    {0, 2, 6, 14, 30, 62, 126, 254},
+    {0, 0, 4, 12, 28, 60, 124, 252},
+    {0, 0, 0,  8, 24, 56, 120, 248},
+    {0, 0, 0,  0, 16, 48, 112, 240},
+    {0, 0, 0,  0,  0, 32,  96, 224},
+    {0, 0, 0,  0,  0,  0,  64, 192},
+    {0, 0, 0,  0,  0,  0,   0, 128},
+};
+
+void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
+    if (to_pos < from_pos) {
+        return;
+    }
+
+    size_t from_bucket = from_pos / CHAR_BIT;
+    size_t to_bucket = to_pos / CHAR_BIT;
+
+    size_t from_index = from_pos % CHAR_BIT;
+    size_t to_index = to_pos % CHAR_BIT;
+
+    if (from_bucket == to_bucket) {
+        bitset[from_bucket] &= ~bitset_char_mask[from_index][to_index];
+    } else {
+        bitset[from_bucket] &= ~bitset_char_mask[from_index][7];
+        memset(bitset+from_bucket, 0, to_bucket-from_bucket);
+        bitset[to_bucket] &= ~bitset_char_mask[0][to_index];
+    }
 }
 
 void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by) {
