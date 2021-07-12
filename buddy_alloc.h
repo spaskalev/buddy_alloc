@@ -958,19 +958,22 @@ static inline size_t buddy_tree_size_for_order(struct buddy_tree *t,
 }
 
 static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
-    for (size_t shift = 0; shift < pos.local_offset; shift++) {
-        if (value & (1u << shift)) {
-            bitset_set(bitset, pos.bitset_location+shift);
+    for (size_t shift = 1; shift <= pos.local_offset; shift++) {
+        size_t at = pos.bitset_location+pos.local_offset-shift;
+        if (value & 1u) {
+            bitset_set(bitset, at);
         } else {
-            bitset_clear(bitset, pos.bitset_location+shift);
+            bitset_clear(bitset, at);
         }
+        value >>= 1u;
     }
 }
 
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos) {
     size_t result = 0;
     for (size_t shift = 0; shift < pos.local_offset; shift++) {
-        result |= (((size_t) bitset_test(bitset, pos.bitset_location + shift)) << shift);
+        result <<= 1u;
+        result += bitset_test(bitset, pos.bitset_location + shift);
     }
     return result;
 }
