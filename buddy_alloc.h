@@ -1051,15 +1051,24 @@ static void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
 }
 
 static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
-    size_t size_a = buddy_tree_status(t, buddy_tree_left_child(t, pos));
-    size_t size_b = buddy_tree_status(t, buddy_tree_right_child(t, pos));
+    if (! pos) {
+        return;
+    }
+
+    struct internal_position pos_internal =
+        buddy_tree_internal_position_tree(t, buddy_tree_left_child(t, pos));
+    size_t size_a = read_from_internal_position(buddy_tree_bits(t), pos_internal);
+
+    pos_internal.bitset_location += pos_internal.local_offset;
+    size_t size_b = read_from_internal_position(buddy_tree_bits(t), pos_internal);
+
     while (pos) {
         size_t free = 0;
         if (size_a || size_b) {
             free = (size_a <= size_b ? size_a : size_b) + 1;
         }
 
-        struct internal_position pos_internal = buddy_tree_internal_position_tree(t, pos);
+        pos_internal = buddy_tree_internal_position_tree(t, pos);
         size_t current = read_from_internal_position(buddy_tree_bits(t), pos_internal);
         if (free == current) {
             break; /* short the parent chain update */
