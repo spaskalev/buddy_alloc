@@ -151,6 +151,9 @@ static _Bool buddy_tree_interval_contains(struct buddy_tree_interval outer,
 /* Returns the free capacity at or underneath the indicated position */
 static size_t buddy_tree_status(struct buddy_tree *t, buddy_tree_pos pos);
 
+/* Fast test whether the indicated position is fully-allocated */
+static inline _Bool buddy_tree_fully_used(struct buddy_tree *t, buddy_tree_pos pos);
+
 /* Marks the indicated position as allocated and propagates the change */
 static void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos);
 
@@ -570,7 +573,7 @@ static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned c
     buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
 
     /* Find the actual allocated position tracking this address */
-    while (pos && (! buddy_tree_status(buddy_tree(buddy), pos))) {
+    while (pos && !buddy_tree_fully_used(buddy_tree(buddy), pos)) {
         pos = buddy_tree_parent(pos);
     }
 
@@ -1006,6 +1009,15 @@ static size_t buddy_tree_status(struct buddy_tree *t, buddy_tree_pos pos) {
 
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
     return read_from_internal_position(buddy_tree_bits(t), internal);
+}
+
+static inline _Bool buddy_tree_fully_used(struct buddy_tree *t, buddy_tree_pos pos) {
+    /*
+     * Note that when we are looking for a fully-allocated slot
+     * we don't need the full status - just the highest bit.
+     */
+    struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
+    return bitset_test(buddy_tree_bits(t), internal.bitset_location);
 }
 
 static void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos) {
