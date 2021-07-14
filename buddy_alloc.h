@@ -1043,6 +1043,12 @@ static void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
     /* Calling release on an unused or a partially-used position a bug in caller */
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
 
+#ifdef BUDDY_ALLOC_SAFETY
+    if (read_from_internal_position(buddy_tree_bits(t), internal) != internal.max_value) {
+        return;
+    }
+#endif
+
     /* Mark the node as unused */
     write_to_internal_position(buddy_tree_bits(t), internal, 0);
 
