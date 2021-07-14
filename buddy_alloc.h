@@ -1059,14 +1059,14 @@ static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
             free = (size_a <= size_b ? size_a : size_b) + 1;
         }
 
-        size_t current = buddy_tree_status(t, pos);
+        struct internal_position pos_internal = buddy_tree_internal_position_tree(t, pos);
+        size_t current = read_from_internal_position(buddy_tree_bits(t), pos_internal);
         if (free == current) {
             break; /* short the parent chain update */
         }
 
         /* Update the node */
-        write_to_internal_position(buddy_tree_bits(t),
-            buddy_tree_internal_position_tree(t, pos), free);
+        write_to_internal_position(buddy_tree_bits(t), pos_internal, free);
 
         if (pos == 1) {
             break;
