@@ -1072,9 +1072,16 @@ static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
             break;
         }
 
-        /* Advance upwards */
         size_a = free; /* A remains the current position */
-        size_b = buddy_tree_status(t, pos ^= 1u); /* B is the sibling position */
+        /* B is the sibling position */
+        if (pos & 1u) {
+            pos_internal.bitset_location -= pos_internal.local_offset;
+        } else {
+            pos_internal.bitset_location += pos_internal.local_offset;
+        }
+        size_b = read_from_internal_position(buddy_tree_bits(t), pos_internal);
+
+        /* Advance upwards */
         pos = buddy_tree_parent(pos);
     }
 }
