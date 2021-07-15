@@ -1248,22 +1248,24 @@ static void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_p
     }
 }
 
+static uint8_t bitset_index_mask[8] = {1, 2, 4, 8, 16, 32, 64, 128};
+
 static inline void bitset_set(unsigned char *bitset, size_t pos) {
     size_t bucket = pos / CHAR_BIT;
     size_t index = pos % CHAR_BIT;
-    bitset[bucket] |= (1u << index);
+    bitset[bucket] |= bitset_index_mask[index];
 }
 
 static inline void bitset_clear(unsigned char *bitset, size_t pos) {
     size_t bucket = pos / CHAR_BIT;
     size_t index = pos % CHAR_BIT;
-    bitset[bucket] &= ~(1u << index);
+    bitset[bucket] &= ~bitset_index_mask[index];
 }
 
 static inline _Bool bitset_test(const unsigned char *bitset, size_t pos) {
     size_t bucket = pos / CHAR_BIT;
     size_t index = pos % CHAR_BIT;
-    return (_Bool)(bitset[bucket] & (1u << index));
+    return bitset[bucket] & bitset_index_mask[index];
 }
 
 static uint8_t bitset_char_mask[8][8] = {
