@@ -567,9 +567,13 @@ static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned c
     /* Find the deepest position tracking this address */
     unsigned char *main = buddy_main(buddy);
     ptrdiff_t offset = addr - main;
+
+#ifdef BUDDY_ALLOC_SAFETY
     if (offset % BUDDY_ALIGN) {
         return 0; /* invalid alignment */
     }
+#endif
+
     buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
 
     /* Find the actual allocated position tracking this address */
