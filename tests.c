@@ -389,7 +389,7 @@ void test_buddy_resize_embedded_up_at_reserved() {
 	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
 	assert(buddy != NULL);
 	assert(buddy_malloc(buddy, 1024) == NULL);
-	buddy = buddy_resize(buddy, 1024 + (sizeof(size_t)*2) + buddy_sizeof(1024));
+	buddy = buddy_resize(buddy, 1024 + (sizeof(size_t)*4) + buddy_sizeof(1024));
 	assert(buddy != NULL);
 	assert(buddy_malloc(buddy, 1024) == data_buf);
 	assert(buddy_malloc(buddy, 1024) == NULL);
@@ -905,6 +905,19 @@ void test_buddy_mixed_sizes_01() {
 	assert(buddy_malloc(buddy, 1) == NULL);
 }
 
+void test_buddy_large_arena() {
+	start_test;
+	size_t size = 2147483648 /* 2 GB */;
+	unsigned char *data_buf = malloc(size);
+	unsigned char *buddy_buf = malloc(buddy_sizeof(size));
+	struct buddy *buddy = buddy_init(buddy_buf, buddy_buf, size);
+	assert(buddy != NULL);
+	assert(buddy_malloc(buddy, size) == buddy_buf);
+	buddy_free(buddy, data_buf);
+	free(buddy_buf);
+	free(data_buf);
+}
+
 void test_buddy_tree_init() {
 	start_test;
 	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
@@ -1351,6 +1364,7 @@ int main() {
 		test_buddy_mixed_use_03();
 
 		test_buddy_mixed_sizes_01();
+		test_buddy_large_arena();
 	}
 	
 	{

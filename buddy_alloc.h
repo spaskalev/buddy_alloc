@@ -186,6 +186,8 @@ static void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_p
 
 static void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to_pos);
 
+static size_t bitset_count_range(unsigned char *bitset, size_t from_pos, size_t to_pos);
+
 static inline void bitset_set(unsigned char *bitset, size_t pos);
 
 static inline void bitset_clear(unsigned char *bitset, size_t pos);
@@ -719,7 +721,6 @@ struct buddy_tree {
 };
 
 struct internal_position {
-    size_t max_value;
     size_t local_offset;
     size_t bitset_location;
 };
@@ -744,9 +745,9 @@ static inline size_t size_for_order(uint8_t order, uint8_t to) {
     size_t result = 0;
     size_t multi = 1u;
     while (order != to) {
-        result += highest_bit_position(order) * multi;
-        order -= 1u;
-        multi <<= 1u;
+        result += order * multi;
+        order--;
+        multi *= 2;
     }
     return result;
 }
@@ -754,10 +755,9 @@ static inline size_t size_for_order(uint8_t order, uint8_t to) {
 static inline struct internal_position buddy_tree_internal_position_order(
         size_t tree_order, buddy_tree_pos pos) {
     struct internal_position p = {0};
-    p.max_value = tree_order - buddy_tree_depth(pos) + 1;
-    size_t total_offset = size_for_order(tree_order, p.max_value);
+    p.local_offset = tree_order - buddy_tree_depth(pos) + 1;
+    size_t total_offset = size_for_order(tree_order, p.local_offset);
     size_t local_index = buddy_tree_index_internal(pos);
-    p.local_offset = highest_bit_position(p.max_value);
     p.bitset_location = total_offset + (p.local_offset * local_index);
     return p;
 }
@@ -765,10 +765,9 @@ static inline struct internal_position buddy_tree_internal_position_order(
 static inline struct internal_position buddy_tree_internal_position_tree(
         struct buddy_tree *t, buddy_tree_pos pos) {
     struct internal_position p = {0};
-    p.max_value = t->order - buddy_tree_depth(pos) + 1;
-    size_t total_offset = buddy_tree_size_for_order(t, p.max_value);
+    p.local_offset = t->order - buddy_tree_depth(pos) + 1;
+    size_t total_offset = buddy_tree_size_for_order(t, p.local_offset);
     size_t local_index = buddy_tree_index_internal(pos);
-    p.local_offset = highest_bit_position(p.max_value);
     p.bitset_location = total_offset + (p.local_offset * local_index);
     return p;
 }
@@ -958,24 +957,16 @@ static inline size_t buddy_tree_size_for_order(struct buddy_tree *t,
 static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
     bitset_clear_range(bitset, pos.bitset_location,
         pos.bitset_location+pos.local_offset-1);
-    if (! value) {
-        return; /* skip iterating over empty value */
-    }
-    for (size_t shift = 1; shift <= pos.local_offset; shift++) {
-        if (value & 1u) {
-            bitset_set(bitset, pos.bitset_location+pos.local_offset-shift);
-        }
-        value >>= 1u;
+    size_t shift = 0;
+    while (value) {
+        bitset_set(bitset, pos.bitset_location + shift);
+        value--;
+        shift++;
     }
 }
 
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos) {
-    size_t result = bitset_test(bitset, pos.bitset_location);
-    for (size_t shift = 1; shift < pos.local_offset; shift++) {
-        result <<= 1u;
-        result += bitset_test(bitset, pos.bitset_location + shift);
-    }
-    return result;
+    return bitset_count_range(bitset, pos.bitset_location, pos.bitset_location+pos.local_offset-1);
 }
 
 static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, buddy_tree_pos pos) {
@@ -1026,7 +1017,7 @@ static void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos) {
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
 
     /* Mark the node as used */
-    write_to_internal_position(buddy_tree_bits(t), internal, internal.max_value);
+    write_to_internal_position(buddy_tree_bits(t), internal, internal.local_offset);
 
     /* Update the tree upwards */
     update_parent_chain(t, buddy_tree_parent(pos));
@@ -1041,7 +1032,7 @@ static void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
 
 #ifdef BUDDY_ALLOC_SAFETY
-    if (read_from_internal_position(buddy_tree_bits(t), internal) != internal.max_value) {
+    if (read_from_internal_position(buddy_tree_bits(t), internal) != internal.local_offset) {
         return;
     }
 #endif
@@ -1156,7 +1147,7 @@ static _Bool buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos) {
         struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
         size_t value = read_from_internal_position(buddy_tree_bits(t), internal);
         if (value) {
-            return value != internal.max_value;
+            return value != internal.local_offset;
         }
         pos = buddy_tree_parent(pos);
     }
@@ -1170,7 +1161,7 @@ static _Bool buddy_tree_can_shrink(struct buddy_tree *t) {
     struct internal_position root_internal =
         buddy_tree_internal_position_tree(t, buddy_tree_root());
     size_t root_value = read_from_internal_position(buddy_tree_bits(t), root_internal);
-    if (root_value == root_internal.max_value) {
+    if (root_value == root_internal.local_offset) {
         return 0; /* Refusing to shrink with the root fully-allocated! */
     }
     return 1;
@@ -1207,7 +1198,7 @@ static void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos,
                 "                                                               ");
             printf("pos: %zu status: %zu bitset-len: %zu bitset-at: %zu",
                 pos, pos_status, pos_internal.local_offset, pos_internal.bitset_location);
-            if (pos_status == pos_internal.max_value) {
+            if (pos_status == pos_internal.local_offset) {
                 printf(" size: %zu\n", pos_size);
             } else {
                 printf("\n");
@@ -1290,6 +1281,27 @@ static void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to
         }
         bitset[to_bucket] &= ~bitset_char_mask[0][to_index];
     }
+}
+
+static size_t bitset_count_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
+    size_t from_bucket = from_pos / CHAR_BIT;
+    size_t to_bucket = to_pos / CHAR_BIT;
+
+    size_t from_index = from_pos % CHAR_BIT;
+    size_t to_index = to_pos % CHAR_BIT;
+
+    if (from_bucket == to_bucket) {
+        return __builtin_popcount(bitset[from_bucket] & bitset_char_mask[from_index][to_index]);
+    }
+
+    size_t result = __builtin_popcount(bitset[from_bucket] & bitset_char_mask[from_index][7]);
+    from_bucket++;
+    while(from_bucket != to_bucket) {
+        result += __builtin_popcount(bitset[from_bucket] & 255u);
+        from_bucket++;
+    }
+    result += __builtin_popcount(bitset[to_bucket] & bitset_char_mask[0][to_index]);
+    return result;
 }
 
 static void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by) {
