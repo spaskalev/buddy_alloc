@@ -18,7 +18,6 @@
 #undef BUDDY_ALLOC_IMPLEMENTATION
 
 void test_highest_bit_position() {
-	assert(highest_bit_position(0) == 0);
 	assert(highest_bit_position(1) == 1);
 	assert(highest_bit_position(2) == 2);
 	assert(highest_bit_position(3) == 2);
@@ -931,7 +930,6 @@ void test_buddy_tree_order() {
 
 void test_buddy_tree_depth() {
 	start_test;
-	assert(buddy_tree_depth(0) == 0);
 	assert(buddy_tree_depth(1) == 1);
     assert(buddy_tree_depth(2) == 2);
     assert(buddy_tree_depth(3) == 2);
@@ -944,8 +942,6 @@ void test_buddy_tree_left_child() {
 	buddy_tree_pos pos = buddy_tree_root();
 	pos = buddy_tree_left_child(t, pos);
 	assert(buddy_tree_depth(pos) == 2);
-	pos = buddy_tree_left_child(t, pos);
-	assert(buddy_tree_valid(t, pos) == 0);
 	pos = buddy_tree_left_child(t, pos);
 	assert(buddy_tree_valid(t, pos) == 0);
 }
@@ -977,7 +973,6 @@ void test_buddy_tree_right_adjacent() {
 	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_pos pos = buddy_tree_root();
-	assert(buddy_tree_right_adjacent(0) == 0);
 	assert(buddy_tree_right_adjacent(pos) == 0);
 	assert(buddy_tree_right_adjacent(buddy_tree_right_child(t, pos)) == 0);
 	assert(buddy_tree_right_adjacent(buddy_tree_left_child(t, pos)) == buddy_tree_right_child(t, pos));
@@ -988,7 +983,6 @@ void test_buddy_tree_index() {
 	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_pos pos = buddy_tree_root();
-	assert(buddy_tree_index(0) == 0);
 	assert(buddy_tree_index(pos) == 0);
 	assert(buddy_tree_index(buddy_tree_left_child(t, pos)) == 0);
 	assert(buddy_tree_index(buddy_tree_right_child(t, pos)) == 1);

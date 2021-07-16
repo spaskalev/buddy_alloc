@@ -518,7 +518,7 @@ void buddy_free(struct buddy *buddy, void *ptr) {
     }
     unsigned char *dst = (unsigned char *)ptr;
     unsigned char *main = buddy_main(buddy);
-    if ((dst < main) || (dst > (main + buddy->memory_size))) {
+    if ((dst < main) || (dst >= (main + buddy->memory_size))) {
         return;
     }
 
@@ -1337,10 +1337,9 @@ static void bitset_debug(unsigned char *bitset, size_t length) {
  Bits
 */
 
+/* Returns the higest set bit position for the given value. Do not call with zero. */
 static inline size_t highest_bit_position(size_t value) {
-    if (value == 0) {
-        return 0;
-    }
+    assert(value);
     return ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value));
 }
 
