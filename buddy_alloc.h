@@ -813,9 +813,9 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
         while(current_order) {
             /* Get handles into the rows at the tracked depth */
             struct internal_position current_internal = buddy_tree_internal_position_order(
-                current_order, buddy_tree_leftmost_child_internal(current_order));
+                t->order, buddy_tree_leftmost_child_internal(current_order));
             struct internal_position next_internal = buddy_tree_internal_position_order(
-                current_order + 1u, buddy_tree_leftmost_child_internal(current_order + 1u));
+                t->order + 1u, buddy_tree_leftmost_child_internal(current_order + 1u));
 
             /* There are this many nodes at the current level */
             size_t node_count = 1u << (current_order - 1u);
