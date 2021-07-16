@@ -120,13 +120,13 @@ static buddy_tree_pos buddy_tree_root(void);
 static buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t);
 
 /* Returns the tree depth of the indicated position */
-static size_t inline buddy_tree_depth(buddy_tree_pos pos);
+static inline size_t buddy_tree_depth(buddy_tree_pos pos);
 
-/* Returns the left child node position or an invalid position if there is no left child node */
-static buddy_tree_pos buddy_tree_left_child(struct buddy_tree *t, buddy_tree_pos pos);
+/* Returns the left child node position. Does not check if that is a valid position */
+static inline buddy_tree_pos buddy_tree_left_child(buddy_tree_pos pos);
 
-/* Returns the right child node position or an invalid position if there is no right child node */
-static buddy_tree_pos buddy_tree_right_child(struct buddy_tree *t, buddy_tree_pos pos);
+/* Returns the right child node position. Does not check if that is a valid position */
+static inline buddy_tree_pos buddy_tree_right_child(buddy_tree_pos pos);
 
 /* Returns the parent node position or an invalid position if there is no parent node */
 static inline buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos);
@@ -613,7 +613,7 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state) {
         state ? &buddy_tree_mark : &buddy_tree_release;
 
     struct buddy_tree *tree = buddy_tree(buddy);
-    buddy_tree_pos pos = buddy_tree_right_child(tree, buddy_tree_root());
+    buddy_tree_pos pos = buddy_tree_right_child(buddy_tree_root());
     while (delta) {
         size_t current_pos_size = size_for_depth(buddy, buddy_tree_depth(pos));
         if (delta == current_pos_size) {
@@ -623,15 +623,15 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state) {
         }
         if (delta <= (current_pos_size / 2)) {
             // re-run for right child
-            pos = buddy_tree_right_child(tree, pos);
+            pos = buddy_tree_right_child(pos);
             continue;
         } else {
             // toggle right child
-            (*toggle)(tree, buddy_tree_right_child(tree, pos));
+            (*toggle)(tree, buddy_tree_right_child(pos));
             // reduce delta
             delta -= current_pos_size / 2;
             // re-run for left child
-            pos = buddy_tree_left_child(tree, pos);
+            pos = buddy_tree_left_child(pos);
             continue;
         }
     }
@@ -847,7 +847,7 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
         size_t current_order = t->order;
         size_t next_order = current_order - 1;
 
-        buddy_tree_pos left_start = buddy_tree_left_child(t, buddy_tree_root());
+        buddy_tree_pos left_start = buddy_tree_left_child(buddy_tree_root());
         while(buddy_tree_valid(t, left_start)) {
             /* Get handles into the rows at the tracked depth */
             struct internal_position current_internal = buddy_tree_internal_position_order(
@@ -865,7 +865,7 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
                 current_internal.bitset_location - next_internal.bitset_location/* at here */);
 
             /* Handle the lower level */
-            left_start = buddy_tree_left_child(t, left_start);
+            left_start = buddy_tree_left_child(left_start);
         }
 
         /* Advance the order */
@@ -899,21 +899,12 @@ static inline size_t buddy_tree_depth(buddy_tree_pos pos) {
     return highest_bit_position(pos);
 }
 
-static buddy_tree_pos buddy_tree_left_child(struct buddy_tree *t, buddy_tree_pos pos) {
-    if (buddy_tree_depth(pos) == t->order) {
-        return 0;
-    }
-    pos = 2 * pos;
-    return pos;
+static inline buddy_tree_pos buddy_tree_left_child(buddy_tree_pos pos) {
+    return pos * 2;
 }
 
-static buddy_tree_pos buddy_tree_right_child(struct buddy_tree *t, buddy_tree_pos pos) {
-    if (buddy_tree_depth(pos) == t->order) {
-        return 0;
-    }
-    pos = 2 * pos;
-    pos += 1;
-    return pos;
+static inline buddy_tree_pos buddy_tree_right_child(buddy_tree_pos pos) {
+    return (pos * 2) + 1;
 }
 
 static inline buddy_tree_pos buddy_tree_parent(buddy_tree_pos pos) {
@@ -993,8 +984,8 @@ static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, budd
     result.to = pos;
     size_t depth = buddy_tree_depth(pos);
     while (depth != t->order) {
-        result.from = buddy_tree_left_child(t, result.from);
-        result.to = buddy_tree_right_child(t, result.to);
+        result.from = buddy_tree_left_child(result.from);
+        result.to = buddy_tree_right_child(result.to);
         depth += 1;
     }
     return result;
@@ -1070,7 +1061,7 @@ static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
     unsigned char *bits = buddy_tree_bits(t);
 
     struct internal_position pos_internal =
-        buddy_tree_internal_position_tree(t, buddy_tree_left_child(t, pos));
+        buddy_tree_internal_position_tree(t, buddy_tree_left_child(pos));
     size_t size_a = read_from_internal_position(bits, pos_internal);
 
     pos_internal.bitset_location += pos_internal.local_offset;
@@ -1110,6 +1101,7 @@ static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
 }
 
 static buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth) {
+    assert(target_depth <= t->order);
     buddy_tree_pos start = buddy_tree_root();
     uint8_t target_status = target_depth - 1;
     size_t current_depth = buddy_tree_depth(start);
@@ -1126,7 +1118,7 @@ static buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_
             target_status -= 1;
             current_depth += 1;
             /* Do an optimal fit followed by left-first fit */
-            buddy_tree_pos left_pos = buddy_tree_left_child(t, start);
+            buddy_tree_pos left_pos = buddy_tree_left_child(start);
             buddy_tree_pos right_pos = left_pos + 1;
             size_t left_status = 0;
             size_t right_status = 0;
@@ -1172,7 +1164,7 @@ static _Bool buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos) {
 }
 
 static _Bool buddy_tree_can_shrink(struct buddy_tree *t) {
-    if (buddy_tree_status(t, buddy_tree_right_child(t, buddy_tree_root())) != 0) {
+    if (buddy_tree_status(t, buddy_tree_right_child(buddy_tree_root())) != 0) {
         return 0; /* Refusing to shrink with right subtree still used! */
     }
     struct internal_position root_internal =
@@ -1219,8 +1211,8 @@ static void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos,
             } else {
                 printf("\n");
             }
-            if (buddy_tree_valid(t, buddy_tree_left_child(t, pos))) {
-                pos = buddy_tree_left_child(t, pos);
+            if (buddy_tree_valid(t, buddy_tree_left_child(pos))) {
+                pos = buddy_tree_left_child(pos);
             } else {
                 going_up = 1;
             }
