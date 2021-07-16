@@ -1186,14 +1186,14 @@ static void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos,
     _Bool going_up = 0;
     while (1) {
         if (going_up) {
+            if (pos == start) {
+                break;
+            }
             if (! (pos & 1u /* bit-wise */) /* left node */) {
                 pos = buddy_tree_right_adjacent(pos);
                 going_up = 0;
             } else {
                 pos = buddy_tree_parent(pos);
-                if (pos == start) {
-                    break;
-                }
             }
         } else {
             struct internal_position pos_internal =
@@ -1205,7 +1205,8 @@ static void buddy_tree_debug(struct buddy_tree *t, buddy_tree_pos pos,
             printf("%.*s",
                 (int) buddy_tree_depth(pos),
                 "                                                               ");
-            printf("pos: %zu status: %zu", pos, pos_status);
+            printf("pos: %zu status: %zu bitset-len: %zu bitset-at: %zu",
+                pos, pos_status, pos_internal.local_offset, pos_internal.bitset_location);
             if (pos_status == pos_internal.max_value) {
                 printf(" size: %zu\n", pos_size);
             } else {
