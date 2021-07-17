@@ -813,9 +813,9 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
         while(current_order) {
             /* Get handles into the rows at the tracked depth */
             struct internal_position current_internal = buddy_tree_internal_position_order(
-                t->order, buddy_tree_leftmost_child_internal(current_order));
+                current_order, buddy_tree_leftmost_child_internal(current_order));
             struct internal_position next_internal = buddy_tree_internal_position_order(
-                t->order + 1u, buddy_tree_leftmost_child_internal(current_order + 1u));
+                current_order + 1u, buddy_tree_leftmost_child_internal(current_order + 1u));
 
             /* There are this many nodes at the current level */
             size_t node_count = 1u << (current_order - 1u);
@@ -1108,41 +1108,43 @@ static buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_
     size_t current_status = buddy_tree_status(t, start);
     while (1) {
         if (current_depth == target_depth) {
-            if (current_status == 0) {
-                return start; /* Position is free, success */
-            }
-            return 0; /* Position is not free, fail */
+            return current_status == 0 ? start : 0;
         }
-        if (current_status <= target_status) { /* A free position is available down the tree */
-            /* Advance criteria */
-            target_status -= 1;
-            current_depth += 1;
-            /* Do an optimal fit followed by left-first fit */
-            buddy_tree_pos left_pos = buddy_tree_left_child(start);
-            buddy_tree_pos right_pos = left_pos + 1;
-            size_t left_status = 0;
-            size_t right_status = 0;
-            if ((left_status = buddy_tree_status(t, left_pos)) > target_status) {
-                /* left branch is busy, pick right */
-                start = right_pos;
-                current_status = right_status;
-            } else if ((right_status = buddy_tree_status(t, right_pos)) > target_status) {
-                /* right branch is busy, pick left */
-                start = left_pos;
-                current_status = left_status;
-            } else {
-                /* Both branches are good, pick the more-used one */
-                if (left_status >= right_status) {
-                    start = left_pos;
-                    current_status = left_status;
-                } else {
-                    start = right_pos;
-                    current_status = right_status;
-                }
-            }
+        if (current_status > target_status) {
+            return 0; /* No position available down the tree */
+        }
+
+        /* Advance criteria */
+        target_status -= 1;
+        current_depth += 1;
+
+        /* Do an optimal fit followed by left-first fit */
+        buddy_tree_pos left_pos = buddy_tree_left_child(start);
+        buddy_tree_pos right_pos = left_pos + 1;
+        struct internal_position internal = buddy_tree_internal_position_tree(t, left_pos);
+        size_t left_status = read_from_internal_position(buddy_tree_bits(t), internal);
+        internal.bitset_location += internal.local_offset; /* advance to the right */
+        size_t right_status = read_from_internal_position(buddy_tree_bits(t), internal);
+
+        if (left_status > target_status) { /* left branch is busy, pick right */
+            start = right_pos;
+            current_status = right_status;
+            continue;
+        }
+
+        if (right_status > target_status) { /* right branch is busy, pick left */
+            start = left_pos;
+            current_status = left_status;
+            continue;
+        }
+
+        /* Both branches are good, pick the more-used one */
+        if (left_status >= right_status) {
+            start = left_pos;
+            current_status = left_status;
         } else {
-            /* No position available down the tree */
-            return 0;
+            start = right_pos;
+            current_status = right_status;
         }
     }
 }
