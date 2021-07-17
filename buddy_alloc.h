@@ -957,11 +957,9 @@ static inline size_t buddy_tree_size_for_order(struct buddy_tree *t,
 static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
     bitset_clear_range(bitset, pos.bitset_location,
         pos.bitset_location+pos.local_offset-1);
-    size_t shift = 0;
-    while (value) {
-        bitset_set(bitset, pos.bitset_location + shift);
-        value--;
-        shift++;
+    if (value) {
+        bitset_set_range(bitset, pos.bitset_location,
+            pos.bitset_location+value-1);
     }
 }
 
@@ -1222,16 +1220,6 @@ size_t bitset_sizeof(size_t elements) {
     return ((elements) + CHAR_BIT - 1u) / CHAR_BIT;
 }
 
-static void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
-    if (to_pos < from_pos) {
-        return;
-    }
-    while (from_pos <= to_pos) {
-        bitset_set(bitset, from_pos);
-        from_pos += 1;
-    }
-}
-
 static uint8_t bitset_index_mask[8] = {1, 2, 4, 8, 16, 32, 64, 128};
 
 static inline void bitset_set(unsigned char *bitset, size_t pos) {
@@ -1280,6 +1268,26 @@ static void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to
             from_bucket++;
         }
         bitset[to_bucket] &= ~bitset_char_mask[0][to_index];
+    }
+}
+
+static void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
+    size_t from_bucket = from_pos / CHAR_BIT;
+    size_t to_bucket = to_pos / CHAR_BIT;
+
+    size_t from_index = from_pos % CHAR_BIT;
+    size_t to_index = to_pos % CHAR_BIT;
+
+    if (from_bucket == to_bucket) {
+        bitset[from_bucket] |= bitset_char_mask[from_index][to_index];
+    } else {
+        bitset[from_bucket] |= bitset_char_mask[from_index][7];
+        from_bucket++;
+        while(from_bucket != to_bucket) {
+            bitset[from_bucket] |= 255u;
+            from_bucket++;
+        }
+        bitset[to_bucket] |= bitset_char_mask[0][to_index];
     }
 }
 
