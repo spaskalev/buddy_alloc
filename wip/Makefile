@@ -5,7 +5,7 @@ buddy_shared.so: buddy_brk.c buddy_brk.h buddy_global.h ../buddy_alloc.h
 	gcc -g -O0 -Og -march=native -fpic -shared -o buddy_shared.so buddy_brk.c
 
 test: buddy_shared.so
-	env LD_PRELOAD=./buddy_shared.so $(STRESS_NG) --malloc 1 --malloc-ops 500 2>&1
+	env LD_PRELOAD=./buddy_shared.so $(STRESS_NG) --malloc 1 --malloc-ops 100000 2>&1
 
 trace: buddy_shared.so
 	ltrace -S -l buddy_shared.so env LD_PRELOAD=./buddy_shared.so $(STRESS_NG) --malloc 1 --malloc-ops 1 2>&1
