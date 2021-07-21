@@ -829,6 +829,11 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
                 current_internal.bitset_location + (current_internal.local_offset * node_count) /* up to here */,
                 next_internal.bitset_location - current_internal.bitset_location /* by */);
 
+            /* Clear right section */
+            bitset_clear_range(buddy_tree_bits(t),
+                next_internal.bitset_location + (next_internal.local_offset * node_count) + 1,
+                next_internal.bitset_location + (next_internal.local_offset * node_count * 2) - 1);
+
             /* Handle the upper level */
             current_order -= 1u;
             current_pos = buddy_tree_parent(current_pos);
