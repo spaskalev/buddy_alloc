@@ -143,7 +143,7 @@ void test_bitset_debug() {
 	unsigned char buf[4096] = {0};
 	bitset_set(buf, 0);
 	bitset_clear(buf, 1);
-	bitset_debug(buf, 2); /* code coverage */
+	bitset_debug(stdout, buf, 2); /* code coverage */
 }
 
 void test_buddy_init_null() {
@@ -473,7 +473,7 @@ void test_buddy_debug() {
 	start_test;
 	alignas(max_align_t) unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_embed(data_buf, 256);
-	buddy_debug(buddy); /* code coverage */
+	buddy_debug(stdout, buddy); /* code coverage */
 }
 
 void test_buddy_can_shrink() {
@@ -1105,9 +1105,9 @@ void test_buddy_tree_debug() {
 	unsigned char buddy_tree_buf[4096] = {0};
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_mark(t, buddy_tree_root());
-	buddy_tree_debug(t, buddy_tree_root(), 0);printf("\n"); /* code coverage */
+	buddy_tree_debug(stdout, t, buddy_tree_root(), 0);printf("\n"); /* code coverage */
 	buddy_tree_pos invalid_pos = 0;
-	buddy_tree_debug(t, invalid_pos, 0); /* code coverage */
+	buddy_tree_debug(stdout, t, invalid_pos, 0); /* code coverage */
 }
 
 void test_buddy_tree_resize_same_size() {
