@@ -19,7 +19,7 @@ perf: buddy_shared.so
 	x-www-browser file://$(shell pwd)/perf-kernel.svg &
 
 debug: buddy_shared.so
-	gdb -x gdbinit.cfg --args $(STRESS_NG) --malloc 1 --malloc-ops 1 2>&1
+	gdb -x gdbinit.cfg --args $(STRESS_NG) --malloc 1 --malloc-ops 100000 2>&1
 
 clean:
 	rm -f buddy_shared.so
