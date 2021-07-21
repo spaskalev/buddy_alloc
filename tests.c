@@ -1100,18 +1100,50 @@ void test_buddy_tree_find_free_02() {
 	assert(buddy_tree_valid(t, pos) == 0);
 }
 
-void test_buddy_tree_debug() {
+void test_buddy_tree_debug_coverage() {
 	start_test;
 	unsigned char buddy_tree_buf[4096] = {0};
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_mark(t, buddy_tree_root());
 	buddy_tree_debug(stdout, t, buddy_tree_root(), 0);printf("\n"); /* code coverage */
-	buddy_tree_check_invariant(t, buddy_tree_root());
-	buddy_tree_release(t, buddy_tree_root());
-	buddy_tree_mark(t, buddy_tree_left_child(buddy_tree_root()));
-	buddy_tree_check_invariant(t, buddy_tree_root());
 	buddy_tree_pos invalid_pos = 0;
 	buddy_tree_debug(stdout, t, invalid_pos, 0); /* code coverage */
+}
+
+void test_buddy_tree_check_invariant_positive_01() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	struct internal_position root_internal =
+		buddy_tree_internal_position_tree(t, buddy_tree_root());
+	write_to_internal_position(buddy_tree_bits(t), root_internal, 1);
+	assert(buddy_tree_check_invariant(t, buddy_tree_root()));
+}
+
+void test_buddy_tree_check_invariant_positive_02() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	struct internal_position left_internal =
+		buddy_tree_internal_position_tree(t, buddy_tree_left_child(buddy_tree_root()));
+	write_to_internal_position(buddy_tree_bits(t), left_internal, 1);
+	assert(buddy_tree_check_invariant(t, buddy_tree_root()));
+}
+
+void test_buddy_tree_check_invariant_negative_01() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_mark(t, buddy_tree_root());
+	assert(! buddy_tree_check_invariant(t, buddy_tree_root()));
+}
+
+void test_buddy_tree_check_invariant_negative_02() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	buddy_tree_mark(t, buddy_tree_left_child(buddy_tree_root()));
+	assert(! buddy_tree_check_invariant(t, buddy_tree_root()));
 }
 
 void test_buddy_tree_resize_same_size() {
@@ -1390,7 +1422,11 @@ int main() {
 		test_buddy_tree_propagation_01();
 		test_buddy_tree_propagation_02();
 		test_buddy_tree_find_free_02();
-		test_buddy_tree_debug();
+		test_buddy_tree_debug_coverage();
+		test_buddy_tree_check_invariant_positive_01();
+		test_buddy_tree_check_invariant_positive_02();
+		test_buddy_tree_check_invariant_negative_01();
+		test_buddy_tree_check_invariant_negative_02();
 		test_buddy_tree_resize_same_size();
 		test_buddy_tree_resize_01();
 		test_buddy_tree_resize_02();

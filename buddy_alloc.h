@@ -174,7 +174,7 @@ static _Bool buddy_tree_can_shrink(struct buddy_tree *t);
 static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, buddy_tree_pos pos, size_t start_size);
 
 /* Implementation defined */
-static void buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos);
+static _Bool buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos);
 
 /*
  * A char-backed bitset implementation
@@ -1219,7 +1219,7 @@ static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, buddy_tree_pos 
     fflush(stdout);
 }
 
-static void buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos) {
+static _Bool buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos) {
     buddy_tree_pos start = pos;
     _Bool going_up = 0;
     _Bool fail = 0;
@@ -1270,9 +1270,7 @@ static void buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos)
             }
         }
     }
-    if (fail) {
-        assert(0);
-    }
+    return fail;
 }
 
 /*
