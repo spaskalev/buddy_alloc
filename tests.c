@@ -1106,6 +1106,10 @@ void test_buddy_tree_debug() {
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_mark(t, buddy_tree_root());
 	buddy_tree_debug(stdout, t, buddy_tree_root(), 0);printf("\n"); /* code coverage */
+	buddy_tree_check_invariant(t);
+	buddy_tree_release(t, buddy_tree_root());
+	buddy_tree_mark(t, buddy_tree_left_child(buddy_tree_root()));
+	buddy_tree_check_invariant(t);
 	buddy_tree_pos invalid_pos = 0;
 	buddy_tree_debug(stdout, t, invalid_pos, 0); /* code coverage */
 }

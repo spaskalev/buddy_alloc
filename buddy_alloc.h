@@ -173,6 +173,9 @@ static _Bool buddy_tree_can_shrink(struct buddy_tree *t);
 /* Implementation defined */
 static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, buddy_tree_pos pos, size_t start_size);
 
+/* Implementation defined */
+static void buddy_tree_check_invariant(struct buddy_tree *t);
+
 /*
  * A char-backed bitset implementation
  */
@@ -1205,6 +1208,46 @@ static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, buddy_tree_pos 
     }
 
     fflush(stdout);
+}
+
+static void buddy_tree_check_invariant(struct buddy_tree *t) {
+    buddy_tree_pos pos = buddy_tree_root();
+    buddy_tree_pos start = pos;
+    _Bool going_up = 0;
+    while (1) {
+        if (going_up) {
+            if (pos == start) {
+                break;
+            }
+            if (! (pos & 1u /* bit-wise */) /* left node */) {
+                pos = buddy_tree_right_adjacent(pos);
+                going_up = 0;
+            } else {
+                pos = buddy_tree_parent(pos);
+            }
+        } else {
+            if (buddy_tree_valid(t, buddy_tree_left_child(pos))) {
+
+                struct internal_position current_internal = buddy_tree_internal_position_tree(t, pos);
+                size_t current_status = read_from_internal_position(buddy_tree_bits(t), current_internal);
+
+                size_t left_child_status = buddy_tree_status(t, buddy_tree_left_child(pos));
+                size_t right_child_status = buddy_tree_status(t, buddy_tree_right_child(pos));
+
+                if (left_child_status || right_child_status) {
+                    size_t min = left_child_status <= right_child_status
+                        ? left_child_status : right_child_status;
+                    assert(current_status == (min + 1));
+                } else {
+                    assert((current_status == 0) || (current_status == current_internal.local_offset));
+                }
+
+                pos = buddy_tree_left_child(pos);
+            } else {
+                going_up = 1;
+            }
+        }
+    }
 }
 
 /*
