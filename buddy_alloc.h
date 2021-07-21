@@ -174,7 +174,7 @@ static _Bool buddy_tree_can_shrink(struct buddy_tree *t);
 static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, buddy_tree_pos pos, size_t start_size);
 
 /* Implementation defined */
-static void buddy_tree_check_invariant(struct buddy_tree *t);
+static void buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos);
 
 /*
  * A char-backed bitset implementation
@@ -1210,10 +1210,10 @@ static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, buddy_tree_pos 
     fflush(stdout);
 }
 
-static void buddy_tree_check_invariant(struct buddy_tree *t) {
-    buddy_tree_pos pos = buddy_tree_root();
+static void buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos) {
     buddy_tree_pos start = pos;
     _Bool going_up = 0;
+    _Bool fail = 0;
     while (1) {
         if (going_up) {
             if (pos == start) {
@@ -1234,12 +1234,25 @@ static void buddy_tree_check_invariant(struct buddy_tree *t) {
                 size_t left_child_status = buddy_tree_status(t, buddy_tree_left_child(pos));
                 size_t right_child_status = buddy_tree_status(t, buddy_tree_right_child(pos));
 
+                _Bool violated = 0;
+
                 if (left_child_status || right_child_status) {
                     size_t min = left_child_status <= right_child_status
                         ? left_child_status : right_child_status;
-                    assert(current_status == (min + 1));
+                    if (current_status != (min + 1)) {
+                        violated = 1;
+                    }
                 } else {
-                    assert((current_status == 0) || (current_status == current_internal.local_offset));
+                    if ((current_status > 0) && (current_status < current_internal.local_offset)) {
+                        violated = 1;
+                    }
+                }
+
+                if (violated) {
+                    fail = 1;
+                    fprintf(stdout, "invariant violation at position [ %zu ]!\n", pos);
+                    fprintf(stdout, "current: %zu left %zu right %zu max %zu\n",
+                        current_status, left_child_status, right_child_status, current_internal.local_offset);
                 }
 
                 pos = buddy_tree_left_child(pos);
@@ -1247,6 +1260,9 @@ static void buddy_tree_check_invariant(struct buddy_tree *t) {
                 going_up = 1;
             }
         }
+    }
+    if (fail) {
+        assert(0);
     }
 }
 
