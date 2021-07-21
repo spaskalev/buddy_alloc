@@ -736,7 +736,7 @@ static struct internal_position buddy_tree_internal_position_tree(
     struct buddy_tree *t, buddy_tree_pos pos);
 static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order);
 static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order);
-static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos);
+static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos, size_t new_value);
 static inline unsigned char *buddy_tree_bits(struct buddy_tree *t);
 static void buddy_tree_populate_size_for_order(struct buddy_tree *t);
 static inline size_t buddy_tree_size_for_order(struct buddy_tree *t, uint8_t to);
@@ -843,7 +843,8 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
         t->order += 1u;
         t->upper_pos_bound = 1u << t->order;
         buddy_tree_populate_size_for_order(t);
-        update_parent_chain(t, buddy_tree_root());
+        struct internal_position root_internal = buddy_tree_internal_position_tree(t, buddy_tree_root());
+        write_to_internal_position(buddy_tree_bits(t), root_internal, 1); /* since new right subtree is always 0 */
     }
 }
 
@@ -1024,7 +1025,7 @@ static void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos) {
     write_to_internal_position(buddy_tree_bits(t), internal, internal.local_offset);
 
     /* Update the tree upwards */
-    update_parent_chain(t, buddy_tree_parent(pos));
+    update_parent_chain(t, pos, internal.local_offset);
 }
 
 static void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
@@ -1045,53 +1046,39 @@ static void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
     write_to_internal_position(buddy_tree_bits(t), internal, 0);
 
     /* Update the tree upwards */
-    update_parent_chain(t, buddy_tree_parent(pos));
+    update_parent_chain(t, pos, 0);
 }
 
-static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
-    if (! pos) {
-        return;
-    }
+static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos, size_t new_value) {
+    assert(pos);
+    unsigned char *bitset = buddy_tree_bits(t);
+    while (pos != 1) {
+        /* Read the parent position */
+        buddy_tree_pos parent_pos = buddy_tree_parent(pos);
+        struct internal_position parent_internal = buddy_tree_internal_position_tree(t, parent_pos);
+        size_t parent_value = read_from_internal_position(bitset, parent_internal);
 
-    unsigned char *bits = buddy_tree_bits(t);
-
-    struct internal_position pos_internal =
-        buddy_tree_internal_position_tree(t, buddy_tree_left_child(pos));
-    size_t size_a = read_from_internal_position(bits, pos_internal);
-
-    pos_internal.bitset_location += pos_internal.local_offset;
-    size_t size_b = read_from_internal_position(bits, pos_internal);
-
-    while (1) {
-        size_t free = 0;
-        if (size_a || size_b) {
-            free = (size_a <= size_b ? size_a : size_b) + 1;
+        size_t target_parent_value;
+        if (new_value) {
+            if (parent_value == 0) {
+                target_parent_value = 1;
+            } else {
+                /* need to read the sibling */
+                size_t sibling_value = buddy_tree_status(t, pos ^ 1u);
+                target_parent_value = (new_value <= sibling_value ? new_value : sibling_value) + 1;
+            }
+        } else { /* new_value is being set to zero */
+            target_parent_value = (parent_value == 1 ? 0 : 1);
         }
 
-        pos_internal = buddy_tree_internal_position_tree(t, pos);
-        size_t current = read_from_internal_position(bits, pos_internal);
-        if (free == current) {
-            return; /* short the parent chain update */
+        if (target_parent_value == parent_value) { // short the parent chain update 
+            break;
         }
 
-        /* Update the node */
-        write_to_internal_position(bits, pos_internal, free);
-
-        if (pos == 1) {
-            return;
-        }
-
-        size_a = free; /* A remains the current position */
-        /* B is the sibling position */
-        if (pos & 1u) {
-            pos_internal.bitset_location -= pos_internal.local_offset;
-        } else {
-            pos_internal.bitset_location += pos_internal.local_offset;
-        }
-        size_b = read_from_internal_position(bits, pos_internal);
-
-        /* Advance upwards */
-        pos = buddy_tree_parent(pos);
+        /* Write the new value and advance up the parent chain */
+        write_to_internal_position(bitset, parent_internal, target_parent_value);
+        new_value = target_parent_value;
+        pos = parent_pos;
     }
 }
 
