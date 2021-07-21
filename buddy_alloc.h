@@ -902,6 +902,7 @@ static buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t) {
 }
 
 static buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order) {
+    assert(tree_order);
     return 1u << (tree_order - 1u);
 }
 
