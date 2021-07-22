@@ -831,7 +831,7 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
 
             /* Clear right section */
             bitset_clear_range(buddy_tree_bits(t),
-                next_internal.bitset_location + (next_internal.local_offset * node_count) + 1,
+                next_internal.bitset_location + (next_internal.local_offset * node_count),
                 next_internal.bitset_location + (next_internal.local_offset * node_count * 2) - 1);
 
             /* Handle the upper level */
@@ -843,8 +843,12 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
         t->order += 1u;
         t->upper_pos_bound = 1u << t->order;
         buddy_tree_populate_size_for_order(t);
+
+        /* Update the root */
+        size_t left_status = buddy_tree_status(t, buddy_tree_left_child(buddy_tree_root()));
+        size_t target_root_value = left_status ? 1 : 0; /* The (new) right subtree has a value of 0 */
         struct internal_position root_internal = buddy_tree_internal_position_tree(t, buddy_tree_root());
-        write_to_internal_position(buddy_tree_bits(t), root_internal, 1); /* since new right subtree is always 0 */
+        write_to_internal_position(buddy_tree_bits(t), root_internal, target_root_value); 
     }
 }
 
