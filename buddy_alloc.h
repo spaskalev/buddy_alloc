@@ -1069,11 +1069,7 @@ static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
     size_t size_b = read_from_internal_position(bits, pos_internal);
 
     while (1) {
-        size_t free = 0;
-        if (size_a || size_b) {
-            free = (size_a <= size_b ? size_a : size_b) + 1;
-        }
-
+        size_t free = (size_a || size_b) * ((size_a <= size_b ? size_a : size_b) + 1);
         pos_internal = buddy_tree_internal_position_tree(t, pos);
         size_t current = read_from_internal_position(bits, pos_internal);
         if (free == current) {
