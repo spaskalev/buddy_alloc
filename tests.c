@@ -189,7 +189,7 @@ void test_buddy_invalid_datasize() {
 	alignas(max_align_t) unsigned char data_buf[4096];
 	{
 		assert(buddy_sizeof(0) == 0);
-		assert(buddy_sizeof(BUDDY_ALIGN-1) == 0);
+		assert(buddy_sizeof(BUDDY_ALLOC_ALIGN-1) == 0);
 	}
 	{
 		struct buddy *buddy = buddy_init(buddy_buf, data_buf, 0);
@@ -225,9 +225,9 @@ void test_buddy_init_non_power_of_two_memory_01() {
 	assert(buddy != NULL);
 
 	for (size_t i = 0; i < 60; i++) {
-		assert(buddy_malloc(buddy, BUDDY_ALIGN) != NULL);
+		assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) != NULL);
 	}
-	assert(buddy_malloc(buddy, BUDDY_ALIGN) == NULL);
+	assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) == NULL);
 }
 
 void test_buddy_init_non_power_of_two_memory_02() {
@@ -240,9 +240,9 @@ void test_buddy_init_non_power_of_two_memory_02() {
 	assert(buddy != NULL);
 
 	for (size_t i = 0; i < 59; i++) {
-		assert(buddy_malloc(buddy, BUDDY_ALIGN) != NULL);
+		assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) != NULL);
 	}
-	assert(buddy_malloc(buddy, BUDDY_ALIGN) == NULL);
+	assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) == NULL);
 }
 
 void test_buddy_init_non_power_of_two_memory_03() {
@@ -255,9 +255,9 @@ void test_buddy_init_non_power_of_two_memory_03() {
 	assert(buddy != NULL);
 
 	for (size_t i = 0; i < 60; i++) {
-		assert(buddy_malloc(buddy, BUDDY_ALIGN) != NULL);
+		assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) != NULL);
 	}
-	assert(buddy_malloc(buddy, BUDDY_ALIGN) == NULL);
+	assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) == NULL);
 }
 
 void test_buddy_resize_noop() {

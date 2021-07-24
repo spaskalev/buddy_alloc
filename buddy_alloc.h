@@ -23,8 +23,6 @@
 #include <string.h>
 #include <sys/types.h>
 
-#define BUDDY_ALIGN (sizeof(size_t) * CHAR_BIT)
-
 struct buddy;
 
 /* Returns the size of a buddy required to manage of block of the specified size */
@@ -72,6 +70,10 @@ void buddy_free(struct buddy *buddy, void *ptr);
 
 #ifdef BUDDY_ALLOC_IMPLEMENTATION
 #undef BUDDY_ALLOC_IMPLEMENTATION
+
+#ifndef BUDDY_ALLOC_ALIGN
+#define BUDDY_ALLOC_ALIGN (sizeof(size_t) * CHAR_BIT)
+#endif
 
 /*
  * Debug functions
@@ -255,7 +257,7 @@ static struct buddy_embed_check buddy_embed_offset(size_t memory_size);
 static buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, size_t offset);
 
 size_t buddy_sizeof(size_t memory_size) {
-    if (memory_size < BUDDY_ALIGN) {
+    if (memory_size < BUDDY_ALLOC_ALIGN) {
         return 0; /* invalid */
     }
     size_t buddy_tree_order = buddy_tree_order_for_memory(memory_size);
@@ -275,8 +277,8 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
         return NULL;
     }
     /* Trim down memory to alignment */
-    if (memory_size % BUDDY_ALIGN) {
-        memory_size -= (memory_size % BUDDY_ALIGN);
+    if (memory_size % BUDDY_ALLOC_ALIGN) {
+        memory_size -= (memory_size % BUDDY_ALLOC_ALIGN);
     }
     size_t size = buddy_sizeof(memory_size);
     if (size == 0) {
@@ -327,8 +329,8 @@ struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size) {
 
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size) {
     /* Trim down memory to alignment */
-    if (new_memory_size % BUDDY_ALIGN) {
-        new_memory_size -= (new_memory_size % BUDDY_ALIGN);
+    if (new_memory_size % BUDDY_ALLOC_ALIGN) {
+        new_memory_size -= (new_memory_size % BUDDY_ALLOC_ALIGN);
     }
 
     /* Account for tree use */
@@ -393,7 +395,7 @@ size_t buddy_arena_size(struct buddy *buddy) {
 }
 
 static size_t buddy_tree_order_for_memory(size_t memory_size) {
-    size_t blocks = memory_size / BUDDY_ALIGN;
+    size_t blocks = memory_size / BUDDY_ALLOC_ALIGN;
     return highest_bit_position(ceiling_power_of_two(blocks));
 }
 
@@ -532,8 +534,8 @@ void buddy_free(struct buddy *buddy, void *ptr) {
 }
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
-    if (requested_size < BUDDY_ALIGN) {
-        requested_size = BUDDY_ALIGN;
+    if (requested_size < BUDDY_ALLOC_ALIGN) {
+        requested_size = BUDDY_ALLOC_ALIGN;
     }
     size_t depth = 1;
     size_t effective_memory_size = ceiling_power_of_two(buddy->memory_size);
@@ -560,7 +562,7 @@ static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos) {
 }
 
 static buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, size_t offset) {
-    size_t index = offset / BUDDY_ALIGN;
+    size_t index = offset / BUDDY_ALLOC_ALIGN;
     buddy_tree_pos pos = buddy_tree_leftmost_child(buddy_tree(buddy));
     return pos + index;
 }
@@ -571,7 +573,7 @@ static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned c
     ptrdiff_t offset = addr - main;
 
 #ifdef BUDDY_ALLOC_SAFETY
-    if (offset % BUDDY_ALIGN) {
+    if (offset % BUDDY_ALLOC_ALIGN) {
         return 0; /* invalid alignment */
     }
 #endif
@@ -604,11 +606,11 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state) {
     }
 
     /* Get the area that we need to mask and pad it to alignment */
-    /* Node memory size is already aligned to BUDDY_ALIGN */
+    /* Node memory size is already aligned to BUDDY_ALLOC_ALIGN */
     size_t delta = effective_memory_size - memory_size;
 
     /* Update the virtual slot count */
-    buddy->virtual_slots = state ? (delta / BUDDY_ALIGN) : 0;
+    buddy->virtual_slots = state ? (delta / BUDDY_ALLOC_ALIGN) : 0;
 
     /* Determine whether to mark or release */
     void (*toggle)(struct buddy_tree *, buddy_tree_pos) =
@@ -647,7 +649,7 @@ static _Bool buddy_is_free(struct buddy *buddy, size_t from) {
 
     size_t effective_memory_size = ceiling_power_of_two(buddy->memory_size);
     size_t to = effective_memory_size -
-        ((buddy->virtual_slots ? buddy->virtual_slots : 1) * BUDDY_ALIGN);
+        ((buddy->virtual_slots ? buddy->virtual_slots : 1) * BUDDY_ALLOC_ALIGN);
 
     struct buddy_tree *t = buddy_tree(buddy);
 
