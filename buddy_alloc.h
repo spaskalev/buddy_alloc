@@ -981,7 +981,7 @@ static void write_to_internal_position(unsigned char *bitset, struct internal_po
 
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos) {
     if (! bitset_test(bitset, pos.bitset_location)) {
-        return 0; /* Fast test without complete extratioc */
+        return 0; /* Fast test without complete extration */
     }
     return bitset_count_range(bitset, pos.bitset_location, pos.bitset_location+pos.local_offset-1);
 }
