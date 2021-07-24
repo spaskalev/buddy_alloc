@@ -1330,12 +1330,10 @@ static void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to
         bitset[from_bucket] &= ~bitset_char_mask[from_index][to_index];
     } else {
         bitset[from_bucket] &= ~bitset_char_mask[from_index][7];
-        from_bucket++;
-        while(from_bucket != to_bucket) {
-            bitset[from_bucket] = 0;
-            from_bucket++;
-        }
         bitset[to_bucket] &= ~bitset_char_mask[0][to_index];
+        while(++from_bucket != to_bucket) {
+            bitset[from_bucket] = 0;
+        }      
     }
 }
 
@@ -1350,12 +1348,10 @@ static void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_p
         bitset[from_bucket] |= bitset_char_mask[from_index][to_index];
     } else {
         bitset[from_bucket] |= bitset_char_mask[from_index][7];
-        from_bucket++;
-        while(from_bucket != to_bucket) {
-            bitset[from_bucket] = 255u;
-            from_bucket++;
-        }
         bitset[to_bucket] |= bitset_char_mask[0][to_index];
+        while(++from_bucket != to_bucket) {
+            bitset[from_bucket] = 255u;
+        }
     }
 }
 
@@ -1370,13 +1366,11 @@ static size_t bitset_count_range(unsigned char *bitset, size_t from_pos, size_t 
         return __builtin_popcount(bitset[from_bucket] & bitset_char_mask[from_index][to_index]);
     }
 
-    size_t result = __builtin_popcount(bitset[from_bucket] & bitset_char_mask[from_index][7]);
-    from_bucket++;
-    while(from_bucket != to_bucket) {
+    size_t result = __builtin_popcount(bitset[from_bucket] & bitset_char_mask[from_index][7])
+        + __builtin_popcount(bitset[to_bucket]  & bitset_char_mask[0][to_index]);
+    while(++from_bucket != to_bucket) {
         result += __builtin_popcount(bitset[from_bucket]);
-        from_bucket++;
     }
-    result += __builtin_popcount(bitset[to_bucket]  & bitset_char_mask[0][to_index]);
     return result;
 }
 
