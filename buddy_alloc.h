@@ -971,12 +971,14 @@ static inline size_t buddy_tree_size_for_order(struct buddy_tree *t,
 }
 
 static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
+    if (! value) {
+        bitset_clear(bitset, pos.bitset_location);
+        return;
+    }
     bitset_clear_range(bitset, pos.bitset_location,
         pos.bitset_location+pos.local_offset-1);
-    if (value) {
-        bitset_set_range(bitset, pos.bitset_location,
-            pos.bitset_location+value-1);
-    }
+    bitset_set_range(bitset, pos.bitset_location,
+        pos.bitset_location+value-1);
 }
 
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos) {
