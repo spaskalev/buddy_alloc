@@ -529,8 +529,10 @@ void buddy_free(struct buddy *buddy, void *ptr) {
     /* Find the position tracking this address */
     buddy_tree_pos pos = position_for_address(buddy, dst);
 
-    /* Release the position */
-    buddy_tree_release(buddy_tree(buddy), pos);
+    if (pos) {
+        /* Release the position */
+        buddy_tree_release(buddy_tree(buddy), pos);
+    }
 }
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
@@ -1012,18 +1014,14 @@ static _Bool buddy_tree_interval_contains(struct buddy_tree_interval outer,
 }
 
 static size_t buddy_tree_status(struct buddy_tree *t, buddy_tree_pos pos) {
-    if (!pos) {
-        return 0;
-    }
+    assert(pos);
 
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
     return read_from_internal_position(buddy_tree_bits(t), internal);
 }
 
 static void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos) {
-    if (!pos) {
-        return;
-    }
+    assert(pos);
 
     /* Calling mark on a used position is a bug in caller */
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
@@ -1036,9 +1034,7 @@ static void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos) {
 }
 
 static void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
-    if (!pos) {
-        return;
-    }
+    assert(pos);
 
     /* Calling release on an unused or a partially-used position a bug in caller */
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);

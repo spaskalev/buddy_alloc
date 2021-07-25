@@ -1000,10 +1000,6 @@ void test_buddy_tree_mark_status_release_01() {
 	alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
 
-	assert(buddy_tree_status(t, 0) == 0);
-	buddy_tree_mark(t, 0); /* coverage */
-	buddy_tree_release(t, 0); /* coverage */
-
 	buddy_tree_pos pos = buddy_tree_root();
 	assert(buddy_tree_status(t, pos) == 0);
 	buddy_tree_mark(t, pos);
