@@ -10,6 +10,7 @@
 #include <stdlib.h>
 
 #define BUDDY_ALLOC_IMPLEMENTATION
+#define BUDDY_ALLOC_ALIGN sizeof(size_t)
 #include "../buddy_alloc.h"
 
 #include "buddy_global.h"
