@@ -473,6 +473,9 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
 
     /* Find the position tracking this address */
     buddy_tree_pos origin = position_for_address(buddy, ptr);
+    if (!origin) {
+        return NULL;
+    }
     size_t current_depth = buddy_tree_depth(origin);
     size_t target_depth = depth_for_size(buddy, requested_size);
 
@@ -529,10 +532,12 @@ void buddy_free(struct buddy *buddy, void *ptr) {
     /* Find the position tracking this address */
     buddy_tree_pos pos = position_for_address(buddy, dst);
 
-    if (pos) {
-        /* Release the position */
-        buddy_tree_release(buddy_tree(buddy), pos);
+    if (! pos) {
+        return;
     }
+
+    /* Release the position */
+    buddy_tree_release(buddy_tree(buddy), pos);
 }
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
