@@ -738,7 +738,8 @@ static struct internal_position buddy_tree_internal_position_tree(
     struct buddy_tree *t, buddy_tree_pos pos);
 static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order);
 static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order);
-static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos);
+static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos,
+    struct internal_position pos_internal, size_t size_current);
 static inline unsigned char *buddy_tree_bits(struct buddy_tree *t);
 static void buddy_tree_populate_size_for_order(struct buddy_tree *t);
 static inline size_t buddy_tree_size_for_order(struct buddy_tree *t, uint8_t to);
@@ -847,7 +848,8 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
         buddy_tree_populate_size_for_order(t);
 
         /* Update the root */
-        update_parent_chain(t, buddy_tree_root());
+        buddy_tree_pos right = buddy_tree_right_child(buddy_tree_root());
+        update_parent_chain(t, right, buddy_tree_internal_position_tree(t, right), 0);
     }
 }
 
@@ -1030,7 +1032,7 @@ static void buddy_tree_mark(struct buddy_tree *t, buddy_tree_pos pos) {
     write_to_internal_position(buddy_tree_bits(t), internal, internal.local_offset);
 
     /* Update the tree upwards */
-    update_parent_chain(t, buddy_tree_parent(pos));
+    update_parent_chain(t, pos, internal, internal.local_offset);
 }
 
 static void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
@@ -1051,46 +1053,30 @@ static void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos) {
     write_to_internal_position(buddy_tree_bits(t), internal, 0);
 
     /* Update the tree upwards */
-    update_parent_chain(t, buddy_tree_parent(pos));
+    update_parent_chain(t, pos, internal, 0);
 }
 
-static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos) {
-    if (! pos) {
-        return;
-    }
-
+static void update_parent_chain(struct buddy_tree *t, buddy_tree_pos pos,
+        struct internal_position pos_internal, size_t size_current) {
     unsigned char *bits = buddy_tree_bits(t);
+    while (pos != 1) {
+        pos_internal.bitset_location += pos_internal.local_offset
+            - (2 * pos_internal.local_offset * (pos & 1u));
+        size_t size_sibling = read_from_internal_position(bits, pos_internal);
 
-    struct internal_position pos_internal =
-        buddy_tree_internal_position_tree(t, buddy_tree_left_child(pos));
-    size_t size_a = read_from_internal_position(bits, pos_internal);
-
-    pos_internal.bitset_location += pos_internal.local_offset;
-    size_t size_b = read_from_internal_position(bits, pos_internal);
-
-    while (1) {
-        size_t free = (size_a || size_b) * ((size_a <= size_b ? size_a : size_b) + 1);
+        pos = buddy_tree_parent(pos);
         pos_internal = buddy_tree_internal_position_tree(t, pos);
-        size_t current = read_from_internal_position(bits, pos_internal);
-        if (free == current) {
-            return; /* short the parent chain update */
-        }
+        size_t size_parent = read_from_internal_position(bits, pos_internal);
 
-        /* Update the node */
-        write_to_internal_position(bits, pos_internal, free);
-
-        if (pos == 1) {
+        size_t target_parent = (size_current || size_sibling)
+            * ((size_current <= size_sibling ? size_current : size_sibling) + 1);
+        if (target_parent == size_parent) {
             return;
         }
 
-        size_a = free; /* A is the current position, B is the sibling */
-        pos_internal.bitset_location += pos_internal.local_offset;
-        pos_internal.bitset_location -= 2 * pos_internal.local_offset * (pos & 1u);
-        size_b = read_from_internal_position(bits, pos_internal);
-
-        /* Advance upwards */
-        pos = buddy_tree_parent(pos);
-    }
+        write_to_internal_position(bits, pos_internal, target_parent);
+        size_current = target_parent;
+    };
 }
 
 static buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth) {
