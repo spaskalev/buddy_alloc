@@ -79,6 +79,46 @@ An application developer may also need object allocation that is relocatable. Us
 
 ## Implementation
 
+```
++-------------+                  +----------------------------------------------------------+
+|             |                  | The allocator component works with 'struct buddy *' and  |
+|  allocator  +------------------+ is responsible for the allocator interface (malloc/free )|
+|             |                  | and for interfacing with the allocator tree.             |
++------+------+                  +----------------------------------------------------------+
+       |
+       |
+       |(uses)
+       |
+       |
+       |
++------v------+                   +------------------------------------------------------+
+|             |                   | The allocator tree is the core internal component.   |
+|  allocator  +-------------------+ It provides the actual allocation and deallocation   |
+|    tree     |                   | algorithms and uses a binary tree to keep its state. |
+|             |                   +------------------------------------------------------+
++------+------+
+       |
+       |
+       |(uses)
+       |
+       |
+       |
++------v------+                   +---------------------------------------------------+
+|             |                   | The bitset is the allocator tree backing store.   |
+|   bitset    +-------------------+                                                   |
+|             |                   | The buddy_tree_internal_position_* functions map  |
++-------------+                   | a tree position to the bitset.                    |
+                                  |                                                   |
+                                  | The write_to and read_from (internal position)    |
+                                  | functions encode and decode values in the bitset. |
+                                  |                                                   |
+                                  | Values are encoded in unary with no separators as |
+                                  | the struct internal_position lists their length.  |
+                                  | The unary encoding is faster to encode and decode |
+                                  | on unaligned boundaries.                          |
+                                  +---------------------------------------------------+
+```
+
 ### Metadata
 
 The allocator uses a bitset-backed perfect binary tree to track allocations. The tree is fixed in size and remains outside of the main arena. This allows for better cache performance in the arena as the cache is not loading allocator metadata when processing application data.
