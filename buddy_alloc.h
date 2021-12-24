@@ -40,8 +40,11 @@ struct buddy *buddy_embed(unsigned char *main, size_t memory_size);
 /* Resizes the arena and metadata to a new size. */
 struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size);
 
-/* Tests if the allocation can be shrank in half */
+/* Tests if the allocation can be shrunk in half */
 _Bool buddy_can_shrink(struct buddy *buddy);
+
+/* Tests if the allocation is completely empty */
+_Bool buddy_is_empty(struct buddy *buddy);
 
 /* Reports the arena size */
 size_t buddy_arena_size(struct buddy *buddy);
@@ -385,6 +388,13 @@ _Bool buddy_can_shrink(struct buddy *buddy) {
         return 0;
     }
     return buddy_is_free(buddy, buddy->memory_size / 2);
+}
+
+_Bool buddy_is_empty(struct buddy *buddy) {
+    if (buddy == NULL) {
+        return 1;
+    }
+    return buddy_is_free(buddy, 0);
 }
 
 size_t buddy_arena_size(struct buddy *buddy) {
@@ -920,6 +930,7 @@ static buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order) {
 }
 
 static inline size_t buddy_tree_depth(buddy_tree_pos pos) {
+    if (!pos) return 0u;
     return highest_bit_position(pos);
 }
 
