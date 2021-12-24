@@ -40,8 +40,11 @@ struct buddy *buddy_embed(unsigned char *main, size_t memory_size);
 /* Resizes the arena and metadata to a new size. */
 struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size);
 
-/* Tests if the allocation can be shrank in half */
+/* Tests if the allocation can be shrunk in half */
 _Bool buddy_can_shrink(struct buddy *buddy);
+
+/* Tests if the allocation is completely empty */
+_Bool buddy_is_empty(struct buddy *buddy);
 
 /* Reports the arena size */
 size_t buddy_arena_size(struct buddy *buddy);
@@ -88,7 +91,7 @@ typedef size_t buddy_tree_pos;
 
 struct buddy_tree_interval {
     buddy_tree_pos from;
-    buddy_tree_pos to;    
+    buddy_tree_pos to;
 };
 
 /*
@@ -385,6 +388,13 @@ _Bool buddy_can_shrink(struct buddy *buddy) {
         return 0;
     }
     return buddy_is_free(buddy, buddy->memory_size / 2);
+}
+
+_Bool buddy_is_empty(struct buddy *buddy) {
+    if (buddy == NULL) {
+        return 1;
+    }
+    return buddy_is_free(buddy, 0);
 }
 
 size_t buddy_arena_size(struct buddy *buddy) {
@@ -895,7 +905,7 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
         t->order = next_order;
         t->upper_pos_bound = 1u << t->order;
         buddy_tree_populate_size_for_order(t);
-    }   
+    }
 }
 
 static _Bool buddy_tree_valid(struct buddy_tree *t, buddy_tree_pos pos) {
@@ -1001,7 +1011,7 @@ static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, budd
     struct buddy_tree_interval result = {0};
     result.from = pos;
     result.to = pos;
-    size_t depth = buddy_tree_depth(pos);
+    size_t depth = pos ? buddy_tree_depth(pos) : 0;
     while (depth != t->order) {
         result.from = buddy_tree_left_child(result.from);
         result.to = buddy_tree_right_child(result.to);
@@ -1181,7 +1191,7 @@ static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, buddy_tree_pos 
             struct internal_position pos_internal =
                 buddy_tree_internal_position_tree(t, pos);
             size_t pos_status = read_from_internal_position(buddy_tree_bits(t), pos_internal);
-            size_t pos_size = start_size 
+            size_t pos_size = start_size
                 >> ((buddy_tree_depth(pos) - 1u)
                     % ((sizeof(size_t) * CHAR_BIT)-1));
             fprintf(stream, "%.*s",
@@ -1312,7 +1322,7 @@ static void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to
         bitset[to_bucket] &= ~bitset_char_mask[0][to_index];
         while(++from_bucket != to_bucket) {
             bitset[from_bucket] = 0;
-        }      
+        }
     }
 }
 
