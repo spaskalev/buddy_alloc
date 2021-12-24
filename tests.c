@@ -621,6 +621,9 @@ void test_buddy_demo() {
 	/* Free using the buddy allocator */
 	buddy_free(buddy, data);
 
+	assert(buddy_is_empty(NULL) == 1);
+	assert(buddy_is_empty(buddy));
+
 	free(buddy_metadata);
 	free(buddy_arena);
 }
@@ -1430,7 +1433,7 @@ int main() {
 		test_buddy_mixed_sizes_01();
 		test_buddy_large_arena();
 	}
-	
+
 	{
 		test_buddy_tree_init();
 		test_buddy_tree_valid();

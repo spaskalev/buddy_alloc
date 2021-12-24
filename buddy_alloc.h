@@ -91,7 +91,7 @@ typedef size_t buddy_tree_pos;
 
 struct buddy_tree_interval {
     buddy_tree_pos from;
-    buddy_tree_pos to;    
+    buddy_tree_pos to;
 };
 
 /*
@@ -905,7 +905,7 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
         t->order = next_order;
         t->upper_pos_bound = 1u << t->order;
         buddy_tree_populate_size_for_order(t);
-    }   
+    }
 }
 
 static _Bool buddy_tree_valid(struct buddy_tree *t, buddy_tree_pos pos) {
@@ -930,7 +930,6 @@ static buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order) {
 }
 
 static inline size_t buddy_tree_depth(buddy_tree_pos pos) {
-    if (!pos) return 0u;
     return highest_bit_position(pos);
 }
 
@@ -1012,7 +1011,7 @@ static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, budd
     struct buddy_tree_interval result = {0};
     result.from = pos;
     result.to = pos;
-    size_t depth = buddy_tree_depth(pos);
+    size_t depth = pos ? buddy_tree_depth(pos) : 0;
     while (depth != t->order) {
         result.from = buddy_tree_left_child(result.from);
         result.to = buddy_tree_right_child(result.to);
@@ -1192,7 +1191,7 @@ static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, buddy_tree_pos 
             struct internal_position pos_internal =
                 buddy_tree_internal_position_tree(t, pos);
             size_t pos_status = read_from_internal_position(buddy_tree_bits(t), pos_internal);
-            size_t pos_size = start_size 
+            size_t pos_size = start_size
                 >> ((buddy_tree_depth(pos) - 1u)
                     % ((sizeof(size_t) * CHAR_BIT)-1));
             fprintf(stream, "%.*s",
@@ -1323,7 +1322,7 @@ static void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to
         bitset[to_bucket] &= ~bitset_char_mask[0][to_index];
         while(++from_bucket != to_bucket) {
             bitset[from_bucket] = 0;
-        }      
+        }
     }
 }
 
