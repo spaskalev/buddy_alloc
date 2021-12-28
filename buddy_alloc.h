@@ -273,11 +273,11 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
     if ((at == NULL) || (main == NULL)) {
         return NULL;
     }
-    size_t at_alignment = ((uintptr_t) at) % alignof(struct buddy);
+    size_t at_alignment = ((uintptr_t) at) % __alignof__(struct buddy);
     if (at_alignment != 0) {
         return NULL;
     }
-    size_t main_alignment = ((uintptr_t) main) % alignof(size_t);
+    size_t main_alignment = ((uintptr_t) main) % __alignof__(size_t);
     if (main_alignment != 0) {
         return NULL;
     }
@@ -706,8 +706,8 @@ static struct buddy_embed_check buddy_embed_offset(size_t memory_size) {
     }
 
     size_t offset = memory_size - buddy_size;
-    if (offset % alignof(struct buddy) != 0) {
-        buddy_size += offset % alignof(struct buddy);
+    if (offset % __alignof__(struct buddy) != 0) {
+        buddy_size += offset % __alignof__(struct buddy);
         if (buddy_size >= memory_size) {
             result.can_fit = 0;
         }
