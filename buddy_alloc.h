@@ -218,7 +218,7 @@ static void bitset_debug(FILE *stream, unsigned char *bitset, size_t length);
 static unsigned int popcount_byte(unsigned char b);
 
 /* Returns the index of the highest bit set (1-based) */
-static inline size_t highest_bit_position(size_t value);
+static size_t highest_bit_position(size_t value);
 
 /* Returns the nearest larger or equal power of two */
 static inline size_t ceiling_power_of_two(size_t value);
@@ -1410,15 +1410,23 @@ static unsigned int popcount_byte(unsigned char b) {
     return popcount_lookup[b & 15] + popcount_lookup[b >> 4];
 }
 
-/* Returns the higest set bit position for the given value. Do not call with zero. */
-static inline size_t highest_bit_position(size_t value) {
-    assert(value);
-    return ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value));
+/* Returns the higest set bit position for the given value. Returns zero for zero. */
+static size_t highest_bit_position(size_t value) {
+    int result = 0;
+    const size_t all_set[] = {4294967295, 65535, 255, 15, 7, 3, 1};
+    const size_t count[] = {32, 16, 8, 4, 2, 1, 1};
+    for (size_t i = 0; i < 7; i++) {
+        if (value >= all_set[i]) {
+            value >>= count[i];
+            result += count[i];
+        }       
+    }
+    return result + value;
 }
 
 static inline size_t ceiling_power_of_two(size_t value) {
     value += !value; /* branchless x -> { 1 for 0, x for x } */
-    return 1u << ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value + value - 1)-1);
+    return 1u << (highest_bit_position(value + value - 1)-1);
 }
 
 #endif /* BUDDY_ALLOC_IMPLEMENTATION */
