@@ -485,7 +485,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
     }
 
     /* Find the position tracking this address */
-    buddy_tree_pos origin = position_for_address(buddy, ptr);
+    buddy_tree_pos origin = position_for_address(buddy, (unsigned char *) ptr);
     if (!origin) {
         return NULL;
     }
