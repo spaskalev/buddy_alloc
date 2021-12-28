@@ -16,7 +16,6 @@
 #define BUDDY_ALLOC_H
 
 #include <limits.h>
-#include <stdalign.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -41,10 +40,10 @@ struct buddy *buddy_embed(unsigned char *main, size_t memory_size);
 struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size);
 
 /* Tests if the allocation can be shrunk in half */
-_Bool buddy_can_shrink(struct buddy *buddy);
+unsigned int buddy_can_shrink(struct buddy *buddy);
 
 /* Tests if the allocation is completely empty */
-_Bool buddy_is_empty(struct buddy *buddy);
+unsigned int buddy_is_empty(struct buddy *buddy);
 
 /* Reports the arena size */
 size_t buddy_arena_size(struct buddy *buddy);
@@ -105,7 +104,7 @@ static size_t buddy_tree_sizeof(uint8_t order);
 static struct buddy_tree *buddy_tree_init(unsigned char *at, uint8_t order);
 
 /* Indicates whether this is a valid position for the tree */
-static _Bool buddy_tree_valid(struct buddy_tree *t, buddy_tree_pos pos);
+static unsigned int buddy_tree_valid(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Returns the order of the specified buddy allocation tree */
 static uint8_t buddy_tree_order(struct buddy_tree *t);
@@ -146,7 +145,7 @@ static size_t buddy_tree_index(buddy_tree_pos pos);
 static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Checks if one interval contains another */
-static _Bool buddy_tree_interval_contains(struct buddy_tree_interval outer,
+static unsigned int buddy_tree_interval_contains(struct buddy_tree_interval outer,
     struct buddy_tree_interval inner);
 
 /*
@@ -166,10 +165,10 @@ static void buddy_tree_release(struct buddy_tree *t, buddy_tree_pos pos);
 static buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth);
 
 /* Tests if the incidated position is available for allocation */
-static _Bool buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos);
+static unsigned int buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos);
 
 /* Tests if the tree can be shrank in half */
-static _Bool buddy_tree_can_shrink(struct buddy_tree *t);
+static unsigned int buddy_tree_can_shrink(struct buddy_tree *t);
 
 /*
  * Debug functions
@@ -179,7 +178,7 @@ static _Bool buddy_tree_can_shrink(struct buddy_tree *t);
 static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, buddy_tree_pos pos, size_t start_size);
 
 /* Implementation defined */
-static _Bool buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos);
+static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos);
 
 /*
  * A char-backed bitset implementation
@@ -197,7 +196,7 @@ static inline void bitset_set(unsigned char *bitset, size_t pos);
 
 static inline void bitset_clear(unsigned char *bitset, size_t pos);
 
-static inline _Bool bitset_test(const unsigned char *bitset, size_t pos);
+static inline unsigned int bitset_test(const unsigned char *bitset, size_t pos);
 
 static void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by);
 
@@ -214,8 +213,11 @@ static void bitset_debug(FILE *stream, unsigned char *bitset, size_t length);
  Bits
 */
 
+/* Returns the number of set bits in the given byte */
+static unsigned int popcount_byte(unsigned char b);
+
 /* Returns the index of the highest bit set (1-based) */
-static inline size_t highest_bit_position(size_t value);
+static size_t highest_bit_position(size_t value);
 
 /* Returns the nearest larger or equal power of two */
 static inline size_t ceiling_power_of_two(size_t value);
@@ -235,12 +237,12 @@ struct buddy {
         unsigned char *main;
         ptrdiff_t main_offset;
     };
-    _Bool relative_mode;
+    unsigned int relative_mode;
     unsigned char buddy_tree[];
 };
 
 struct buddy_embed_check {
-    _Bool can_fit;
+    unsigned int can_fit;
     size_t offset;
     size_t buddy_size;
 };
@@ -252,10 +254,10 @@ static void *address_for_position(struct buddy *buddy, buddy_tree_pos pos);
 static buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr);
 static unsigned char *buddy_main(struct buddy *buddy);
 static struct buddy_tree *buddy_tree(struct buddy *buddy);
-static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state);
+static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state);
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size);
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
-static _Bool buddy_is_free(struct buddy *buddy, size_t from);
+static unsigned int buddy_is_free(struct buddy *buddy, size_t from);
 static struct buddy_embed_check buddy_embed_offset(size_t memory_size);
 static buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, size_t offset);
 
@@ -383,14 +385,14 @@ static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memor
     return relocated;
 }
 
-_Bool buddy_can_shrink(struct buddy *buddy) {
+unsigned int buddy_can_shrink(struct buddy *buddy) {
     if (buddy == NULL) {
         return 0;
     }
     return buddy_is_free(buddy, buddy->memory_size / 2);
 }
 
-_Bool buddy_is_empty(struct buddy *buddy) {
+unsigned int buddy_is_empty(struct buddy *buddy) {
     if (buddy == NULL) {
         return 1;
     }
@@ -482,7 +484,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
     }
 
     /* Find the position tracking this address */
-    buddy_tree_pos origin = position_for_address(buddy, ptr);
+    buddy_tree_pos origin = position_for_address(buddy, (unsigned char *) ptr);
     if (!origin) {
         return NULL;
     }
@@ -612,7 +614,7 @@ static unsigned char *buddy_main(struct buddy *buddy) {
     return buddy->main;
 }
 
-static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state) {
+static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) {
     size_t memory_size = buddy->memory_size;
     /* Mask/unmask the virtual space if memory is not a power of two */
     size_t effective_memory_size = ceiling_power_of_two(memory_size);
@@ -661,7 +663,7 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, _Bool state) {
 /* Internal function that checks if there are any allocations
  after the indicated relative memory index. Used to check if
  the arena can be downsized. */
-static _Bool buddy_is_free(struct buddy *buddy, size_t from) {
+static unsigned int buddy_is_free(struct buddy *buddy, size_t from) {
     /* from is already adjusted for alignment */
 
     size_t effective_memory_size = ceiling_power_of_two(buddy->memory_size);
@@ -908,7 +910,7 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
     }
 }
 
-static _Bool buddy_tree_valid(struct buddy_tree *t, buddy_tree_pos pos) {
+static unsigned int buddy_tree_valid(struct buddy_tree *t, buddy_tree_pos pos) {
     return pos && (pos < t->upper_pos_bound);
 }
 
@@ -1020,7 +1022,7 @@ static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, budd
     return result;
 }
 
-static _Bool buddy_tree_interval_contains(struct buddy_tree_interval outer,
+static unsigned int buddy_tree_interval_contains(struct buddy_tree_interval outer,
         struct buddy_tree_interval inner) {
     return (inner.from >= outer.from)
         && (inner.from <= outer.to)
@@ -1139,7 +1141,7 @@ static buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_
     }
 }
 
-static _Bool buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos) {
+static unsigned int buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos) {
     if (buddy_tree_status(t, pos)) {
         return 0;
     }
@@ -1155,7 +1157,7 @@ static _Bool buddy_tree_is_free(struct buddy_tree *t, buddy_tree_pos pos) {
     return 1;
 }
 
-static _Bool buddy_tree_can_shrink(struct buddy_tree *t) {
+static unsigned int buddy_tree_can_shrink(struct buddy_tree *t) {
     if (buddy_tree_status(t, buddy_tree_right_child(buddy_tree_root())) != 0) {
         return 0; /* Refusing to shrink with right subtree still used! */
     }
@@ -1175,7 +1177,7 @@ static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, buddy_tree_pos 
     }
 
     buddy_tree_pos start = pos;
-    _Bool going_up = 0;
+    unsigned int going_up = 0;
     while (1) {
         if (going_up) {
             if (pos == start) {
@@ -1215,10 +1217,10 @@ static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, buddy_tree_pos 
     fflush(stdout);
 }
 
-static _Bool buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos) {
+static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos) {
     buddy_tree_pos start = pos;
-    _Bool going_up = 0;
-    _Bool fail = 0;
+    unsigned int going_up = 0;
+    unsigned int fail = 0;
     while (1) {
         if (going_up) {
             if (pos == start) {
@@ -1239,7 +1241,7 @@ static _Bool buddy_tree_check_invariant(struct buddy_tree *t, buddy_tree_pos pos
                 size_t left_child_status = buddy_tree_status(t, buddy_tree_left_child(pos));
                 size_t right_child_status = buddy_tree_status(t, buddy_tree_right_child(pos));
 
-                _Bool violated = 0;
+                unsigned int violated = 0;
 
                 if (left_child_status || right_child_status) {
                     size_t min = left_child_status <= right_child_status
@@ -1291,13 +1293,13 @@ static inline void bitset_clear(unsigned char *bitset, size_t pos) {
     bitset[bucket] &= ~bitset_index_mask[index];
 }
 
-static inline _Bool bitset_test(const unsigned char *bitset, size_t pos) {
+static inline unsigned int bitset_test(const unsigned char *bitset, size_t pos) {
     size_t bucket = pos / CHAR_BIT;
     size_t index = pos % CHAR_BIT;
     return bitset[bucket] & bitset_index_mask[index];
 }
 
-static uint8_t bitset_char_mask[8][8] = {
+static const uint8_t bitset_char_mask[8][8] = {
     {1, 3, 7, 15, 31, 63, 127, 255},
     {0, 2, 6, 14, 30, 62, 126, 254},
     {0, 0, 4, 12, 28, 60, 124, 252},
@@ -1352,13 +1354,13 @@ static size_t bitset_count_range(unsigned char *bitset, size_t from_pos, size_t 
     size_t to_index = to_pos % CHAR_BIT;
 
     if (from_bucket == to_bucket) {
-        return __builtin_popcount(bitset[from_bucket] & bitset_char_mask[from_index][to_index]);
+        return popcount_byte(bitset[from_bucket] & bitset_char_mask[from_index][to_index]);
     }
 
-    size_t result = __builtin_popcount(bitset[from_bucket] & bitset_char_mask[from_index][7])
-        + __builtin_popcount(bitset[to_bucket]  & bitset_char_mask[0][to_index]);
+    size_t result = popcount_byte(bitset[from_bucket] & bitset_char_mask[from_index][7])
+        + popcount_byte(bitset[to_bucket]  & bitset_char_mask[0][to_index]);
     while(++from_bucket != to_bucket) {
-        result += __builtin_popcount(bitset[from_bucket]);
+        result += popcount_byte(bitset[from_bucket]);
     }
     return result;
 }
@@ -1393,7 +1395,7 @@ static void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to
 
 static void bitset_debug(FILE *stream, unsigned char *bitset, size_t length) {
     for (size_t i = 0; i < length; i++) {
-        fprintf(stream, "%zu: %d\n", i, bitset_test(bitset, i));
+        fprintf(stream, "%zu: %d\n", i, bitset_test(bitset, i) && 1);
     }
 }
 
@@ -1401,15 +1403,29 @@ static void bitset_debug(FILE *stream, unsigned char *bitset, size_t length) {
  Bits
 */
 
-/* Returns the higest set bit position for the given value. Do not call with zero. */
-static inline size_t highest_bit_position(size_t value) {
-    assert(value);
-    return ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value));
+static const unsigned char popcount_lookup[16] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4};
+
+static unsigned int popcount_byte(unsigned char b) {
+    return popcount_lookup[b & 15] + popcount_lookup[b >> 4];
+}
+
+/* Returns the higest set bit position for the given value. Returns zero for zero. */
+static size_t highest_bit_position(size_t value) {
+    int result = 0;
+    const size_t all_set[] = {4294967295, 65535, 255, 15, 7, 3, 1};
+    const size_t count[] = {32, 16, 8, 4, 2, 1, 1};
+    for (size_t i = 0; i < 7; i++) {
+        if (value >= all_set[i]) {
+            value >>= count[i];
+            result += count[i];
+        }       
+    }
+    return result + value;
 }
 
 static inline size_t ceiling_power_of_two(size_t value) {
     value += !value; /* branchless x -> { 1 for 0, x for x } */
-    return 1u << ((sizeof(size_t) * CHAR_BIT) - __builtin_clzl(value + value - 1)-1);
+    return 1u << (highest_bit_position(value + value - 1)-1);
 }
 
 #endif /* BUDDY_ALLOC_IMPLEMENTATION */
