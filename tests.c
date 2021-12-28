@@ -944,10 +944,10 @@ void test_buddy_tree_valid() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 8);
-	assert(buddy_tree_valid(t, 0) == 0);
-	assert(buddy_tree_valid(t, 256) == 0);
-	assert(buddy_tree_valid(t, 1) == 1);
-	assert(buddy_tree_valid(t, 255) == 1);
+	assert(buddy_tree_valid(t, (struct buddy_tree_pos){ 0, 0 }) == 0);
+	assert(buddy_tree_valid(t, (struct buddy_tree_pos){ 256, 0 }) == 0);
+	assert(buddy_tree_valid(t, (struct buddy_tree_pos){ 1, 1 }) == 1);
+	assert(buddy_tree_valid(t, (struct buddy_tree_pos){ 255, 8 }) == 1);
 }
 
 void test_buddy_tree_order() {
@@ -959,16 +959,16 @@ void test_buddy_tree_order() {
 
 void test_buddy_tree_depth() {
 	start_test;
-	assert(buddy_tree_depth(1) == 1);
-    assert(buddy_tree_depth(2) == 2);
-    assert(buddy_tree_depth(3) == 2);
+	assert(buddy_tree_depth((struct buddy_tree_pos){ 1, 1 }) == 1);
+    assert(buddy_tree_depth((struct buddy_tree_pos){ 2, 2 }) == 2);
+    assert(buddy_tree_depth((struct buddy_tree_pos){ 3, 2 }) == 2);
 }
 
 void test_buddy_tree_left_child() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
-	buddy_tree_pos pos = buddy_tree_root();
+	struct buddy_tree_pos pos = buddy_tree_root();
 	pos = buddy_tree_left_child(pos);
 	assert(buddy_tree_depth(pos) == 2);
 	pos = buddy_tree_left_child(pos);
@@ -979,7 +979,7 @@ void test_buddy_tree_right_child() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
-	buddy_tree_pos pos = buddy_tree_root();
+	struct buddy_tree_pos pos = buddy_tree_root();
 	pos = buddy_tree_right_child(pos);
 	assert(buddy_tree_depth(pos) == 2);
 	pos = buddy_tree_right_child(pos);
@@ -988,24 +988,28 @@ void test_buddy_tree_right_child() {
 
 void test_buddy_tree_parent() {
 	start_test;
-	buddy_tree_pos pos = buddy_tree_root();
-	assert(buddy_tree_parent(pos) == 0);
-	assert(buddy_tree_parent(0) == 0);
-	assert(buddy_tree_parent(buddy_tree_left_child(pos)) == pos);
-	assert(buddy_tree_parent(buddy_tree_right_child(pos)) == pos);
+	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	struct buddy_tree_pos pos = buddy_tree_root();
+	assert(! buddy_tree_valid(t, buddy_tree_parent(pos)));
+	assert(! buddy_tree_valid(t, buddy_tree_parent(INVALID_POS)));
+	assert(buddy_tree_parent(buddy_tree_left_child(pos)).index == pos.index);
+	assert(buddy_tree_parent(buddy_tree_right_child(pos)).index == pos.index);
 }
 
 void test_buddy_tree_right_adjacent() {
 	start_test;
-	buddy_tree_pos pos = buddy_tree_root();
-	assert(buddy_tree_right_adjacent(pos) == 0);
-	assert(buddy_tree_right_adjacent(buddy_tree_right_child(pos)) == 0);
-	assert(buddy_tree_right_adjacent(buddy_tree_left_child(pos)) == buddy_tree_right_child(pos));
+	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
+	struct buddy_tree_pos pos = buddy_tree_root();
+	assert(! buddy_tree_valid(t, buddy_tree_right_adjacent(pos)));
+	assert(! buddy_tree_valid(t, buddy_tree_right_adjacent(buddy_tree_right_child(pos))));
+	assert(buddy_tree_right_adjacent(buddy_tree_left_child(pos)).index == buddy_tree_right_child(pos).index);
 }
 
 void test_buddy_tree_index() {
 	start_test;
-	buddy_tree_pos pos = buddy_tree_root();
+	struct buddy_tree_pos pos = buddy_tree_root();
 	assert(buddy_tree_index(pos) == 0);
 	assert(buddy_tree_index(buddy_tree_left_child(pos)) == 0);
 	assert(buddy_tree_index(buddy_tree_right_child(pos)) == 1);
@@ -1016,7 +1020,7 @@ void test_buddy_tree_mark_status_release_01() {
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
 
-	buddy_tree_pos pos = buddy_tree_root();
+	struct buddy_tree_pos pos = buddy_tree_root();
 	assert(buddy_tree_status(t, pos) == 0);
 	buddy_tree_mark(t, pos);
 	assert(buddy_tree_status(t, pos) == 1);
@@ -1028,7 +1032,7 @@ void test_buddy_tree_mark_status_release_02() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
-	buddy_tree_pos pos = buddy_tree_root();
+	struct buddy_tree_pos pos = buddy_tree_root();
 	assert(buddy_tree_status(t, pos) == 0);
 	buddy_tree_mark(t, pos);
 	assert(buddy_tree_status(t, pos) == 2);
@@ -1038,7 +1042,7 @@ void test_buddy_tree_mark_status_release_03() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
-	buddy_tree_pos pos = buddy_tree_root();
+	struct buddy_tree_pos pos = buddy_tree_root();
 	assert(buddy_tree_status(t, pos) == 0);
 	buddy_tree_mark(t, pos);
 	assert(buddy_tree_status(t, pos) == 3);
@@ -1048,7 +1052,7 @@ void test_buddy_tree_mark_status_release_04() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 4);
-	buddy_tree_pos pos = buddy_tree_root();
+	struct buddy_tree_pos pos = buddy_tree_root();
 	assert(buddy_tree_status(t, pos) == 0);
 	buddy_tree_mark(t, pos);
 	assert(buddy_tree_status(t, pos) == 4);
@@ -1058,7 +1062,7 @@ void test_buddy_tree_duplicate_mark() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
-	buddy_tree_pos pos = buddy_tree_root();
+	struct buddy_tree_pos pos = buddy_tree_root();
 	buddy_tree_mark(t, pos);
 	buddy_tree_mark(t, pos);
 }
@@ -1067,7 +1071,7 @@ void test_buddy_tree_duplicate_free() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
-	buddy_tree_pos pos = buddy_tree_root();
+	struct buddy_tree_pos pos = buddy_tree_root();
 	buddy_tree_release(t, pos);
 }
 
@@ -1075,8 +1079,8 @@ void test_buddy_tree_propagation_01() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
-	buddy_tree_pos pos = buddy_tree_root();
-	buddy_tree_pos left = buddy_tree_left_child(pos);
+	struct buddy_tree_pos pos = buddy_tree_root();
+	struct buddy_tree_pos left = buddy_tree_left_child(pos);
 	assert(buddy_tree_status(t, left) == 0);
 	buddy_tree_mark(t, left);
 	assert(buddy_tree_status(t, left) == 1);
@@ -1087,8 +1091,8 @@ void test_buddy_tree_propagation_02() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
-	buddy_tree_pos pos = buddy_tree_root();
-	buddy_tree_pos left = buddy_tree_left_child(buddy_tree_left_child(pos));
+	struct buddy_tree_pos pos = buddy_tree_root();
+	struct buddy_tree_pos left = buddy_tree_left_child(buddy_tree_left_child(pos));
 	buddy_tree_mark(t, left);
 	assert(buddy_tree_status(t, left) == 1);
 	assert(buddy_tree_status(t, pos) == 1);
@@ -1098,7 +1102,7 @@ void test_buddy_tree_find_free_02() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
-	buddy_tree_pos pos = buddy_tree_find_free(t, 1);
+	struct buddy_tree_pos pos = buddy_tree_find_free(t, 1);
 	assert(buddy_tree_valid(t, pos) == 1);
 	pos = buddy_tree_find_free(t, 2);
 	assert(buddy_tree_valid(t, pos) == 1);
@@ -1118,8 +1122,7 @@ void test_buddy_tree_debug_coverage() {
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_mark(t, buddy_tree_root());
 	buddy_tree_debug(stdout, t, buddy_tree_root(), 0);printf("\n"); /* code coverage */
-	buddy_tree_pos invalid_pos = 0;
-	buddy_tree_debug(stdout, t, invalid_pos, 0); /* code coverage */
+	buddy_tree_debug(stdout, t, INVALID_POS, 0); /* code coverage */
 }
 
 void test_buddy_tree_check_invariant_positive_01() {
@@ -1176,10 +1179,13 @@ void test_buddy_tree_resize_01() {
 	assert(buddy_tree_status(t, buddy_tree_left_child(buddy_tree_root())) == 1);
 	assert(buddy_tree_status(t, buddy_tree_right_child(buddy_tree_root())) == 0);
 	buddy_tree_resize(t, 3);
-	unsigned char expected[] = {0 /*ignored */, 1, 1, 0, 1, 0, 0, 0};
-	for (size_t i = 1; i < 8; i++) {
-		assert(buddy_tree_status(t, i) == expected[i]);
-	}
+	assert(buddy_tree_status(t, buddy_tree_root()) == 1);
+	assert(buddy_tree_status(t, buddy_tree_left_child(buddy_tree_root())) == 1);
+	assert(buddy_tree_status(t, buddy_tree_right_child(buddy_tree_root())) == 0);
+	assert(buddy_tree_status(t, buddy_tree_left_child(buddy_tree_left_child(buddy_tree_root()))) == 1);
+	assert(buddy_tree_status(t, buddy_tree_right_child(buddy_tree_left_child(buddy_tree_root()))) == 0);
+	assert(buddy_tree_status(t, buddy_tree_left_child(buddy_tree_right_child(buddy_tree_root()))) == 0);
+	assert(buddy_tree_status(t, buddy_tree_right_child(buddy_tree_right_child(buddy_tree_root()))) == 0);
 }
 
 void test_buddy_tree_resize_02() {
@@ -1238,16 +1244,16 @@ void test_buddy_tree_leftmost_child() {
 	{
 		unsigned char buddy_tree_buf[4096] = {0};
 		struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 1);
-		buddy_tree_pos leftmost = buddy_tree_leftmost_child(t);
+		struct buddy_tree_pos leftmost = buddy_tree_leftmost_child(t);
 		assert(buddy_tree_valid(t, leftmost));
-		assert(leftmost == buddy_tree_root());
+		assert(leftmost.index == buddy_tree_root().index);
 	}
 	{
 		unsigned char buddy_tree_buf[4096] = {0};
 		struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
-		buddy_tree_pos leftmost = buddy_tree_leftmost_child(t);
+		struct buddy_tree_pos leftmost = buddy_tree_leftmost_child(t);
 		assert(buddy_tree_valid(t, leftmost));
-		assert(leftmost == buddy_tree_left_child(buddy_tree_root()));
+		assert(leftmost.index == buddy_tree_left_child(buddy_tree_root()).index);
 	}
 }
 
@@ -1255,7 +1261,7 @@ void test_buddy_tree_is_free_01() {
 	start_test;
 	unsigned char buddy_tree_buf[4096] = {0};
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
-	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	struct buddy_tree_pos pos = buddy_tree_leftmost_child(t);
 	assert(buddy_tree_is_free(t, pos) == 1);
 	pos = buddy_tree_right_adjacent(pos);
 	assert(buddy_tree_is_free(t, pos) == 1);
@@ -1269,7 +1275,7 @@ void test_buddy_tree_is_free_02() {
 	start_test;
 	unsigned char buddy_tree_buf[4096] = {0};
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
-	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	struct buddy_tree_pos pos = buddy_tree_leftmost_child(t);
 	buddy_tree_mark(t, pos);
 	assert(buddy_tree_is_free(t, pos) == 0);
 	pos = buddy_tree_right_adjacent(pos);
@@ -1283,7 +1289,7 @@ void test_buddy_tree_is_free_03() {
 	start_test;
 	unsigned char buddy_tree_buf[4096] = {0};
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
-	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	struct buddy_tree_pos pos = buddy_tree_leftmost_child(t);
 	buddy_tree_mark(t, buddy_tree_parent(pos));
 	assert(buddy_tree_is_free(t, pos) == 0);
 	pos = buddy_tree_right_adjacent(pos);
@@ -1299,7 +1305,7 @@ void test_buddy_tree_is_free_04() {
 	unsigned char buddy_tree_buf[4096] = {0};
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
 	buddy_tree_mark(t, buddy_tree_root());
-	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	struct buddy_tree_pos pos = buddy_tree_leftmost_child(t);
 	assert(buddy_tree_is_free(t, pos) == 0);
 	pos = buddy_tree_right_adjacent(pos);
 	assert(buddy_tree_is_free(t, pos) == 0);
@@ -1313,20 +1319,20 @@ void test_buddy_tree_interval() {
 	start_test;
 	unsigned char buddy_tree_buf[4096] = {0};
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
-	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	struct buddy_tree_pos pos = buddy_tree_leftmost_child(t);
 	struct buddy_tree_interval interval = buddy_tree_interval(t, pos);
-	assert(interval.from == pos);
-	assert(interval.to == pos);
+	assert(interval.from.index == pos.index);
+	assert(interval.to.index == pos.index);
 	interval = buddy_tree_interval(t, buddy_tree_parent(pos));
-	assert(interval.from == pos);
-	assert(interval.to == buddy_tree_right_adjacent(pos));
+	assert(interval.from.index == pos.index);
+	assert(interval.to.index == buddy_tree_right_adjacent(pos).index);
 }
 
 void test_buddy_tree_interval_contains() {
 	start_test;
 	unsigned char buddy_tree_buf[4096] = {0};
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
-	buddy_tree_pos pos = buddy_tree_leftmost_child(t);
+	struct buddy_tree_pos pos = buddy_tree_leftmost_child(t);
 	struct buddy_tree_interval interval_low = buddy_tree_interval(t, pos);
 	struct buddy_tree_interval interval_high = buddy_tree_interval(t, buddy_tree_parent(pos));
 	assert(buddy_tree_interval_contains(interval_low, interval_low) == 1);
