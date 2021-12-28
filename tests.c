@@ -44,9 +44,9 @@ void test_bitset_basic() {
 	assert(bitset_sizeof(7) == 1);
 	assert(bitset_sizeof(8) == 1);
 	assert(bitset_sizeof(9) == 2);
-	assert(bitset_test(buf, 0) == 0);
+	assert(!bitset_test(buf, 0));
 	bitset_set(buf, 0);
-	assert(bitset_test(buf, 0) == 1);
+	assert(bitset_test(buf, 0));
 }
 
 void test_bitset_range() {
@@ -86,56 +86,56 @@ void test_bitset_shift() {
 	bitset_set(buf, 4);
 	bitset_set(buf, 7);
 	bitset_shift_right(buf, 0, 8, 4);
-	assert(bitset_test(buf, 0) == 0);
-	assert(bitset_test(buf, 1) == 0);
-	assert(bitset_test(buf, 2) == 0);
-	assert(bitset_test(buf, 3) == 0);
-	assert(bitset_test(buf, 4) == 1);
-	assert(bitset_test(buf, 5) == 0);
-	assert(bitset_test(buf, 6) == 0);
-	assert(bitset_test(buf, 7) == 1);
-	assert(bitset_test(buf, 8) == 1);
-	assert(bitset_test(buf, 9) == 0);
-	assert(bitset_test(buf, 10) == 0);
-	assert(bitset_test(buf, 11) == 1);
-	assert(bitset_test(buf, 12) == 0);
-	assert(bitset_test(buf, 13) == 0);
-	assert(bitset_test(buf, 14) == 0);
-	assert(bitset_test(buf, 15) == 0);
+	assert(!bitset_test(buf, 0));
+	assert(!bitset_test(buf, 1));
+	assert(!bitset_test(buf, 2));
+	assert(!bitset_test(buf, 3));
+	assert(bitset_test(buf, 4));
+	assert(!bitset_test(buf, 5));
+	assert(!bitset_test(buf, 6));
+	assert(bitset_test(buf, 7));
+	assert(bitset_test(buf, 8));
+	assert(!bitset_test(buf, 9));
+	assert(!bitset_test(buf, 10));
+	assert(bitset_test(buf, 11));
+	assert(!bitset_test(buf, 12));
+	assert(!bitset_test(buf, 13));
+	assert(!bitset_test(buf, 14));
+	assert(!bitset_test(buf, 15));
 	bitset_shift_left(buf, 4, 12, 4);
-	assert(bitset_test(buf, 0) == 1);
-	assert(bitset_test(buf, 1) == 0);
-	assert(bitset_test(buf, 2) == 0);
-	assert(bitset_test(buf, 3) == 1);
-	assert(bitset_test(buf, 4) == 1);
-	assert(bitset_test(buf, 5) == 0);
-	assert(bitset_test(buf, 6) == 0);
-	assert(bitset_test(buf, 7) == 1);
-	assert(bitset_test(buf, 8) == 0);
-	assert(bitset_test(buf, 9) == 0);
-	assert(bitset_test(buf, 10) == 0);
-	assert(bitset_test(buf, 11) == 0);
-	assert(bitset_test(buf, 12) == 0);
-	assert(bitset_test(buf, 13) == 0);
-	assert(bitset_test(buf, 14) == 0);
-	assert(bitset_test(buf, 15) == 0);
+	assert(bitset_test(buf, 0));
+	assert(!bitset_test(buf, 1));
+	assert(!bitset_test(buf, 2));
+	assert(bitset_test(buf, 3));
+	assert(bitset_test(buf, 4));
+	assert(!bitset_test(buf, 5));
+	assert(!bitset_test(buf, 6));
+	assert(bitset_test(buf, 7));
+	assert(!bitset_test(buf, 8));
+	assert(!bitset_test(buf, 9));
+	assert(!bitset_test(buf, 10));
+	assert(!bitset_test(buf, 11));
+	assert(!bitset_test(buf, 12));
+	assert(!bitset_test(buf, 13));
+	assert(!bitset_test(buf, 14));
+	assert(!bitset_test(buf, 15));
 }
 
 void test_bitset_shift_invalid() {
 	start_test;
 	unsigned char buf[4096] = {0};
 	bitset_set_range(buf, 1, 0); /* no-op */
-	assert(bitset_test(buf, 0) == 0);
-	assert(bitset_test(buf, 1) == 0);
+	assert(!bitset_test(buf, 0));
+	assert(!bitset_test(buf, 1));
 	bitset_set_range(buf, 0, 1);
-	assert(bitset_test(buf, 0) == 1);
-	assert(bitset_test(buf, 1) == 1);
+	assert(bitset_test(buf, 0));
+	assert(bitset_test(buf, 1));
 	bitset_clear_range(buf, 1, 0) /* no-op */;
-	assert(bitset_test(buf, 0) == 1);
-	assert(bitset_test(buf, 1) == 1);
+	assert(bitset_test(buf, 0));
+	assert(bitset_test(buf, 1));
 	bitset_clear_range(buf, 0, 1);
-	assert(bitset_test(buf, 0) == 0);
-	assert(bitset_test(buf, 1) == 0);
+	assert(!bitset_test(buf, 0));
+	assert(!bitset_test(buf, 1));
 }
 
 void test_bitset_debug() {
