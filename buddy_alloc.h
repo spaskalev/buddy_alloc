@@ -16,7 +16,6 @@
 #define BUDDY_ALLOC_H
 
 #include <limits.h>
-#include <stdalign.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
