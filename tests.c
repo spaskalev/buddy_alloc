@@ -38,6 +38,12 @@ void test_ceiling_power_of_two() {
 	assert(ceiling_power_of_two(8) == 8);
 }
 
+void test_popcount_byte() {
+	for (size_t i = 0; i < 256; i++) {
+		assert(popcount_byte(i) == (popcount_byte(i / 2) + (i & 1)));
+	}
+}
+
 void test_bitset_basic() {
 	start_test;
 	unsigned char buf[4] = {0};
@@ -1336,6 +1342,7 @@ int main() {
 	{
 		test_highest_bit_position();
 		test_ceiling_power_of_two();
+		test_popcount_byte();
 	}
 
 	{

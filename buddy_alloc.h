@@ -214,6 +214,9 @@ static void bitset_debug(FILE *stream, unsigned char *bitset, size_t length);
  Bits
 */
 
+/* Returns the number of set bits in the given byte */
+static unsigned int popcount_byte(unsigned char b);
+
 /* Returns the index of the highest bit set (1-based) */
 static inline size_t highest_bit_position(size_t value);
 
@@ -1297,7 +1300,7 @@ static inline unsigned int bitset_test(const unsigned char *bitset, size_t pos) 
     return bitset[bucket] & bitset_index_mask[index];
 }
 
-static uint8_t bitset_char_mask[8][8] = {
+static const uint8_t bitset_char_mask[8][8] = {
     {1, 3, 7, 15, 31, 63, 127, 255},
     {0, 2, 6, 14, 30, 62, 126, 254},
     {0, 0, 4, 12, 28, 60, 124, 252},
@@ -1352,13 +1355,13 @@ static size_t bitset_count_range(unsigned char *bitset, size_t from_pos, size_t 
     size_t to_index = to_pos % CHAR_BIT;
 
     if (from_bucket == to_bucket) {
-        return __builtin_popcount(bitset[from_bucket] & bitset_char_mask[from_index][to_index]);
+        return popcount_byte(bitset[from_bucket] & bitset_char_mask[from_index][to_index]);
     }
 
-    size_t result = __builtin_popcount(bitset[from_bucket] & bitset_char_mask[from_index][7])
-        + __builtin_popcount(bitset[to_bucket]  & bitset_char_mask[0][to_index]);
+    size_t result = popcount_byte(bitset[from_bucket] & bitset_char_mask[from_index][7])
+        + popcount_byte(bitset[to_bucket]  & bitset_char_mask[0][to_index]);
     while(++from_bucket != to_bucket) {
-        result += __builtin_popcount(bitset[from_bucket]);
+        result += popcount_byte(bitset[from_bucket]);
     }
     return result;
 }
@@ -1400,6 +1403,12 @@ static void bitset_debug(FILE *stream, unsigned char *bitset, size_t length) {
 /*
  Bits
 */
+
+static const unsigned char popcount_lookup[16] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4};
+
+static unsigned int popcount_byte(unsigned char b) {
+    return popcount_lookup[b & 15] + popcount_lookup[b >> 4];
+}
 
 /* Returns the higest set bit position for the given value. Do not call with zero. */
 static inline size_t highest_bit_position(size_t value) {
