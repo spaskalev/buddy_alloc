@@ -439,14 +439,15 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
     }
 
     size_t target_depth = depth_for_size(buddy, requested_size);
-    struct buddy_tree_pos pos = buddy_tree_find_free(buddy_tree(buddy), target_depth);
+    struct buddy_tree *tree = buddy_tree(buddy);
+    struct buddy_tree_pos pos = buddy_tree_find_free(tree, target_depth);
 
-    if (! pos.index) {
+    if (! buddy_tree_valid(tree, pos)) {
         return NULL; /* no slot found */
     }
 
     /* Allocate the slot */
-    buddy_tree_mark(buddy_tree(buddy), pos);
+    buddy_tree_mark(tree, pos);
 
     /* Find and return the actual memory address */
     return address_for_position(buddy, pos);
@@ -492,8 +493,9 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
     }
 
     /* Find the position tracking this address */
+    struct buddy_tree *tree = buddy_tree(buddy);
     struct buddy_tree_pos origin = position_for_address(buddy, (unsigned char *) ptr);
-    if (! origin.index) {
+    if (! buddy_tree_valid(tree, origin)) {
         return NULL;
     }
     size_t current_depth = buddy_tree_depth(origin);
@@ -505,12 +507,12 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
     }
 
     /* Release the position and perform a search */
-    buddy_tree_release(buddy_tree(buddy), origin);
-    struct buddy_tree_pos new_pos = buddy_tree_find_free(buddy_tree(buddy), target_depth);
+    buddy_tree_release(tree, origin);
+    struct buddy_tree_pos new_pos = buddy_tree_find_free(tree, target_depth);
 
-    if (! buddy_tree_valid(buddy_tree(buddy), new_pos)) {
+    if (! buddy_tree_valid(tree, new_pos)) {
         /* allocation failure, restore mark and return null */
-        buddy_tree_mark(buddy_tree(buddy), origin);
+        buddy_tree_mark(tree, origin);
         return NULL;
     }
 
@@ -520,7 +522,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
     memmove(destination, source, size_for_depth(buddy,
         current_depth > target_depth ? current_depth : target_depth));
     /* Allocate and return */
-    buddy_tree_mark(buddy_tree(buddy), new_pos);
+    buddy_tree_mark(tree, new_pos);
     return destination;
 }
 
@@ -550,14 +552,15 @@ void buddy_free(struct buddy *buddy, void *ptr) {
     }
 
     /* Find the position tracking this address */
+    struct buddy_tree *tree = buddy_tree(buddy);
     struct buddy_tree_pos pos = position_for_address(buddy, dst);
 
-    if (! pos.index) {
+    if (! buddy_tree_valid(tree, pos)) {
         return;
     }
 
     /* Release the position */
-    buddy_tree_release(buddy_tree(buddy), pos);
+    buddy_tree_release(tree, pos);
 }
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
@@ -606,10 +609,11 @@ static struct buddy_tree_pos position_for_address(struct buddy *buddy, const uns
     }
 #endif
 
+    struct buddy_tree *tree = buddy_tree(buddy);
     struct buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
 
     /* Find the actual allocated position tracking this address */
-    while (pos.index && !buddy_tree_status(buddy_tree(buddy), pos)) {
+    while (buddy_tree_valid(tree, pos) && !buddy_tree_status(tree, pos)) {
         pos = buddy_tree_parent(pos);
     }
 
@@ -900,7 +904,7 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
                 next_order, buddy_tree_parent(left_start));
 
             /* There are this many nodes at the current level */
-            size_t node_count = 1u << (highest_bit_position(left_start.index) - 1u);
+            size_t node_count = 1u << (left_start.depth - 1u);
 
             /* Transfer the bits*/
             bitset_shift_left(buddy_tree_bits(t),
@@ -1037,7 +1041,7 @@ static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, stru
     struct buddy_tree_interval result = {0};
     result.from = pos;
     result.to = pos;
-    size_t depth = pos.index ? buddy_tree_depth(pos) : 0;
+    size_t depth = pos.depth;
     while (depth != t->order) {
         result.from = buddy_tree_left_child(result.from);
         result.to = buddy_tree_right_child(result.to);
@@ -1055,15 +1059,11 @@ static unsigned int buddy_tree_interval_contains(struct buddy_tree_interval oute
 }
 
 static size_t buddy_tree_status(struct buddy_tree *t, struct buddy_tree_pos pos) {
-    assert(pos.index);
-
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
     return read_from_internal_position(buddy_tree_bits(t), internal);
 }
 
 static void buddy_tree_mark(struct buddy_tree *t, struct buddy_tree_pos pos) {
-    assert(pos.index);
-
     /* Calling mark on a used position is a bug in caller */
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
 
@@ -1075,8 +1075,6 @@ static void buddy_tree_mark(struct buddy_tree *t, struct buddy_tree_pos pos) {
 }
 
 static void buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos) {
-    assert(pos.index);
-
     /* Calling release on an unused or a partially-used position a bug in caller */
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
 
