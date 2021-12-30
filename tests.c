@@ -1196,7 +1196,7 @@ void test_buddy_walk() {
 	buddy_malloc(buddy, 128);
 	size_t counter = 0;
 	assert(buddy_walk(buddy, walker, &counter) == NULL);
-	assert(counter = 2);
+	assert(counter == 2);
 	buddy_malloc(buddy, 256);
 	assert(buddy_walk(buddy, walker, &counter) != NULL);
 }
