@@ -68,6 +68,9 @@ void *buddy_reallocarray(struct buddy *buddy, void *ptr,
 /* Use the specified buddy to free memory. See free. */
 void buddy_free(struct buddy *buddy, void *ptr);
 
+/* A (safer) free with a size. Will not free unless the size fits the target span. */
+void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size);
+
 #endif /* BUDDY_ALLOC_H */
 
 #ifdef BUDDY_ALLOC_IMPLEMENTATION
@@ -562,6 +565,42 @@ void buddy_free(struct buddy *buddy, void *ptr) {
     struct buddy_tree_pos pos = position_for_address(buddy, dst);
 
     if (! buddy_tree_valid(tree, pos)) {
+        return;
+    }
+
+    /* Release the position */
+    buddy_tree_release(tree, pos);
+}
+
+void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size) {
+    if (buddy == NULL) {
+        return;
+    }
+    if (ptr == NULL) {
+        return;
+    }
+    unsigned char *dst = (unsigned char *)ptr;
+    unsigned char *main = buddy_main(buddy);
+    if ((dst < main) || (dst >= (main + buddy->memory_size))) {
+        return;
+    }
+
+    /* Find the position tracking this address */
+    struct buddy_tree *tree = buddy_tree(buddy);
+    struct buddy_tree_pos pos = position_for_address(buddy, dst);
+
+    if (! buddy_tree_valid(tree, pos)) {
+        return;
+    }
+
+    size_t allocated_size_for_depth = size_for_depth(buddy, pos.depth);
+    if (requested_size < BUDDY_ALLOC_ALIGN) {
+        requested_size = BUDDY_ALLOC_ALIGN;
+    }
+    if (requested_size > allocated_size_for_depth) {
+        return;
+    }
+    if (requested_size <= (allocated_size_for_depth / 2)) {
         return;
     }
 
