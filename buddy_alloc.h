@@ -71,6 +71,20 @@ void buddy_free(struct buddy *buddy, void *ptr);
 /* A (safer) free with a size. Will not free unless the size fits the target span. */
 void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size);
 
+/*
+ * Iteration functions
+ */
+
+/*
+ * Iterate through the allocated slots and call the provided function for each of them.
+ *
+ * If the provided function returns a non-NULL result the iteration stops and the result
+ * is returned to called. NULL is returned upon completing iteration without stopping.
+ *
+ * The iteration order is implementation-defined and may change between versions.
+ */
+void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t slot_size), void *ctx);
+
 #endif /* BUDDY_ALLOC_H */
 
 #ifdef BUDDY_ALLOC_IMPLEMENTATION
@@ -606,6 +620,53 @@ void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size) {
 
     /* Release the position */
     buddy_tree_release(tree, pos);
+}
+
+void *buddy_walk(struct buddy *buddy,
+        void *(fp)(void *ctx, void *addr, size_t slot_size), void *ctx) {
+    if (buddy == NULL) {
+        return NULL;
+    }
+    if (fp == NULL) {
+        return NULL;
+    }
+    size_t effective_memory_size = ceiling_power_of_two(buddy->memory_size);
+    struct buddy_tree *tree = buddy_tree(buddy);
+    size_t tree_order = buddy_tree_order(tree);
+    struct buddy_tree_pos pos = buddy_tree_root();
+    unsigned int going_up = 0;
+    while (1) {
+        if (going_up) {
+            if (pos.index == buddy_tree_root().index) {
+                break;
+            }
+            if (! (pos.index & 1u /* bit-wise */) /* left node */) {
+                pos = buddy_tree_right_adjacent(pos);
+                going_up = 0;
+            } else {
+                pos = buddy_tree_parent(pos);
+            }
+        } else {
+            size_t pos_status = buddy_tree_status(tree, pos);
+            size_t pos_size = effective_memory_size
+                >> ((pos.depth - 1u) % ((sizeof(size_t) * CHAR_BIT)-1));
+
+            if (pos_status == (tree_order - pos.depth + 1)) { // fully-allocated
+                void *result = (fp)(ctx, address_for_position(buddy, pos), pos_size);
+                if (result != NULL) {
+                    return result;
+                }
+            }
+
+            struct buddy_tree_pos left = buddy_tree_left_child(pos);
+            if (buddy_tree_valid(tree, left)) {
+                pos = left;
+            } else {
+                going_up = 1;
+            }
+        }
+    }
+    return NULL;
 }
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {

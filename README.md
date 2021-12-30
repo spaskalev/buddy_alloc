@@ -77,6 +77,8 @@ A custom allocator can suplement the system allocator where needed. A parser tha
 
 An application developer may also need object allocation that is relocatable. Using memory representation as serialization output is a valid technique and it is used for persistance and replication. The buddy_alloc embedded mode is relocatable allowing it to be serialized and restored to a different memory location, a different process or a different machine altogether (provided matching architecture and binaries).
 
+With the introduction of the `buddy_walk` function the allocator can be used to iterate all the allocated slots with its arena. This can be used for example for a space-bounded mailbox where a failure to allocate means the mailbox is full and the walk can be used to process its content. This can also form the basis of a managed heap for gabage collection.
+
 ## Implementation
 
 ```

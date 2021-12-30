@@ -1174,6 +1174,33 @@ void test_buddy_large_arena() {
 	free(data_buf);
 }
 
+void *walker(void *ctx, void *addr, size_t size) {
+	(void) addr;
+	(void) size;
+	size_t *counter = (size_t *) ctx;
+	(*counter)++;
+	if ((*counter) > 2) {
+		return addr; /* cause a stop */
+	}
+	return NULL;
+}
+
+void test_buddy_walk() {
+	start_test;
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	_Alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
+	assert(buddy_walk(NULL, walker, NULL) == NULL);
+	assert(buddy_walk(buddy, NULL, NULL) == NULL);
+	buddy_malloc(buddy, 64);
+	buddy_malloc(buddy, 128);
+	size_t counter = 0;
+	assert(buddy_walk(buddy, walker, &counter) == NULL);
+	assert(counter = 2);
+	buddy_malloc(buddy, 256);
+	assert(buddy_walk(buddy, walker, &counter) != NULL);
+}
+
 void test_buddy_tree_init() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
@@ -1699,6 +1726,8 @@ int main() {
 
 		test_buddy_mixed_sizes_01();
 		test_buddy_large_arena();
+
+		test_buddy_walk();
 	}
 
 	{
