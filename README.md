@@ -86,10 +86,7 @@ An application developer may also need object allocation that is relocatable. Us
 |             |                  | and for interfacing with the allocator tree.             |
 +------+------+                  +----------------------------------------------------------+
        |
-       |
        |(uses)
-       |
-       |
        |
 +------v------+                   +------------------------------------------------------+
 |             |                   | The allocator tree is the core internal component.   |
@@ -98,10 +95,7 @@ An application developer may also need object allocation that is relocatable. Us
 |             |                   +------------------------------------------------------+
 +------+------+
        |
-       |
        |(uses)
-       |
-       |
        |
 +------v------+                   +---------------------------------------------------+
 |             |                   | The bitset is the allocator tree backing store.   |
@@ -126,6 +120,10 @@ The allocator uses a bitset-backed perfect binary tree to track allocations. The
 ### Allocation and deallocation
 
 The binary tree nodes are labeled with the largest allocation slot available under them. This allows allocation to happen with a limited number of operations. Allocations that cannot be satisfied are fast to fail. Once a free node of the desired size is found it is marked as used and the nodes leading to root of the tree are updated to account for any difference in the largest available size. Deallocation works in a similar way - the smallest used block size for the given address is found, marked as a free and the same node update as with allocation is used to update the tree. 
+
+#### Fragmentation
+
+To minimize fragmentation the allocator will pick the more heavily-used branches when descending the tree to find a free slot. This ensures that larger continuous spans are kept available for larger-sized allocation requests. A minor benefit is that clumping allocations together can allow for better cache performance.
 
 ### Space requirements
 
