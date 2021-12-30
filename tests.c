@@ -685,6 +685,27 @@ void test_buddy_free_invalid_free_03() {
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
 }
 
+void test_buddy_free_invalid_free_04() {
+	start_test;
+	size_t size = BUDDY_ALLOC_ALIGN * 2;
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(size)];
+	_Alignas(max_align_t) unsigned char buddy_buf_control[buddy_sizeof(size)];
+	_Alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
+	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
+	assert(l != NULL);
+	void *r = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
+	assert(r != NULL);
+	assert(l != r);
+	buddy_free(buddy, l);
+	memcpy(buddy_buf_control, buddy_buf, buddy_sizeof(size));
+	// double-free on a left node
+	// that will propagate to a partially-allocated parent
+	buddy_free(buddy, l);
+	/* the use check in buddy_tree_release handles this case */
+	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+}
+
 void test_buddy_demo() {
 	size_t arena_size = 65536;
 	/* You need space for the metadata and for the arena */
@@ -1485,6 +1506,7 @@ int main() {
 		test_buddy_free_invalid_free_01();
 		test_buddy_free_invalid_free_02();
 		test_buddy_free_invalid_free_03();
+		test_buddy_free_invalid_free_04();
 
 		test_buddy_demo();
 		test_buddy_demo_embedded();
