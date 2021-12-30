@@ -278,7 +278,13 @@ size_t buddy_sizeof(size_t memory_size) {
 }
 
 struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_size) {
-    if ((at == NULL) || (main == NULL)) {
+    if (at == NULL) {
+        return NULL;
+    }
+    if (main == NULL) {
+        return NULL;
+    }
+    if (at == main) {
         return NULL;
     }
     size_t at_alignment = ((uintptr_t) at) % __alignof__(struct buddy);
@@ -616,6 +622,12 @@ static struct buddy_tree_pos position_for_address(struct buddy *buddy, const uns
     while (buddy_tree_valid(tree, pos) && !buddy_tree_status(tree, pos)) {
         pos = buddy_tree_parent(pos);
     }
+
+#ifdef BUDDY_ALLOC_SAFETY
+    if (address_for_position(buddy, pos) != addr) {
+        return INVALID_POS; /* invalid alignment */
+    }
+#endif
 
     return pos;
 }

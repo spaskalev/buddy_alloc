@@ -165,6 +165,13 @@ void test_buddy_init_null() {
 	}
 }
 
+void test_buddy_init_overlap() {
+	start_test;
+	_Alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(data_buf, data_buf, 4096);
+	assert(buddy == NULL);
+}
+
 void test_buddy_misalignment() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)+1];
@@ -614,6 +621,70 @@ void test_buddy_free_alignment() {
 	buddy_free(buddy, data_buf+1);
 }
 
+void test_buddy_free_invalid_free_01() {
+	start_test;
+	size_t size = BUDDY_ALLOC_ALIGN * 2;
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(size)];
+	_Alignas(max_align_t) unsigned char buddy_buf_control[buddy_sizeof(size)];
+	_Alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
+	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
+	assert(l != NULL);
+	void *r = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
+	assert(r != NULL);
+	assert(l != r);
+	buddy_free(buddy, r);
+	memcpy(buddy_buf_control, buddy_buf, buddy_sizeof(size));
+	// double-free on a right node
+	// that will propagate to a partially-allocated parent
+	buddy_free(buddy, r);
+	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+}
+
+void test_buddy_free_invalid_free_02() {
+	start_test;
+	size_t size = BUDDY_ALLOC_ALIGN * 2;
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(size)];
+	_Alignas(max_align_t) unsigned char buddy_buf_control[buddy_sizeof(size)];
+	_Alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
+	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
+	assert(l != NULL);
+	void *r = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
+	assert(r != NULL);
+	assert(l != r);
+	buddy_free(buddy, l);
+	buddy_free(buddy, r);
+	memcpy(buddy_buf_control, buddy_buf, buddy_sizeof(size));
+	// double-free on a right node
+	// that will propagate to a unallocated parent
+	buddy_free(buddy, r);
+	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+}
+
+void test_buddy_free_invalid_free_03() {
+	start_test;
+	size_t size = BUDDY_ALLOC_ALIGN * 2;
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(size)];
+	_Alignas(max_align_t) unsigned char buddy_buf_control[buddy_sizeof(size)];
+	_Alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
+	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
+	assert(l != NULL);
+	void *r = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
+	assert(r != NULL);
+	assert(l != r);
+	buddy_free(buddy, l);
+	buddy_free(buddy, r);
+	void *m = buddy_malloc(buddy, size); // full allocation
+	assert(m == l); // at the start of the arena
+	memcpy(buddy_buf_control, buddy_buf, buddy_sizeof(size));
+	// double-free on a right node
+	// that will propagate to a fully-allocated parent
+	buddy_free(buddy, r);
+	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+}
+
 void test_buddy_demo() {
 	size_t arena_size = 65536;
 	/* You need space for the metadata and for the arena */
@@ -926,9 +997,9 @@ void test_buddy_large_arena() {
 	size_t size = 2147483648 /* 2 GB */;
 	unsigned char *data_buf = malloc(size);
 	unsigned char *buddy_buf = malloc(buddy_sizeof(size));
-	struct buddy *buddy = buddy_init(buddy_buf, buddy_buf, size);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	assert(buddy != NULL);
-	assert(buddy_malloc(buddy, size) == buddy_buf);
+	assert(buddy_malloc(buddy, size) == data_buf);
 	buddy_free(buddy, data_buf);
 	free(buddy_buf);
 	free(data_buf);
@@ -1362,6 +1433,7 @@ int main() {
 
 	{
 		test_buddy_init_null();
+		test_buddy_init_overlap();
 		test_buddy_misalignment();
 		test_buddy_embed_misalignment();
 		test_buddy_invalid_datasize();
@@ -1410,6 +1482,9 @@ int main() {
 
 		test_buddy_free_coverage();
 		test_buddy_free_alignment();
+		test_buddy_free_invalid_free_01();
+		test_buddy_free_invalid_free_02();
+		test_buddy_free_invalid_free_03();
 
 		test_buddy_demo();
 		test_buddy_demo_embedded();
