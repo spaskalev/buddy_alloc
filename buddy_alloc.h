@@ -648,14 +648,20 @@ void *buddy_walk(struct buddy *buddy,
             }
         } else {
             size_t pos_status = buddy_tree_status(tree, pos);
-            size_t pos_size = effective_memory_size
-                >> ((pos.depth - 1u) % ((sizeof(size_t) * CHAR_BIT)-1));
+            if (pos_status == 0) { // this branch is free, skip it
+                going_up = 1;
+                continue;
+            }
 
             if (pos_status == (tree_order - pos.depth + 1)) { // fully-allocated
+                size_t pos_size = effective_memory_size
+                    >> ((pos.depth - 1u) % ((sizeof(size_t) * CHAR_BIT)-1));
                 void *result = (fp)(ctx, address_for_position(buddy, pos), pos_size);
                 if (result != NULL) {
                     return result;
                 }
+                going_up = 1;
+                continue;
             }
 
             struct buddy_tree_pos left = buddy_tree_left_child(pos);
