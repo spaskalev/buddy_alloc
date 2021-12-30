@@ -16,7 +16,7 @@ CTIDY_EXTRA='-std=c11'
 TESTS_SRC=tests.c
 LIB_SRC=buddy_alloc.h
 
-test: tests.out
+test: tests.out spell
 	rm -f *.gcda
 	./tests.out
 	$(LLVM_COV) gcov -b $(TESTS_SRC) | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
@@ -38,6 +38,10 @@ check-recursion: $(LIB_SRC)
 clean:
 	rm -f *.gcda *.gcno *.gcov tests.out
 
-.PHONY: test clean test-clang-tidy test-cppcheck
+spell:
+	spell -d .dict *.md
+	[ -z "$$(spell -d .dict *.md)" ]
+
+.PHONY: test clean test-clang-tidy test-cppcheck spell
 
 .PRECIOUS: tests.out

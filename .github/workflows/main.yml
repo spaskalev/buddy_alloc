@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: setup
-      run: sudo apt-get update && sudo apt-get -y -qq install clang-tidy cppcheck cflow
+      run: sudo apt-get update && sudo apt-get -y -qq install clang-tidy cppcheck cflow spell
     - name: make
       run: make LLVM_VERSION=10
       working-directory: .
