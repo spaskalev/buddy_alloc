@@ -636,6 +636,7 @@ void *buddy_walk(struct buddy *buddy,
     size_t tree_order = buddy_tree_order(tree);
     struct buddy_tree_pos pos = buddy_tree_root();
     unsigned int going_up = 0;
+    size_t pos_status = buddy_tree_status(tree, pos);
     while (1) {
         if (going_up) {
             if (pos.index == buddy_tree_root().index) {
@@ -643,12 +644,13 @@ void *buddy_walk(struct buddy *buddy,
             }
             if (! (pos.index & 1u /* bit-wise */) /* left node */) {
                 pos = buddy_tree_right_adjacent(pos);
+                pos_status = buddy_tree_status(tree, pos);
                 going_up = 0;
             } else {
                 pos = buddy_tree_parent(pos);
+                pos_status = buddy_tree_status(tree, pos);
             }
         } else {
-            size_t pos_status = buddy_tree_status(tree, pos);
             if (! pos_status) { // empty node, go back
                 going_up = 1;
                 continue;
@@ -656,6 +658,7 @@ void *buddy_walk(struct buddy *buddy,
 
             struct buddy_tree_pos left = buddy_tree_left_child(pos);
             if (buddy_tree_valid(tree, left)) {
+                size_t left_status = buddy_tree_status(tree, left);
                 // We are at a partially or fully-allocated non-leaf node
                 if (pos_status == (tree_order - pos.depth + 1)) { // fully-allocated                    
                     // The tree doesn't make a distinction of a fully-allocated node
@@ -663,9 +666,10 @@ void *buddy_walk(struct buddy *buddy,
                     //  child allocations at the node level - we need to check the children.
                     // A fully-allocated node will have both children set to their maximum
                     //  but it is sufficient to check just one for non-zero.
-                    if (buddy_tree_status(tree, left)) {
+                    if (left_status) {
                         // A child is allocated, descend
                         pos = left;
+                        pos_status = left_status;
                     } else {
                         // Current node is allocated, process
                         size_t pos_size = effective_memory_size >> (pos.depth - 1u);
@@ -679,6 +683,7 @@ void *buddy_walk(struct buddy *buddy,
                 } else { // partially-allocated
                     // Descend
                     pos = left;
+                    pos_status = left_status;
                 }
             } else {
                 // We are at an allocated leaf node
