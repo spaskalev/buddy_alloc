@@ -1176,7 +1176,8 @@ void test_buddy_large_arena() {
 
 void *walker(void *ctx, void *addr, size_t size) {
 	(void) addr;
-	(void) size;
+	printf("%zu \n", size);
+	assert(size == 64);
 	size_t *counter = (size_t *) ctx;
 	(*counter)++;
 	if ((*counter) > 2) {
@@ -1192,12 +1193,17 @@ void test_buddy_walk() {
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	assert(buddy_walk(NULL, walker, NULL) == NULL);
 	assert(buddy_walk(buddy, NULL, NULL) == NULL);
+	void *a = buddy_malloc(buddy, 64);
 	buddy_malloc(buddy, 64);
-	buddy_malloc(buddy, 128);
 	size_t counter = 0;
 	assert(buddy_walk(buddy, walker, &counter) == NULL);
 	assert(counter == 2);
-	buddy_malloc(buddy, 256);
+	buddy_free(buddy, a);
+	counter = 0;
+	assert(buddy_walk(buddy, walker, &counter) == NULL);
+	counter = 0;
+	buddy_malloc(buddy, 64);
+	buddy_malloc(buddy, 64);
 	assert(buddy_walk(buddy, walker, &counter) != NULL);
 }
 

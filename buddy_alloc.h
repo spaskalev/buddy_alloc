@@ -654,9 +654,19 @@ void *buddy_walk(struct buddy *buddy,
                 continue;
             }
 
+            struct buddy_tree_pos left = buddy_tree_left_child(pos);
+            unsigned int is_left_valid = buddy_tree_valid(tree, left);
+
+            if (is_left_valid) {
+                size_t left_status = buddy_tree_status(tree, left);
+                if (left_status) {
+                    pos = left;
+                    continue;
+                }
+            }
+
             if (pos_status == (tree_order - pos.depth + 1)) { // fully-allocated
-                size_t pos_size = effective_memory_size
-                    >> ((pos.depth - 1u) % ((sizeof(size_t) * CHAR_BIT)-1));
+                size_t pos_size = effective_memory_size >> (pos.depth - 1u);
                 void *result = (fp)(ctx, address_for_position(buddy, pos), pos_size);
                 if (result != NULL) {
                     return result;
@@ -664,13 +674,7 @@ void *buddy_walk(struct buddy *buddy,
                 going_up = 1;
                 continue;
             }
-
-            struct buddy_tree_pos left = buddy_tree_left_child(pos);
-            if (buddy_tree_valid(tree, left)) {
-                pos = left;
-            } else {
-                going_up = 1;
-            }
+            going_up = 1;
         }
     }
     return NULL;
