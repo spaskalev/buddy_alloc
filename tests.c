@@ -1289,9 +1289,9 @@ void *walker_05(void *ctx, void *addr, size_t size) {
 
 void test_buddy_walk_05() {
 	start_test;
-	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
-	_Alignas(max_align_t) unsigned char data_buf[512];
-	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 384); // virtual slots
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
+	_Alignas(max_align_t) unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 3648); // virtual slots
 	unsigned int ctx = 0;
 	assert(buddy_walk(buddy, walker_05, &ctx) == NULL);
 	assert(walker_05(&ctx, NULL, 0) == &ctx); // coverage

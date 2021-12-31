@@ -644,7 +644,12 @@ void *buddy_walk(struct buddy *buddy,
             size_t pos_size = effective_memory_size >> (pos.depth - 1u);
             unsigned char *addr = address_for_position(buddy, pos);
             if (((size_t)(addr - main + pos_size)) > buddy->memory_size) {
-                // virtual slot, do not call
+                // Do not process virtual slots
+                // As virtual slots are on the right side of the tree
+                //  if we see a one with the current iteration order this
+                //  means that all subsequent slots will be virtual,
+                //  hence we can return early.
+                return NULL;
             } else {
                 void *result = (fp)(ctx, addr, pos_size);
                 if (result != NULL) {
