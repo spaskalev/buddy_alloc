@@ -56,3 +56,8 @@ dkms.conf
 *.gcda
 *.gcno
 *.static
+
+# Perf
+bench/out.perf-folded
+bench/perf-kernel.svg
+bench/perf.data
