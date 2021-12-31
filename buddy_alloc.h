@@ -279,6 +279,7 @@ static void *address_for_position(struct buddy *buddy, struct buddy_tree_pos pos
 static struct buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr);
 static unsigned char *buddy_main(struct buddy *buddy);
 static struct buddy_tree *buddy_tree(struct buddy *buddy);
+static size_t buddy_effective_memory_size(struct buddy *buddy);
 static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state);
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size);
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
@@ -630,7 +631,7 @@ void *buddy_walk(struct buddy *buddy,
     if (fp == NULL) {
         return NULL;
     }
-    size_t effective_memory_size = ceiling_power_of_two(buddy->memory_size);
+    size_t effective_memory_size = buddy_effective_memory_size(buddy);
     struct buddy_tree *tree = buddy_tree(buddy);
     size_t tree_order = buddy_tree_order(tree);
     struct buddy_tree_pos pos = buddy_tree_root();
@@ -680,7 +681,7 @@ static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
         requested_size = BUDDY_ALLOC_ALIGN;
     }
     size_t depth = 1;
-    size_t effective_memory_size = ceiling_power_of_two(buddy->memory_size);
+    size_t effective_memory_size = buddy_effective_memory_size(buddy);
     while ((effective_memory_size / requested_size) >> 1u) {
         depth++;
         effective_memory_size >>= 1u;
@@ -695,6 +696,10 @@ static inline size_t size_for_depth(struct buddy *buddy, size_t depth) {
 
 static struct buddy_tree *buddy_tree(struct buddy *buddy) {
     return (struct buddy_tree*) buddy->buddy_tree;
+}
+
+static size_t buddy_effective_memory_size(struct buddy *buddy) {
+    return ceiling_power_of_two(buddy->memory_size);
 }
 
 static void *address_for_position(struct buddy *buddy, struct buddy_tree_pos pos) {
@@ -748,7 +753,7 @@ static unsigned char *buddy_main(struct buddy *buddy) {
 static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) {
     size_t memory_size = buddy->memory_size;
     /* Mask/unmask the virtual space if memory is not a power of two */
-    size_t effective_memory_size = ceiling_power_of_two(memory_size);
+    size_t effective_memory_size = buddy_effective_memory_size(buddy);
     if (effective_memory_size == memory_size) {
         /* Update the virtual slot count */
         buddy->virtual_slots = 0;
@@ -797,7 +802,7 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) 
 static unsigned int buddy_is_free(struct buddy *buddy, size_t from) {
     /* from is already adjusted for alignment */
 
-    size_t effective_memory_size = ceiling_power_of_two(buddy->memory_size);
+    size_t effective_memory_size = buddy_effective_memory_size(buddy);
     size_t to = effective_memory_size -
         ((buddy->virtual_slots ? buddy->virtual_slots : 1) * BUDDY_ALLOC_ALIGN);
 
@@ -860,7 +865,7 @@ static void buddy_debug(FILE *stream, struct buddy *buddy) {
     fprintf(stream, "\n");
     fprintf(stream, "virtual slots: %zu\n", buddy->virtual_slots);
     fprintf(stream, "allocator tree follows:\n");
-    buddy_tree_debug(stream, buddy_tree(buddy), buddy_tree_root(), ceiling_power_of_two(buddy->memory_size));
+    buddy_tree_debug(stream, buddy_tree(buddy), buddy_tree_root(), buddy_effective_memory_size(buddy));
 }
 
 /*
@@ -1552,6 +1557,7 @@ static unsigned int popcount_byte(unsigned char b) {
 /* Returns the higest set bit position for the given value. Returns zero for zero. */
 static size_t highest_bit_position(size_t value) {
     int result = 0;
+    /* some other millenia when size_t becomes 128-bit this will break :) */
     const size_t all_set[] = {4294967295, 65535, 255, 15, 7, 3, 1};
     const size_t count[] = {32, 16, 8, 4, 2, 1, 1};
     for (size_t i = 0; i < 7; i++) {
