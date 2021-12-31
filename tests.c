@@ -1261,6 +1261,26 @@ void test_buddy_walk_03() {
 	assert(buddy_walk(buddy, walker_03, &context) == NULL);
 }
 
+void *walker_04(void *ctx, void *addr, size_t size) {
+	struct buddy *buddy = (struct buddy *) ctx;
+	assert(addr != NULL);
+	assert(size != 0);
+	buddy_free(buddy, addr);
+	return NULL;
+}
+
+void test_buddy_walk_04() {
+	start_test;
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	_Alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
+	buddy_malloc(buddy, 128);
+	buddy_malloc(buddy, 64);
+	buddy_malloc(buddy, 256);
+	assert(buddy_walk(buddy, walker_04, buddy) == NULL);
+	assert(buddy_is_empty(buddy));
+}
+
 void test_buddy_tree_init() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
@@ -1790,6 +1810,7 @@ int main() {
 		test_buddy_walk_01();
 		test_buddy_walk_02();
 		test_buddy_walk_03();
+		test_buddy_walk_04();
 	}
 
 	{
