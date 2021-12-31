@@ -1281,6 +1281,21 @@ void test_buddy_walk_04() {
 	assert(buddy_is_empty(buddy));
 }
 
+void *walker_05(void *ctx, void *addr, size_t size) {
+	(void) addr;
+	(void) size;
+	return ctx;
+}
+
+void test_buddy_walk_05() {
+	start_test;
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	_Alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 384); // virtual slots
+	unsigned int ctx = 0;
+	assert(buddy_walk(buddy, walker_05, &ctx) == NULL);
+	assert(walker_05(&ctx, NULL, 0) == &ctx); // coverage
+}
 void test_buddy_tree_init() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
@@ -1811,6 +1826,7 @@ int main() {
 		test_buddy_walk_02();
 		test_buddy_walk_03();
 		test_buddy_walk_04();
+		test_buddy_walk_05();
 	}
 
 	{

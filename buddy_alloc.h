@@ -275,7 +275,7 @@ struct buddy_embed_check {
 static size_t buddy_tree_order_for_memory(size_t memory_size);
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size);
 static inline size_t size_for_depth(struct buddy *buddy, size_t depth);
-static void *address_for_position(struct buddy *buddy, struct buddy_tree_pos pos);
+static unsigned char *address_for_position(struct buddy *buddy, struct buddy_tree_pos pos);
 static struct buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr);
 static unsigned char *buddy_main(struct buddy *buddy);
 static struct buddy_tree *buddy_tree(struct buddy *buddy);
@@ -631,13 +631,29 @@ void *buddy_walk(struct buddy *buddy,
     if (fp == NULL) {
         return NULL;
     }
+    unsigned char *main = buddy_main(buddy);
     size_t effective_memory_size = buddy_effective_memory_size(buddy);
     struct buddy_tree *tree = buddy_tree(buddy);
     size_t tree_order = buddy_tree_order(tree);
     struct buddy_tree_pos pos = buddy_tree_root();
     unsigned int going_up = 0;
+    unsigned int process = 0;
     size_t pos_status = buddy_tree_status(tree, pos);
     while (1) {
+        if (process) {
+            size_t pos_size = effective_memory_size >> (pos.depth - 1u);
+            unsigned char *addr = address_for_position(buddy, pos);
+            if (((size_t)(addr - main + pos_size)) > buddy->memory_size) {
+                // virtual slot, do not call
+            } else {
+                void *result = (fp)(ctx, addr, pos_size);
+                if (result != NULL) {
+                    return result;
+                }
+            }
+            process = 0;
+        }
+
         if (going_up) {
             if (pos.index == buddy_tree_root().index) {
                 break;
@@ -672,11 +688,7 @@ void *buddy_walk(struct buddy *buddy,
                         pos_status = left_status;
                     } else {
                         // Current node is allocated, process
-                        size_t pos_size = effective_memory_size >> (pos.depth - 1u);
-                        void *result = (fp)(ctx, address_for_position(buddy, pos), pos_size);
-                        if (result != NULL) {
-                            return result;
-                        }
+                        process = 1;
                         // Go back
                         going_up = 1;
                     }
@@ -686,12 +698,8 @@ void *buddy_walk(struct buddy *buddy,
                     pos_status = left_status;
                 }
             } else {
-                // We are at an allocated leaf node
-                size_t pos_size = effective_memory_size >> (pos.depth - 1u);
-                void *result = (fp)(ctx, address_for_position(buddy, pos), pos_size);
-                if (result != NULL) {
-                    return result;
-                }
+                // We are at an allocated leaf node, process
+                process = 1;
                 // Go back
                 going_up = 1;
             }
@@ -726,7 +734,7 @@ static size_t buddy_effective_memory_size(struct buddy *buddy) {
     return ceiling_power_of_two(buddy->memory_size);
 }
 
-static void *address_for_position(struct buddy *buddy, struct buddy_tree_pos pos) {
+static unsigned char *address_for_position(struct buddy *buddy, struct buddy_tree_pos pos) {
     size_t block_size = size_for_depth(buddy, buddy_tree_depth(pos));
     size_t addr = block_size * buddy_tree_index(pos);
     return buddy_main(buddy) + addr;
