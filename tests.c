@@ -1230,6 +1230,37 @@ void test_buddy_walk_02() {
 	assert(buddy_walk(buddy, walker_02, &counter) != NULL);
 }
 
+struct walker_03_entry {
+	void *addr;
+	size_t size;
+};
+
+void *walker_03(void *ctx, void *addr, size_t size) {
+	struct walker_03_entry (*context) = (struct walker_03_entry *) ctx;
+	unsigned int found = 0;
+	for (size_t i = 0; i < 3; i++) {
+		struct walker_03_entry *current = context + i;
+		if ((current->addr == addr) && (current->size) == size) {
+			found = 1;
+			break;
+		}
+	}
+	assert(found);
+	return NULL;
+}
+
+void test_buddy_walk_03() {
+	start_test;
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	_Alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
+	struct walker_03_entry context[3];
+	context[0] = (struct walker_03_entry){.addr = buddy_malloc(buddy, 128), .size = 128};
+	context[1] = (struct walker_03_entry){.addr = buddy_malloc(buddy, 64), .size = 64};
+	context[2] = (struct walker_03_entry){.addr = buddy_malloc(buddy, 256), .size = 256};
+	assert(buddy_walk(buddy, walker_03, &context) == NULL);
+}
+
 void test_buddy_tree_init() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
@@ -1758,6 +1789,7 @@ int main() {
 
 		test_buddy_walk_01();
 		test_buddy_walk_02();
+		test_buddy_walk_03();
 	}
 
 	{
