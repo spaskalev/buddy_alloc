@@ -525,11 +525,6 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
     size_t current_depth = buddy_tree_depth(origin);
     size_t target_depth = depth_for_size(buddy, requested_size);
 
-    /* If the new size fits in the same slot do nothing */
-    if (current_depth == target_depth) {
-        return ptr;
-    }
-
     /* Release the position and perform a search */
     buddy_tree_release(tree, origin);
     struct buddy_tree_pos new_pos = buddy_tree_find_free(tree, target_depth);
@@ -538,6 +533,12 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
         /* allocation failure, restore mark and return null */
         buddy_tree_mark(tree, origin);
         return NULL;
+    }
+
+    if (origin.index == new_pos.index) {
+        /* Allocated to the same slot, restore mark and return null */
+        buddy_tree_mark(tree, origin);
+        return ptr;
     }
 
     /* Copy the content */

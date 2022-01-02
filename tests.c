@@ -1296,6 +1296,38 @@ void test_buddy_walk_05() {
 	assert(buddy_walk(buddy, walker_05, &ctx) == NULL);
 	assert(walker_05(&ctx, NULL, 0) == &ctx); // coverage
 }
+
+void *walker_06(void *ctx, void *addr, size_t size) {
+	struct buddy *buddy = (struct buddy *) ctx;
+	buddy_realloc(buddy, addr, size);
+	return NULL;
+}
+
+void test_buddy_walk_06() {
+	start_test;
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	_Alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
+	void *a[8];
+	a[0] = buddy_malloc(buddy, 64);
+	a[1] = buddy_malloc(buddy, 64);
+	a[2] = buddy_malloc(buddy, 64);
+	a[3] = buddy_malloc(buddy, 64);
+	a[4] = buddy_malloc(buddy, 64);
+	a[5] = buddy_malloc(buddy, 64);
+	a[6] = buddy_malloc(buddy, 64);
+	a[7] = buddy_malloc(buddy, 64);
+	buddy_free(buddy, a[1]);
+	buddy_free(buddy, a[3]);
+	buddy_free(buddy, a[5]);
+	buddy_free(buddy, a[7]);
+	// at this point we have 4x64 slots free but they are
+	// fragmented and cannot be coalesced
+	assert(buddy_malloc(buddy, 256) == NULL);
+	buddy_walk(buddy, walker_06, buddy);
+	assert(buddy_malloc(buddy, 256) != NULL);
+}
+
 void test_buddy_tree_init() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
@@ -1827,6 +1859,7 @@ int main() {
 		test_buddy_walk_03();
 		test_buddy_walk_04();
 		test_buddy_walk_05();
+		test_buddy_walk_06();
 	}
 
 	{
