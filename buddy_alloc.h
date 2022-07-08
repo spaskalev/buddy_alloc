@@ -1609,7 +1609,7 @@ static size_t highest_bit_position(size_t value) {
 
 static inline size_t ceiling_power_of_two(size_t value) {
     value += !value; /* branchless x -> { 1 for 0, x for x } */
-    return 1u << (highest_bit_position(value + value - 1)-1);
+    return 1ul << (highest_bit_position(value + value - 1)-1);
 }
 
 #endif /* BUDDY_ALLOC_IMPLEMENTATION */
