@@ -72,6 +72,13 @@ void buddy_free(struct buddy *buddy, void *ptr);
 void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size);
 
 /*
+ * Reservation functions
+ */
+
+/* Reserve a range by marking it as allocated. Useful for dealing with physical memory. */
+void buddy_reserve_range(struct buddy *buddy, void *ptr, size_t requested_size);
+
+/*
  * Iteration functions
  */
 
@@ -624,6 +631,41 @@ void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size) {
     buddy_tree_release(tree, pos);
 }
 
+void buddy_reserve_range(struct buddy *buddy, void *ptr, size_t requested_size) {
+    if (buddy == NULL) {
+        return;
+    }
+    if (ptr == NULL) {
+        return;
+    }
+    if (requested_size == 0) {
+        return;
+    }
+    unsigned char *dst = (unsigned char *)ptr;
+    unsigned char *main = buddy_main(buddy);
+    if ((dst < main) || ((dst + requested_size) > (main + buddy->memory_size))) {
+        return;
+    }
+
+    /* Find the deepest position tracking this address */
+    struct buddy_tree *tree = buddy_tree(buddy);
+    ptrdiff_t offset = dst - main;
+    struct buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
+
+    /* Advance one position at a time and mark */
+    while (requested_size) {
+        buddy_tree_mark(tree, pos);
+        if (requested_size < BUDDY_ALLOC_ALIGN) {
+            requested_size = 0;
+        } else {
+            requested_size -= BUDDY_ALLOC_ALIGN;
+        }
+        pos.index++;
+    }
+
+    return;
+}
+
 void *buddy_walk(struct buddy *buddy,
         void *(fp)(void *ctx, void *addr, size_t slot_size), void *ctx) {
     if (buddy == NULL) {
@@ -682,7 +724,7 @@ void *buddy_walk(struct buddy *buddy,
             if (buddy_tree_valid(tree, left)) {
                 size_t left_status = buddy_tree_status(tree, left);
                 // We are at a partially or fully-allocated non-leaf node
-                if (pos_status == (tree_order - pos.depth + 1)) { // fully-allocated                    
+                if (pos_status == (tree_order - pos.depth + 1)) { // fully-allocated
                     // The tree doesn't make a distinction of a fully-allocated node
                     //  due to a single allocation vs fully-allocated due to fully-allocated
                     //  child allocations at the node level - we need to check the children.
