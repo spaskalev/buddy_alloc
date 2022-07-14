@@ -1364,6 +1364,17 @@ void test_buddy_reserve_04() {
 	assert(buddy_malloc(buddy, 512) == NULL); // entire buddy should be busy
 }
 
+void test_buddy_reserve_05() {
+	start_test;
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(512)];
+	_Alignas(max_align_t) unsigned char data_buf[512];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
+	buddy_reserve_range(buddy, data_buf, 256); // half length
+	assert(buddy_malloc(buddy, 512) == NULL);
+	assert(buddy_malloc(buddy, 256) == (data_buf + 256));
+	assert(buddy_malloc(buddy, 256) == NULL);
+}
+
 void test_buddy_tree_init() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
@@ -1901,6 +1912,7 @@ int main() {
 		test_buddy_reserve_02();
 		test_buddy_reserve_03();
 		test_buddy_reserve_04();
+		test_buddy_reserve_05();
 	}
 
 	{
