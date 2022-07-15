@@ -78,6 +78,9 @@ void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size);
 /* Reserve a range by marking it as allocated. Useful for dealing with physical memory. */
 void buddy_reserve_range(struct buddy *buddy, void *ptr, size_t requested_size);
 
+/* Release a reserved memory range. Unsafe, this can mess up other allocations if called with wrong parameters! */
+void buddy_unsafe_release_range(struct buddy *buddy, void *ptr, size_t requested_size);
+
 /*
  * Iteration functions
  */
@@ -288,6 +291,7 @@ static unsigned char *buddy_main(struct buddy *buddy);
 static struct buddy_tree *buddy_tree(struct buddy *buddy);
 static size_t buddy_effective_memory_size(struct buddy *buddy);
 static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state);
+static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_t requested_size, unsigned int state);
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size);
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
 static unsigned int buddy_is_free(struct buddy *buddy, size_t from);
@@ -632,38 +636,11 @@ void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size) {
 }
 
 void buddy_reserve_range(struct buddy *buddy, void *ptr, size_t requested_size) {
-    if (buddy == NULL) {
-        return;
-    }
-    if (ptr == NULL) {
-        return;
-    }
-    if (requested_size == 0) {
-        return;
-    }
-    unsigned char *dst = (unsigned char *)ptr;
-    unsigned char *main = buddy_main(buddy);
-    if ((dst < main) || ((dst + requested_size) > (main + buddy->memory_size))) {
-        return;
-    }
+    buddy_toggle_range_reservation(buddy, ptr, requested_size, 1);
+}
 
-    /* Find the deepest position tracking this address */
-    struct buddy_tree *tree = buddy_tree(buddy);
-    ptrdiff_t offset = dst - main;
-    struct buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
-
-    /* Advance one position at a time and mark */
-    while (requested_size) {
-        buddy_tree_mark(tree, pos);
-        if (requested_size < BUDDY_ALLOC_ALIGN) {
-            requested_size = 0;
-        } else {
-            requested_size -= BUDDY_ALLOC_ALIGN;
-        }
-        pos.index++;
-    }
-
-    return;
+void buddy_unsafe_release_range(struct buddy *buddy, void *ptr, size_t requested_size) {
+    buddy_toggle_range_reservation(buddy, ptr, requested_size, 0);
 }
 
 void *buddy_walk(struct buddy *buddy,
@@ -874,6 +851,41 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) 
             continue;
         }
     }
+}
+
+static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_t requested_size, unsigned int state) {
+    if (buddy == NULL) {
+        return;
+    }
+    if (ptr == NULL) {
+        return;
+    }
+    if (requested_size == 0) {
+        return;
+    }
+    unsigned char *dst = (unsigned char *)ptr;
+    unsigned char *main = buddy_main(buddy);
+    if ((dst < main) || ((dst + requested_size) > (main + buddy->memory_size))) {
+        return;
+    }
+
+    /* Determine whether to mark or release */
+    void (*toggle)(struct buddy_tree *, struct buddy_tree_pos) =
+        state ? &buddy_tree_mark : &buddy_tree_release;
+
+    /* Find the deepest position tracking this address */
+    struct buddy_tree *tree = buddy_tree(buddy);
+    ptrdiff_t offset = dst - main;
+    struct buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
+
+    /* Advance one position at a time and process */
+    while (requested_size) {
+        (*toggle)(tree, pos);
+        requested_size = (requested_size < BUDDY_ALLOC_ALIGN) ? 0 : (requested_size - BUDDY_ALLOC_ALIGN);
+        pos.index++;
+    }
+
+    return;
 }
 
 /* Internal function that checks if there are any allocations
