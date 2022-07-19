@@ -273,7 +273,7 @@ struct buddy {
         ptrdiff_t main_offset;
     };
     unsigned int relative_mode;
-    unsigned char buddy_tree[];
+    _Alignas(max_align_t) unsigned char buddy_tree[];
 };
 
 struct buddy_embed_check {
@@ -965,9 +965,9 @@ static void buddy_debug(FILE *stream, struct buddy *buddy) {
  */
 
 struct buddy_tree {
-    uint8_t order;
     size_t upper_pos_bound;
     size_t size_for_order_offset;
+    uint8_t order;
     size_t data[];
 };
 
