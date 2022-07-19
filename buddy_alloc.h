@@ -1436,8 +1436,8 @@ static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, struct buddy_tr
             fprintf(stream, "%.*s",
                 (int) buddy_tree_depth(pos),
                 "                                                               ");
-            fprintf(stream, "pos: %zu status: %zu bitset-len: %zu bitset-at: %zu",
-                pos, pos_status, pos_internal.local_offset, pos_internal.bitset_location);
+            fprintf(stream, "pos index: %zu pos depth: %zu status: %zu bitset-len: %zu bitset-at: %zu",
+                pos.index, pos.depth, pos_status, pos_internal.local_offset, pos_internal.bitset_location);
             if (pos_status == pos_internal.local_offset) {
                 fprintf(stream, " size: %zu\n", pos_size);
             } else {
@@ -1494,7 +1494,7 @@ static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct budd
 
                 if (violated) {
                     fail = 1;
-                    fprintf(stdout, "invariant violation at position [ %zu ]!\n", pos);
+                    fprintf(stdout, "invariant violation at position [ index: %zu depth: %zu ]!\n", pos.index, pos.depth);
                     fprintf(stdout, "current: %zu left %zu right %zu max %zu\n",
                         current_status, left_child_status, right_child_status, current_internal.local_offset);
                 }
