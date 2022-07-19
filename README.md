@@ -144,3 +144,10 @@ Resizing is available for both split and embedded allocator modes and supports b
 - Calling free in a wrong way (double free, out of arena, unaligned) will not corrupt the allocator's metadata.
 - Complete line and branch test coverage. (Not MCDC though)
 - Bounded call stack use, no recursion
+
+## Users
+
+If you are using buddy_alloc in your project and you would like project to be featured here please send a PR or file an issue. If you like buddy_alloc please star it on GitHub so that more users can learn of it. Thanks!
+
+- [Use in game development](https://github.com/spaskalev/buddy_alloc/issues/13#issue-1088282333)
+- [Use in OS kernel](https://github.com/Itay2805/pentagon/blob/1aa005a3f204f40b5869568bd78f4b3087e024a3/kernel/mem/phys.c#L28)
