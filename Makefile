@@ -32,6 +32,10 @@ test-clang-tidy: $(TESTS_SRC)
 test-cppcheck: $(TESTS_SRC)
 	cppcheck --error-exitcode=1 --quiet $^
 
+test-multiplatform: $(TESTS_SRC)
+	powerpc64-linux-gnu-gcc -static $(TESTS_SRC) && ./a.out
+	aarch64-linux-gnu-gcc -static $(TESTS_SRC) && ./a.out
+
 check-recursion: $(LIB_SRC)
 	[ $$( cflow --no-main $(LIB_SRC) | grep -c 'recursive:' ) -eq "0" ]
 
