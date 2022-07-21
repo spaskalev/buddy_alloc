@@ -5,6 +5,12 @@
 
 #define start_test printf("Running test: %s in %s:%d\n", __func__, __FILE__, __LINE__);
 
+/*
+ * The tests are written with 64-bit arch in mind.
+ * To allow running them on 32-bit a PSS macro is used that will
+ * halve its input. It does nothing on 64-bit.
+ */
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -15,6 +21,14 @@
 #define BUDDY_ALLOC_IMPLEMENTATION
 #include "buddy_alloc.h"
 #undef BUDDY_ALLOC_IMPLEMENTATION
+
+#if SIZE_MAX == 0xFFFFFFFFFFFFFFFF
+#define PSS(x) (x)
+#elif SIZE_MAX == 0xFFFFFFFF
+#define PSS(x) ((x)/2)
+#else
+#error Unsupported platform
+#endif
 
 void test_highest_bit_position() {
 	assert(highest_bit_position(1) == 1);
@@ -229,11 +243,12 @@ void test_buddy_init_virtual_slots() {
 
 void test_buddy_init_non_power_of_two_memory_01() {
 	start_test;
-	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-	_Alignas(max_align_t) unsigned char data_buf[4096];
+	size_t buddy_size = PSS(4096);
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(buddy_size)];
+	_Alignas(max_align_t) unsigned char data_buf[buddy_size];
 
-	size_t cutoff = 256;
-	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096-cutoff);
+	size_t cutoff = PSS(256);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, buddy_size-cutoff);
 	assert(buddy != NULL);
 
 	for (size_t i = 0; i < 60; i++) {
@@ -244,11 +259,12 @@ void test_buddy_init_non_power_of_two_memory_01() {
 
 void test_buddy_init_non_power_of_two_memory_02() {
 	start_test;
-	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-	_Alignas(max_align_t) unsigned char data_buf[4096];
+	size_t buddy_size = PSS(4096);
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(buddy_size)];
+	_Alignas(max_align_t) unsigned char data_buf[buddy_size];
 
-	size_t cutoff = 256+(sizeof(size_t)/2);
-	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096-cutoff);
+	size_t cutoff = PSS(256+(sizeof(size_t)/2));
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, buddy_size-cutoff);
 	assert(buddy != NULL);
 
 	for (size_t i = 0; i < 59; i++) {
@@ -259,11 +275,12 @@ void test_buddy_init_non_power_of_two_memory_02() {
 
 void test_buddy_init_non_power_of_two_memory_03() {
 	start_test;
-	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-	_Alignas(max_align_t) unsigned char data_buf[4096];
+	size_t buddy_size = PSS(4096);
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(buddy_size)];
+	_Alignas(max_align_t) unsigned char data_buf[buddy_size];
 
-	size_t cutoff = 256-(sizeof(size_t)/2);
-	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096-cutoff);
+	size_t cutoff = PSS(256-(sizeof(size_t)/2));
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, buddy_size-cutoff);
 	assert(buddy != NULL);
 
 	for (size_t i = 0; i < 60; i++) {
