@@ -427,15 +427,13 @@ void test_buddy_resize_embedded_up_at_reserved() {
 void test_buddy_resize_embedded_up_after_reserved() {
 	start_test;
 	_Alignas(max_align_t) unsigned char data_buf[4096];
-	struct buddy *buddy = buddy_embed(data_buf, 768
-		+ (sizeof(size_t)*2) + buddy_sizeof(768));
+	struct buddy *buddy = buddy_embed(data_buf, 768 + (sizeof(size_t)*2) + buddy_sizeof(768));
 	assert(buddy != NULL);
 	assert(buddy_malloc(buddy, 1024) == NULL);
-	buddy = buddy_resize(buddy, 2048
-		+ (sizeof(size_t)*3) + buddy_sizeof(2048));
+	buddy = buddy_resize(buddy, 2048 + (sizeof(size_t)*3) + buddy_sizeof(2048));
 	assert(buddy != NULL);
 	assert(buddy_malloc(buddy, 1024) == data_buf);
-	assert(buddy_malloc(buddy, 1024) == data_buf+1024);
+	assert(buddy_malloc(buddy, 1024) == data_buf + 1024);
 	assert(buddy_malloc(buddy, 1024) == NULL);
 }
 
@@ -1167,20 +1165,9 @@ void test_buddy_mixed_use_03() {
 	assert(buddy_malloc(buddy, 256) == NULL);
 }
 
-void test_buddy_mixed_sizes_01() {
-	start_test;
-	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(4096)];
-	_Alignas(max_align_t) unsigned char data_buf[4096];
-	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
-	for(size_t i = 1; i <= 64; i++) {
-		assert(buddy_malloc(buddy, i) == data_buf+((i-1)*64));
-	}
-	assert(buddy_malloc(buddy, 1) == NULL);
-}
-
 void test_buddy_large_arena() {
 	start_test;
-	size_t size = 2147483648 /* 2 GB */;
+	size_t size = PSS(2147483648) /* 2/1 GB */;
 	unsigned char *data_buf = malloc(size);
 	unsigned char *buddy_buf = malloc(buddy_sizeof(size));
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
@@ -1865,6 +1852,8 @@ int main() {
 		test_buddy_resize_down_before_reserved();
 		test_buddy_resize_down_already_used();
 
+/* The following tests are hand-crafted around 64-bit sizes and need to be reworked for 32-bit */
+#if SIZE_MAX == 0xFFFFFFFFFFFFFFFF
 		test_buddy_resize_embedded_up_within_reserved();
 		test_buddy_resize_embedded_up_at_reserved();
 		test_buddy_resize_embedded_up_after_reserved();
@@ -1874,6 +1863,7 @@ int main() {
 		test_buddy_resize_embedded_down_before_reserved();
 		test_buddy_resize_embedded_down_already_used();
 		test_buddy_resize_embedded_too_small();
+#endif
 
 		test_buddy_debug();
 
@@ -1937,7 +1927,6 @@ int main() {
 		test_buddy_mixed_use_02();
 		test_buddy_mixed_use_03();
 
-		test_buddy_mixed_sizes_01();
 		test_buddy_large_arena();
 
 		test_buddy_walk_01();
