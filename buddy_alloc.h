@@ -261,6 +261,8 @@ static inline size_t ceiling_power_of_two(size_t value);
  Implementation
 */
 
+const unsigned int BUDDY_RELATIVE_MODE = 1;
+
 /*
  * A binary buddy memory allocator
  */
@@ -272,7 +274,7 @@ struct buddy {
         unsigned char *main;
         ptrdiff_t main_offset;
     };
-    unsigned int relative_mode;
+    unsigned int buddy_flags;
     _Alignas(max_align_t) unsigned char buddy_tree[];
 };
 
@@ -288,6 +290,7 @@ static inline size_t size_for_depth(struct buddy *buddy, size_t depth);
 static unsigned char *address_for_position(struct buddy *buddy, struct buddy_tree_pos pos);
 static struct buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr);
 static unsigned char *buddy_main(struct buddy *buddy);
+static unsigned int buddy_relative_mode(struct buddy *buddy);
 static struct buddy_tree *buddy_tree(struct buddy *buddy);
 static size_t buddy_effective_memory_size(struct buddy *buddy);
 static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state);
@@ -338,7 +341,7 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
     struct buddy *buddy = (struct buddy *) at;
     buddy->main = main;
     buddy->memory_size = memory_size;
-    buddy->relative_mode = 0;
+    buddy->buddy_flags = 0;
     buddy_tree_init(buddy->buddy_tree, buddy_tree_order);
     buddy_toggle_virtual_slots(buddy, 1);
     return buddy;
@@ -358,7 +361,7 @@ struct buddy *buddy_embed(unsigned char *main, size_t memory_size) {
         return NULL;
     }
 
-    buddy->relative_mode = 1;
+    buddy->buddy_flags |= BUDDY_RELATIVE_MODE;
     buddy->main_offset = (unsigned char *)buddy - main;
     return buddy;
 }
@@ -368,7 +371,7 @@ struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size) {
         return buddy;
     }
 
-    if (buddy->relative_mode) {
+    if (buddy_relative_mode(buddy)) {
         return buddy_resize_embedded(buddy, new_memory_size);
     } else {
         return buddy_resize_standard(buddy, new_memory_size);
@@ -801,10 +804,14 @@ static struct buddy_tree_pos position_for_address(struct buddy *buddy, const uns
 }
 
 static unsigned char *buddy_main(struct buddy *buddy) {
-    if (buddy->relative_mode) {
+    if (buddy_relative_mode(buddy)) {
         return (unsigned char *)buddy - buddy->main_offset;
     }
     return buddy->main;
+}
+
+static unsigned int buddy_relative_mode(struct buddy *buddy) {
+    return buddy->buddy_flags & BUDDY_RELATIVE_MODE;
 }
 
 static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) {
@@ -953,7 +960,7 @@ static void buddy_debug(FILE *stream, struct buddy *buddy) {
     fprintf(stream, "buddy allocator at: %p arena at: %p\n", (void *)buddy, (void *)buddy_main(buddy));
     fprintf(stream, "memory size: %zu\n", buddy->memory_size);
     fprintf(stream, "mode: ");
-    fprintf(stream, buddy->relative_mode ? "embedded" : "standard");
+    fprintf(stream, buddy_relative_mode(buddy) ? "embedded" : "standard");
     fprintf(stream, "\n");
     fprintf(stream, "virtual slots: %zu\n", buddy->virtual_slots);
     fprintf(stream, "allocator tree follows:\n");
