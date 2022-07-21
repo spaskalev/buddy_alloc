@@ -5,12 +5,6 @@
 
 #define start_test printf("Running test: %s in %s:%d\n", __func__, __FILE__, __LINE__);
 
-/*
- * The tests are written with 64-bit arch in mind.
- * To allow running them on 32-bit a PSS macro is used that will
- * halve its input. It does nothing on 64-bit.
- */
-
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -22,10 +16,20 @@
 #include "buddy_alloc.h"
 #undef BUDDY_ALLOC_IMPLEMENTATION
 
+/*
+ * The tests are written with 64-bit arch in mind.
+ * To allow running them on 32-bit the following macros are used
+ *
+ * PSS(x) - Platform-specific size. Does nothing on 64 bit. Halves value on 32 bit.
+ * OF(x,y) - One of - picks the first argument on 64 bit and the second on 32 bit.
+ */
+
 #if SIZE_MAX == 0xFFFFFFFFFFFFFFFF
 #define PSS(x) (x)
+#define OF(x, y) (x)
 #elif SIZE_MAX == 0xFFFFFFFF
 #define PSS(x) ((x)/2)
+#define OF(x, y) (y)
 #else
 #error Unsupported platform
 #endif
@@ -418,7 +422,7 @@ void test_buddy_resize_embedded_up_at_reserved() {
 	struct buddy *buddy = buddy_embed(data_buf, 768 + buddy_sizeof(768));
 	assert(buddy != NULL);
 	assert(buddy_malloc(buddy, 1024) == NULL);
-	buddy = buddy_resize(buddy, 1024 + (sizeof(size_t)*4) + buddy_sizeof(1024));
+	buddy = buddy_resize(buddy, 1024 + (sizeof(size_t)*OF(4,5)) + buddy_sizeof(1024));
 	assert(buddy != NULL);
 	assert(buddy_malloc(buddy, 1024) == data_buf);
 	assert(buddy_malloc(buddy, 1024) == NULL);
@@ -430,7 +434,7 @@ void test_buddy_resize_embedded_up_after_reserved() {
 	struct buddy *buddy = buddy_embed(data_buf, 768 + (sizeof(size_t)*2) + buddy_sizeof(768));
 	assert(buddy != NULL);
 	assert(buddy_malloc(buddy, 1024) == NULL);
-	buddy = buddy_resize(buddy, 2048 + (sizeof(size_t)*3) + buddy_sizeof(2048));
+	buddy = buddy_resize(buddy, 2048 + (sizeof(size_t)*OF(3,9)) + buddy_sizeof(2048));
 	assert(buddy != NULL);
 	assert(buddy_malloc(buddy, 1024) == data_buf);
 	assert(buddy_malloc(buddy, 1024) == data_buf + 1024);
@@ -1853,7 +1857,6 @@ int main() {
 		test_buddy_resize_down_already_used();
 
 /* The following tests are hand-crafted around 64-bit sizes and need to be reworked for 32-bit */
-#if SIZE_MAX == 0xFFFFFFFFFFFFFFFF
 		test_buddy_resize_embedded_up_within_reserved();
 		test_buddy_resize_embedded_up_at_reserved();
 		test_buddy_resize_embedded_up_after_reserved();
@@ -1863,7 +1866,6 @@ int main() {
 		test_buddy_resize_embedded_down_before_reserved();
 		test_buddy_resize_embedded_down_already_used();
 		test_buddy_resize_embedded_too_small();
-#endif
 
 		test_buddy_debug();
 
