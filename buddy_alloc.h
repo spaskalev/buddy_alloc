@@ -197,7 +197,7 @@ static void buddy_tree_mark(struct buddy_tree *t, struct buddy_tree_pos pos);
 static void buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos);
 
 /* Returns a free position at the specified depth or an invalid position */
-static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth);
+static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth, uint8_t left_bias);
 
 /* Tests if the incidated position is available for allocation */
 static unsigned int buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_pos pos);
@@ -478,7 +478,7 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
 
     size_t target_depth = depth_for_size(buddy, requested_size);
     struct buddy_tree *tree = buddy_tree(buddy);
-    struct buddy_tree_pos pos = buddy_tree_find_free(tree, target_depth);
+    struct buddy_tree_pos pos = buddy_tree_find_free(tree, target_depth, 0);
 
     if (! buddy_tree_valid(tree, pos)) {
         return NULL; /* no slot found */
@@ -541,7 +541,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
 
     /* Release the position and perform a search */
     buddy_tree_release(tree, origin);
-    struct buddy_tree_pos new_pos = buddy_tree_find_free(tree, target_depth);
+    struct buddy_tree_pos new_pos = buddy_tree_find_free(tree, target_depth, 0);
 
     if (! buddy_tree_valid(tree, new_pos)) {
         /* allocation failure, restore mark and return null */
@@ -1336,7 +1336,7 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
     };
 }
 
-static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth) {
+static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth, uint8_t left_bias) {
     assert(target_depth <= t->order);
     struct buddy_tree_pos start = buddy_tree_root();
     uint8_t target_status = target_depth - 1;
@@ -1374,8 +1374,7 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
             continue;
         }
 
-        /* Both branches are good, pick the more-used one */
-        if (left_status >= right_status) {
+        if (left_bias || (left_status >= right_status)) {
             start = left_pos;
             current_status = left_status;
         } else {

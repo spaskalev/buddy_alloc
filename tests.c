@@ -1569,22 +1569,54 @@ void test_buddy_tree_propagation_02() {
 	assert(buddy_tree_status(t, pos) == 1);
 }
 
-void test_buddy_tree_find_free_02() {
+void test_buddy_tree_find_free() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
-	struct buddy_tree_pos pos = buddy_tree_find_free(t, 1);
+	struct buddy_tree_pos pos = buddy_tree_find_free(t, 1, 0);
 	assert(buddy_tree_valid(t, pos) == 1);
-	pos = buddy_tree_find_free(t, 2);
-	assert(buddy_tree_valid(t, pos) == 1);
-
-	buddy_tree_mark(t, pos);
-	pos = buddy_tree_find_free(t, 2);
+	pos = buddy_tree_find_free(t, 2, 0);
 	assert(buddy_tree_valid(t, pos) == 1);
 
 	buddy_tree_mark(t, pos);
-	pos = buddy_tree_find_free(t, 2);
+	pos = buddy_tree_find_free(t, 2, 0);
+	assert(buddy_tree_valid(t, pos) == 1);
+
+	buddy_tree_mark(t, pos);
+	pos = buddy_tree_find_free(t, 2, 0);
 	assert(buddy_tree_valid(t, pos) == 0);
+}
+
+void test_buddy_tree_find_free_bias() {
+	start_test;
+	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 4);
+	struct buddy_tree_pos pos[4] = {0};
+
+	for (size_t i = 0; i < 4; i++) { // mark all four
+		pos[i] = buddy_tree_find_free(t, 3, 0);
+		assert(buddy_tree_valid(t, pos[i]) == 1);
+		buddy_tree_mark(t, pos[i]);
+	}
+
+	for (size_t i = 0; i < 3; i++) { // release first tree
+		buddy_tree_release(t, pos[i]);
+	}
+
+	struct buddy_tree_pos found;
+	// Test with no left-bias, the optimal fit should
+	// find a free slot on the right side of the tree
+	// as the right side is partially-used and the left
+	// is empty
+	found = buddy_tree_find_free(t, 3, 0);
+	assert(found.index == pos[2].index);
+	assert(found.depth == pos[2].depth);
+
+	// Test with left bias, this should find the first
+	// left-most slot available
+	found = buddy_tree_find_free(t, 3, 1);
+	assert(found.index == pos[0].index);
+	assert(found.depth == pos[0].depth);
 }
 
 void test_buddy_tree_debug_coverage() {
@@ -1966,7 +1998,8 @@ int main() {
 		test_buddy_tree_duplicate_free();
 		test_buddy_tree_propagation_01();
 		test_buddy_tree_propagation_02();
-		test_buddy_tree_find_free_02();
+		test_buddy_tree_find_free();
+		test_buddy_tree_find_free_bias();
 		test_buddy_tree_debug_coverage();
 		test_buddy_tree_check_invariant_positive_01();
 		test_buddy_tree_check_invariant_positive_02();
