@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: setup
-      run: sudo apt-get update && sudo apt-get -y -qq install clang-tidy cppcheck cflow spell gcc-powerpc64-linux-gnu gcc-aarch64-linux-gnu qemu-user-binfmt
+      run: sudo apt-get update && sudo apt-get -y -qq install clang-tidy cppcheck cflow spell gcc-powerpc64-linux-gnu gcc-powerpc-linux-gnu gcc-aarch64-linux-gnu gcc-i686-linux-gnu qemu-user-binfmt
     - name: test-main
       run: make LLVM_VERSION=10
       working-directory: .

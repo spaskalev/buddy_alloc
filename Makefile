@@ -33,8 +33,12 @@ test-cppcheck: $(TESTS_SRC)
 	cppcheck --error-exitcode=1 --quiet $^
 
 test-multiplatform: $(TESTS_SRC)
+	# 64-bit
 	powerpc64-linux-gnu-gcc -static $(TESTS_SRC) && ./a.out
 	aarch64-linux-gnu-gcc -static $(TESTS_SRC) && ./a.out
+	# 32-bit
+	i686-linux-gnu-gcc -static -g tests.c && ./a.out
+	powerpc-linux-gnu-gcc -static $(TESTS_SRC) && ./a.out
 
 check-recursion: $(LIB_SRC)
 	[ $$( cflow --no-main $(LIB_SRC) | grep -c 'recursive:' ) -eq "0" ]
