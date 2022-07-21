@@ -1650,9 +1650,17 @@ static unsigned int popcount_byte(unsigned char b) {
 static size_t highest_bit_position(size_t value) {
     int result = 0;
     /* some other millenia when size_t becomes 128-bit this will break :) */
+#if SIZE_MAX == 0xFFFFFFFFFFFFFFFF
     const size_t all_set[] = {4294967295, 65535, 255, 15, 7, 3, 1};
     const size_t count[] = {32, 16, 8, 4, 2, 1, 1};
-    for (size_t i = 0; i < 7; i++) {
+#elif SIZE_MAX == 0xFFFFFFFF
+    const size_t all_set[] = {65535, 255, 15, 7, 3, 1};
+    const size_t count[] = {16, 8, 4, 2, 1, 1};
+#else
+#error Unsupported platform
+#endif
+
+    for (size_t i = 0; i < (sizeof all_set / sizeof *all_set); i++) {
         if (value >= all_set[i]) {
             value >>= count[i];
             result += count[i];
