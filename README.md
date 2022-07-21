@@ -142,8 +142,10 @@ Resizing is available for both split and embedded allocator modes and supports b
 ### Resiliency
 
 - Calling free in a wrong way (double free, out of arena, unaligned) will not corrupt the allocator's metadata.
-- Complete line and branch test coverage. (Not MCDC though)
-- Bounded call stack use, no recursion
+- 100% line and branch test coverage.
+- Tested on 32-bit and 64-bit platforms.
+- Tested on little-endian and big-endian platforms.
+- Fixed call stack use, no recursion.
 
 ## Users
 
