@@ -1580,7 +1580,7 @@ static float buddy_tree_fragmentation(struct buddy_tree *t) {
     size_t quality = 0;
     size_t total_free_size = 0;
 
-    size_t tree_order = buddy_tree_order(t);
+    uint8_t tree_order = buddy_tree_order(t);
     struct buddy_tree_pos start = buddy_tree_root();
     struct buddy_tree_pos pos = start;
     unsigned int going_up = 0;
@@ -1607,7 +1607,7 @@ static float buddy_tree_fragmentation(struct buddy_tree *t) {
             size_t pos_status = buddy_tree_status(t, pos);
             if (pos_status == 0) {
                 // Empty node, process
-                size_t virtual_size = tree_order - pos.depth + 1;
+                size_t virtual_size = 1ul << ((tree_order - pos.depth) % ((sizeof(size_t) * CHAR_BIT)-1));
                 quality += (virtual_size * virtual_size);
                 total_free_size += virtual_size;
 
