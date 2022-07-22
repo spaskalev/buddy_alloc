@@ -1844,6 +1844,24 @@ void test_buddy_tree_interval_contains() {
 	assert(buddy_tree_interval_contains(interval_low, interval_high) == 0);
 }
 
+void test_buddy_tree_fragmentation() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+
+	// No fragmentation for empty tree
+	assert(buddy_tree_fragmentation(t) == 0);
+
+	// No fragmentation for full tree either
+	buddy_tree_mark(t, buddy_tree_root());
+	assert(buddy_tree_fragmentation(t) == 0);
+	buddy_tree_release(t, buddy_tree_root());
+
+	// Some fragmentation for partially-allocated tree
+	buddy_tree_mark(t, buddy_tree_left_child(buddy_tree_left_child(buddy_tree_root())));
+	assert(buddy_tree_fragmentation(t) == 0.4375);
+}
+
 int main() {
 	setvbuf(stdout, NULL, _IONBF, 0);
 
@@ -2018,5 +2036,7 @@ int main() {
 		test_buddy_tree_is_free_04();
 		test_buddy_tree_interval();
 		test_buddy_tree_interval_contains();
+
+		test_buddy_tree_fragmentation();
 	}
 }
