@@ -95,6 +95,26 @@ void buddy_unsafe_release_range(struct buddy *buddy, void *ptr, size_t requested
  */
 void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t slot_size), void *ctx);
 
+/*
+ * Miscellaneous functions
+ */
+
+/*
+ * Calculates the fragmentation in the allocator in a 0.0 - 1.0 range.
+ * NOTE: if you are using a non-power-of-two sized arena the maximum upper bound can be lower.
+ */
+float buddy_fragmentation(struct buddy *buddy);
+
+/*
+ * Configure the allocator to bias allocations on the left, lower side of its arena.
+ */
+void buddy_set_left_bias(struct buddy *buddy);
+
+/*
+ * Configure the allocator to optimize allocations, instead of biasing them. This is the default mode.
+ */
+void buddy_set_optimal_fit(struct buddy *buddy);
+
 #endif /* BUDDY_ALLOC_H */
 
 #ifdef BUDDY_ALLOC_IMPLEMENTATION
@@ -197,7 +217,7 @@ static void buddy_tree_mark(struct buddy_tree *t, struct buddy_tree_pos pos);
 static void buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos);
 
 /* Returns a free position at the specified depth or an invalid position */
-static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth);
+static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth, uint8_t left_bias);
 
 /* Tests if the incidated position is available for allocation */
 static unsigned int buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_pos pos);
@@ -214,6 +234,9 @@ static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, struct buddy_tr
 
 /* Implementation defined */
 static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct buddy_tree_pos pos);
+
+/* Report fragmentation in a 0.0 - 1.0 range */
+static float buddy_tree_fragmentation(struct buddy_tree *t);
 
 /*
  * A char-backed bitset implementation
@@ -245,8 +268,8 @@ static void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to
 static void bitset_debug(FILE *stream, unsigned char *bitset, size_t length);
 
 /*
- Bits
-*/
+ * Bits
+ */
 
 /* Returns the number of set bits in the given byte */
 static unsigned int popcount_byte(unsigned char b);
@@ -258,10 +281,18 @@ static size_t highest_bit_position(size_t value);
 static inline size_t ceiling_power_of_two(size_t value);
 
 /*
+ * Math
+ */
+
+/* Approximates the square root of a float */
+static inline float approximate_square_root(float f);
+
+/*
  Implementation
 */
 
 const unsigned int BUDDY_RELATIVE_MODE = 1;
+const unsigned int BUDDY_LEFT_BIAS = 2;
 
 /*
  * A binary buddy memory allocator
@@ -298,6 +329,7 @@ static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size);
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
 static unsigned int buddy_is_free(struct buddy *buddy, size_t from);
+static unsigned int buddy_is_left_biased(struct buddy *buddy);
 static struct buddy_embed_check buddy_embed_offset(size_t memory_size);
 static struct buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, size_t offset);
 
@@ -478,7 +510,7 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
 
     size_t target_depth = depth_for_size(buddy, requested_size);
     struct buddy_tree *tree = buddy_tree(buddy);
-    struct buddy_tree_pos pos = buddy_tree_find_free(tree, target_depth);
+    struct buddy_tree_pos pos = buddy_tree_find_free(tree, target_depth, buddy_is_left_biased(buddy));
 
     if (! buddy_tree_valid(tree, pos)) {
         return NULL; /* no slot found */
@@ -541,7 +573,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
 
     /* Release the position and perform a search */
     buddy_tree_release(tree, origin);
-    struct buddy_tree_pos new_pos = buddy_tree_find_free(tree, target_depth);
+    struct buddy_tree_pos new_pos = buddy_tree_find_free(tree, target_depth, buddy_is_left_biased(buddy));
 
     if (! buddy_tree_valid(tree, new_pos)) {
         /* allocation failure, restore mark and return null */
@@ -734,6 +766,27 @@ void *buddy_walk(struct buddy *buddy,
         }
     }
     return NULL;
+}
+
+float buddy_fragmentation(struct buddy *buddy) {
+    if (buddy == NULL) {
+        return 0;
+    }
+    return buddy_tree_fragmentation(buddy_tree(buddy));
+}
+
+void buddy_set_left_bias(struct buddy *buddy) {
+    if (buddy == NULL) {
+        return;
+    }
+    buddy->buddy_flags |= BUDDY_LEFT_BIAS;
+}
+
+void buddy_set_optimal_fit(struct buddy *buddy) {
+    if (buddy == NULL) {
+        return;
+    }
+    buddy->buddy_flags &= ~BUDDY_LEFT_BIAS;
 }
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
@@ -954,6 +1007,10 @@ static struct buddy_embed_check buddy_embed_offset(size_t memory_size) {
         result.buddy_size = buddy_size;
     }
     return result;
+}
+
+static unsigned int buddy_is_left_biased(struct buddy *buddy) {
+    return buddy->buddy_flags & BUDDY_LEFT_BIAS;
 }
 
 static void buddy_debug(FILE *stream, struct buddy *buddy) {
@@ -1336,7 +1393,7 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
     };
 }
 
-static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth) {
+static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth, uint8_t left_bias) {
     assert(target_depth <= t->order);
     struct buddy_tree_pos start = buddy_tree_root();
     uint8_t target_status = target_depth - 1;
@@ -1374,8 +1431,7 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
             continue;
         }
 
-        /* Both branches are good, pick the more-used one */
-        if (left_status >= right_status) {
+        if (left_bias || (left_status >= right_status)) {
             start = left_pos;
             current_status = left_status;
         } else {
@@ -1513,6 +1569,75 @@ static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct budd
         }
     }
     return fail;
+}
+
+/*
+ * Calculate tree fragmentation based on free slots.
+ * Based on https://asawicki.info/news_1757_a_metric_for_memory_fragmentation
+ */
+static float buddy_tree_fragmentation(struct buddy_tree *t) {
+
+    size_t quality = 0;
+    size_t total_free_size = 0;
+
+    size_t tree_order = buddy_tree_order(t);
+    struct buddy_tree_pos start = buddy_tree_root();
+    struct buddy_tree_pos pos = start;
+    unsigned int going_up = 0;
+
+    if (! buddy_tree_status(t, start)) {
+        // Emptry tree
+        return 0;
+    }
+
+    while (1) {
+        if (going_up) {
+            if (pos.index == start.index) {
+                break;
+            }
+            if (pos.index & 1u) {
+                // Ascend
+                pos = buddy_tree_parent(pos);
+            } else {
+                // Descend right
+                pos = buddy_tree_right_adjacent(pos);
+                going_up = 0;
+            }
+        } else {
+            size_t pos_status = buddy_tree_status(t, pos);
+            if (pos_status == 0) {
+                // Empty node, process
+                size_t virtual_size = tree_order - pos.depth + 1;
+                quality += (virtual_size * virtual_size);
+                total_free_size += virtual_size;
+
+                // Ascend
+                going_up = 1;
+                continue;
+            }
+            if (pos_status == (tree_order - pos.depth + 1)) {
+                // Busy node, ascend
+                going_up = 1;
+                continue;
+            }
+            if (buddy_tree_valid(t, buddy_tree_left_child(pos))) {
+                // Descend left
+                pos = buddy_tree_left_child(pos);
+            } else {
+                // Ascend
+                going_up = 1;
+            }
+        }
+    }
+
+    if (total_free_size == 0) {
+        // Fully-allocated tree
+        return 0;
+    }
+
+    float quality_percent = approximate_square_root((float) quality) / total_free_size;
+    float fragmentation = 1 - (quality_percent * quality_percent);
+    return fragmentation;
 }
 
 /*
@@ -1679,6 +1804,15 @@ static size_t highest_bit_position(size_t value) {
 static inline size_t ceiling_power_of_two(size_t value) {
     value += !value; /* branchless x -> { 1 for 0, x for x } */
     return 1ul << (highest_bit_position(value + value - 1)-1);
+}
+
+static inline float approximate_square_root(float f) {
+    /* As listed in https://en.wikipedia.org/wiki/Methods_of_computing_square_roots */
+    union { float f; uint32_t i; } val = {f};
+    val.i -= 1 << 23;   /* Subtract 2^m. */
+    val.i >>= 1;        /* Divide by 2. */
+    val.i += 1 << 29;   /* Add ((b + 1) / 2) * 2^m. */
+    return val.f;       /* Interpret again as float */
 }
 
 #endif /* BUDDY_ALLOC_IMPLEMENTATION */

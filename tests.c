@@ -1405,6 +1405,63 @@ void test_buddy_unsafe_release_02() {
 	assert(buddy_malloc(buddy, 256) == data_buf); // there should be space now
 }
 
+void test_buddy_fragmentation() {
+	start_test;
+
+	// This test verified the same as test_buddy_tree_fragmentation,
+	// just through the allocator public interface
+
+	size_t buddy_size = PSS(265);
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(buddy_size)];
+	_Alignas(max_align_t) unsigned char data_buf[buddy_size];
+	struct buddy *b = buddy_init(buddy_buf, data_buf, buddy_size);
+
+	// No fragmentation for invalid allocator
+	assert(buddy_fragmentation(NULL) == 0);
+
+	// No fragmentation for empty allocator
+	assert(buddy_fragmentation(b) == 0);
+
+	// No fragmentation for full allocator either
+	buddy_malloc(b, buddy_size);
+	assert(buddy_fragmentation(b) == 0);
+	buddy_free(b, data_buf);
+
+	// Some fragmentation for partially-used allocator
+	buddy_malloc(b, PSS(64));
+	buddy_debug(stdout, b);
+	printf("%f\n", buddy_fragmentation(b));
+	assert(buddy_fragmentation(b) == 0.4375);
+}
+
+void test_buddy_bias() {
+	start_test;
+
+	buddy_set_left_bias(NULL); // coverage
+	buddy_set_optimal_fit(NULL);
+
+	size_t buddy_size = PSS(265);
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(buddy_size)];
+	_Alignas(max_align_t) unsigned char data_buf[buddy_size];
+	struct buddy *b = buddy_init(buddy_buf, data_buf, buddy_size);
+
+	void *allocs[4];
+	for (size_t i = 0; i < 4; i++) {
+		allocs[i] = buddy_malloc(b, PSS(64));
+	}
+
+	for (size_t i = 0; i < 3; i++) {
+		buddy_free(b, allocs[i]);
+	}
+
+	buddy_set_left_bias(b);
+	assert(buddy_malloc(b, PSS(64)) == allocs[0]);
+	buddy_free(b, allocs[0]);
+
+	buddy_set_optimal_fit(b);
+	assert(buddy_malloc(b, PSS(64)) == allocs[2]);
+}
+
 void test_buddy_tree_init() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
@@ -1569,22 +1626,54 @@ void test_buddy_tree_propagation_02() {
 	assert(buddy_tree_status(t, pos) == 1);
 }
 
-void test_buddy_tree_find_free_02() {
+void test_buddy_tree_find_free() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
-	struct buddy_tree_pos pos = buddy_tree_find_free(t, 1);
+	struct buddy_tree_pos pos = buddy_tree_find_free(t, 1, 0);
 	assert(buddy_tree_valid(t, pos) == 1);
-	pos = buddy_tree_find_free(t, 2);
-	assert(buddy_tree_valid(t, pos) == 1);
-
-	buddy_tree_mark(t, pos);
-	pos = buddy_tree_find_free(t, 2);
+	pos = buddy_tree_find_free(t, 2, 0);
 	assert(buddy_tree_valid(t, pos) == 1);
 
 	buddy_tree_mark(t, pos);
-	pos = buddy_tree_find_free(t, 2);
+	pos = buddy_tree_find_free(t, 2, 0);
+	assert(buddy_tree_valid(t, pos) == 1);
+
+	buddy_tree_mark(t, pos);
+	pos = buddy_tree_find_free(t, 2, 0);
 	assert(buddy_tree_valid(t, pos) == 0);
+}
+
+void test_buddy_tree_find_free_bias() {
+	start_test;
+	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 4);
+	struct buddy_tree_pos pos[4] = {0};
+
+	for (size_t i = 0; i < 4; i++) { // mark all four
+		pos[i] = buddy_tree_find_free(t, 3, 0);
+		assert(buddy_tree_valid(t, pos[i]) == 1);
+		buddy_tree_mark(t, pos[i]);
+	}
+
+	for (size_t i = 0; i < 3; i++) { // release first tree
+		buddy_tree_release(t, pos[i]);
+	}
+
+	struct buddy_tree_pos found;
+	// Test with no left-bias, the optimal fit should
+	// find a free slot on the right side of the tree
+	// as the right side is partially-used and the left
+	// is empty
+	found = buddy_tree_find_free(t, 3, 0);
+	assert(found.index == pos[2].index);
+	assert(found.depth == pos[2].depth);
+
+	// Test with left bias, this should find the first
+	// left-most slot available
+	found = buddy_tree_find_free(t, 3, 1);
+	assert(found.index == pos[0].index);
+	assert(found.depth == pos[0].depth);
 }
 
 void test_buddy_tree_debug_coverage() {
@@ -1812,6 +1901,24 @@ void test_buddy_tree_interval_contains() {
 	assert(buddy_tree_interval_contains(interval_low, interval_high) == 0);
 }
 
+void test_buddy_tree_fragmentation() {
+	start_test;
+	unsigned char buddy_tree_buf[4096] = {0};
+	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
+
+	// No fragmentation for empty tree
+	assert(buddy_tree_fragmentation(t) == 0);
+
+	// No fragmentation for full tree either
+	buddy_tree_mark(t, buddy_tree_root());
+	assert(buddy_tree_fragmentation(t) == 0);
+	buddy_tree_release(t, buddy_tree_root());
+
+	// Some fragmentation for partially-allocated tree
+	buddy_tree_mark(t, buddy_tree_left_child(buddy_tree_left_child(buddy_tree_root())));
+	assert(buddy_tree_fragmentation(t) == 0.4375);
+}
+
 int main() {
 	setvbuf(stdout, NULL, _IONBF, 0);
 
@@ -1946,6 +2053,10 @@ int main() {
 
 		test_buddy_unsafe_release_01();
 		test_buddy_unsafe_release_02();
+
+		test_buddy_fragmentation();
+
+		test_buddy_bias();
 	}
 
 	{
@@ -1966,7 +2077,8 @@ int main() {
 		test_buddy_tree_duplicate_free();
 		test_buddy_tree_propagation_01();
 		test_buddy_tree_propagation_02();
-		test_buddy_tree_find_free_02();
+		test_buddy_tree_find_free();
+		test_buddy_tree_find_free_bias();
 		test_buddy_tree_debug_coverage();
 		test_buddy_tree_check_invariant_positive_01();
 		test_buddy_tree_check_invariant_positive_02();
@@ -1985,5 +2097,7 @@ int main() {
 		test_buddy_tree_is_free_04();
 		test_buddy_tree_interval();
 		test_buddy_tree_interval_contains();
+
+		test_buddy_tree_fragmentation();
 	}
 }
