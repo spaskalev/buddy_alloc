@@ -1429,7 +1429,6 @@ void test_buddy_fragmentation() {
 
 	// Some fragmentation for partially-used allocator
 	buddy_malloc(b, PSS(64));
-	buddy_debug(stdout, b);
 	printf("%f\n", buddy_fragmentation(b));
 	assert(buddy_fragmentation(b) == 0.4375);
 }
@@ -1682,7 +1681,6 @@ void test_buddy_tree_debug_coverage() {
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_mark(t, buddy_tree_root());
 	buddy_tree_debug(stdout, t, buddy_tree_root(), 0);printf("\n"); /* code coverage */
-	buddy_tree_debug(stdout, t, INVALID_POS, 0); /* code coverage */
 }
 
 void test_buddy_tree_check_invariant_positive_01() {
