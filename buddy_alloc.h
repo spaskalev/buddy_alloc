@@ -95,6 +95,16 @@ void buddy_unsafe_release_range(struct buddy *buddy, void *ptr, size_t requested
  */
 void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t slot_size), void *ctx);
 
+/*
+ * Miscellaneous functions
+ */
+
+/*
+ * Calculates the fragmentation in the allocator in a 0.0 - 1.0 range.
+ * NOTE: if you are using a non-power-of-two sized arena the maximum upper bound can be lower.
+ */
+float buddy_fragmentation(struct buddy *buddy);
+
 #endif /* BUDDY_ALLOC_H */
 
 #ifdef BUDDY_ALLOC_IMPLEMENTATION
@@ -744,6 +754,13 @@ void *buddy_walk(struct buddy *buddy,
         }
     }
     return NULL;
+}
+
+float buddy_fragmentation(struct buddy *buddy) {
+    if (buddy == NULL) {
+        return 0;
+    }
+    return buddy_tree_fragmentation(buddy_tree(buddy));
 }
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {

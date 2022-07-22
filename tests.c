@@ -1405,6 +1405,35 @@ void test_buddy_unsafe_release_02() {
 	assert(buddy_malloc(buddy, 256) == data_buf); // there should be space now
 }
 
+void test_buddy_fragmentation() {
+	start_test;
+
+	// This test verified the same as test_buddy_tree_fragmentation,
+	// just through the allocator public interface
+
+	size_t buddy_size = PSS(265);
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(buddy_size)];
+	_Alignas(max_align_t) unsigned char data_buf[buddy_size];
+	struct buddy *b = buddy_init(buddy_buf, data_buf, buddy_size);
+
+	// No fragmentation for invalid allocator
+	assert(buddy_fragmentation(NULL) == 0);
+
+	// No fragmentation for empty allocator
+	assert(buddy_fragmentation(b) == 0);
+
+	// No fragmentation for full allocator either
+	buddy_malloc(b, buddy_size);
+	assert(buddy_fragmentation(b) == 0);
+	buddy_free(b, data_buf);
+
+	// Some fragmentation for partially-used allocator
+	buddy_malloc(b, PSS(64));
+	buddy_debug(stdout, b);
+	printf("%f\n", buddy_fragmentation(b));
+	assert(buddy_fragmentation(b) == 0.4375);
+}
+
 void test_buddy_tree_init() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
@@ -1996,6 +2025,8 @@ int main() {
 
 		test_buddy_unsafe_release_01();
 		test_buddy_unsafe_release_02();
+
+		test_buddy_fragmentation();
 	}
 
 	{
