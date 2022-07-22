@@ -105,6 +105,16 @@ void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t s
  */
 float buddy_fragmentation(struct buddy *buddy);
 
+/*
+ * Configure the allocator to bias allocations on the left, lower side of its arena.
+ */
+void buddy_set_left_bias(struct buddy *buddy);
+
+/*
+ * Configure the allocator to optimize allocations, instead of biasing them. This is the default mode.
+ */
+void buddy_set_optimal_fit(struct buddy *buddy);
+
 #endif /* BUDDY_ALLOC_H */
 
 #ifdef BUDDY_ALLOC_IMPLEMENTATION
@@ -282,6 +292,7 @@ static inline float approximate_square_root(float f);
 */
 
 const unsigned int BUDDY_RELATIVE_MODE = 1;
+const unsigned int BUDDY_LEFT_BIAS = 2;
 
 /*
  * A binary buddy memory allocator
@@ -318,6 +329,7 @@ static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size);
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
 static unsigned int buddy_is_free(struct buddy *buddy, size_t from);
+static unsigned int buddy_is_left_biased(struct buddy *buddy);
 static struct buddy_embed_check buddy_embed_offset(size_t memory_size);
 static struct buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, size_t offset);
 
@@ -498,7 +510,7 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
 
     size_t target_depth = depth_for_size(buddy, requested_size);
     struct buddy_tree *tree = buddy_tree(buddy);
-    struct buddy_tree_pos pos = buddy_tree_find_free(tree, target_depth, 0);
+    struct buddy_tree_pos pos = buddy_tree_find_free(tree, target_depth, buddy_is_left_biased(buddy));
 
     if (! buddy_tree_valid(tree, pos)) {
         return NULL; /* no slot found */
@@ -561,7 +573,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
 
     /* Release the position and perform a search */
     buddy_tree_release(tree, origin);
-    struct buddy_tree_pos new_pos = buddy_tree_find_free(tree, target_depth, 0);
+    struct buddy_tree_pos new_pos = buddy_tree_find_free(tree, target_depth, buddy_is_left_biased(buddy));
 
     if (! buddy_tree_valid(tree, new_pos)) {
         /* allocation failure, restore mark and return null */
@@ -761,6 +773,20 @@ float buddy_fragmentation(struct buddy *buddy) {
         return 0;
     }
     return buddy_tree_fragmentation(buddy_tree(buddy));
+}
+
+void buddy_set_left_bias(struct buddy *buddy) {
+    if (buddy == NULL) {
+        return;
+    }
+    buddy->buddy_flags |= BUDDY_LEFT_BIAS;
+}
+
+void buddy_set_optimal_fit(struct buddy *buddy) {
+    if (buddy == NULL) {
+        return;
+    }
+    buddy->buddy_flags &= ~BUDDY_LEFT_BIAS;
 }
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
@@ -981,6 +1007,10 @@ static struct buddy_embed_check buddy_embed_offset(size_t memory_size) {
         result.buddy_size = buddy_size;
     }
     return result;
+}
+
+static unsigned int buddy_is_left_biased(struct buddy *buddy) {
+    return buddy->buddy_flags & BUDDY_LEFT_BIAS;
 }
 
 static void buddy_debug(FILE *stream, struct buddy *buddy) {

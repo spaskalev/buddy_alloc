@@ -1434,6 +1434,34 @@ void test_buddy_fragmentation() {
 	assert(buddy_fragmentation(b) == 0.4375);
 }
 
+void test_buddy_bias() {
+	start_test;
+
+	buddy_set_left_bias(NULL); // coverage
+	buddy_set_optimal_fit(NULL);
+
+	size_t buddy_size = PSS(265);
+	_Alignas(max_align_t) unsigned char buddy_buf[buddy_sizeof(buddy_size)];
+	_Alignas(max_align_t) unsigned char data_buf[buddy_size];
+	struct buddy *b = buddy_init(buddy_buf, data_buf, buddy_size);
+
+	void *allocs[4];
+	for (size_t i = 0; i < 4; i++) {
+		allocs[i] = buddy_malloc(b, PSS(64));
+	}
+
+	for (size_t i = 0; i < 3; i++) {
+		buddy_free(b, allocs[i]);
+	}
+
+	buddy_set_left_bias(b);
+	assert(buddy_malloc(b, PSS(64)) == allocs[0]);
+	buddy_free(b, allocs[0]);
+
+	buddy_set_optimal_fit(b);
+	assert(buddy_malloc(b, PSS(64)) == allocs[2]);
+}
+
 void test_buddy_tree_init() {
 	start_test;
 	_Alignas(max_align_t) unsigned char buddy_tree_buf[4096];
@@ -2027,6 +2055,8 @@ int main() {
 		test_buddy_unsafe_release_02();
 
 		test_buddy_fragmentation();
+
+		test_buddy_bias();
 	}
 
 	{
