@@ -1429,7 +1429,6 @@ void test_buddy_fragmentation() {
 
 	// Some fragmentation for partially-used allocator
 	buddy_malloc(b, PSS(64));
-	printf("%f\n", buddy_fragmentation(b));
 	assert(buddy_fragmentation(b) == 0.4375);
 }
 
@@ -1961,7 +1960,6 @@ int main() {
 		test_buddy_resize_down_before_reserved();
 		test_buddy_resize_down_already_used();
 
-/* The following tests are hand-crafted around 64-bit sizes and need to be reworked for 32-bit */
 		test_buddy_resize_embedded_up_within_reserved();
 		test_buddy_resize_embedded_up_at_reserved();
 		test_buddy_resize_embedded_up_after_reserved();
