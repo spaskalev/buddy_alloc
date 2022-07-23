@@ -44,7 +44,7 @@ check-recursion: $(LIB_SRC)
 	[ $$( cflow --no-main $(LIB_SRC) | grep -c 'recursive:' ) -eq "0" ]
 
 clean:
-	rm -f *.gcda *.gcno *.gcov tests.out
+	rm -f a.out *.gcda *.gcno *.gcov tests.out
 
 spell:
 	spell -d .dict *.md
