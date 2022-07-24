@@ -8,11 +8,11 @@ MAKEFLAGS += --no-builtin-rules
 
 LLVM_VERSION?=11
 CC=clang-$(LLVM_VERSION)
-CFLAGS=-std=c11 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -pedantic -Wall -Wextra -Werror -Wfatal-errors -Wformat --coverage
+CFLAGS=-std=c99 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -pedantic -Wall -Wextra -Werror -Wfatal-errors -Wformat --coverage
 LLVM_COV=llvm-cov-$(LLVM_VERSION)
 CTIDY=clang-tidy-$(LLVM_VERSION)
 CTIDY_CHECKS='bugprone-*,performance-*,readability-*,-readability-magic-numbers,-clang-analyzer-security.*'
-CTIDY_EXTRA='-std=c11'
+CTIDY_EXTRA='-std=c99'
 TESTS_SRC=tests.c
 LIB_SRC=buddy_alloc.h
 
