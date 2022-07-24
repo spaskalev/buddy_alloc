@@ -13,7 +13,16 @@ This project is licensed under the 0BSD license. See the LICENSE.md file for det
 
 ## Overview
 
-This is a simple buddy memory allocator that might be suitable for use in applications that require predictable allocation and deallocation behavior. The allocator's metadata is kept separate from the arena and its size is a function of the arena's size.
+This is a buddy memory allocator that might be suitable for use in applications that require predictable allocation and deallocation behavior. The allocator's metadata is kept separate from the arena and its size is a function of the arena's size.
+
+## Features
+
+- Bounded allocation and deallocation cost
+- Fixed call stack use, no recursion
+- C99-compatibility for code and tests
+- 100% line and branch test coverage
+- Supports on 32-bit and 64-bit platforms
+- Endian-agnostic, works on both LE and BE
 
 ## Usage
 
@@ -138,14 +147,6 @@ The perfect binary tree always tracks an arena which size is a power-of-two. Whe
 ### Resizing
 
 Resizing is available for both split and embedded allocator modes and supports both growing the arena and shrinking it. Checks are present that prevent shrinking the arena when memory that is to be reduced is still allocated.
-
-### Resiliency
-
-- Calling free in a wrong way (double free, out of arena, unaligned) will not corrupt the allocator's metadata.
-- 100% line and branch test coverage.
-- Tested on 32-bit and 64-bit platforms.
-- Tested on little-endian and big-endian platforms.
-- Fixed call stack use, no recursion.
 
 ## Users
 

@@ -318,9 +318,9 @@ struct buddy {
     union {
         unsigned char *main;
         ptrdiff_t main_offset;
-    };
-    unsigned int buddy_flags;
-    _Alignas(max_align_t) unsigned char buddy_tree[];
+    } arena;
+    size_t buddy_flags;
+    unsigned char buddy_tree[];
 };
 
 struct buddy_embed_check {
@@ -369,7 +369,7 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
     if (at_alignment != 0) {
         return NULL;
     }
-    size_t main_alignment = ((uintptr_t) main) % __alignof__(size_t);
+    size_t main_alignment = ((uintptr_t) main) % __alignof__(BUDDY_ALLOC_ALIGN);
     if (main_alignment != 0) {
         return NULL;
     }
@@ -385,7 +385,7 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 
     /* TODO check for overlap between buddy metadata and main block */
     struct buddy *buddy = (struct buddy *) at;
-    buddy->main = main;
+    buddy->arena.main = main;
     buddy->memory_size = memory_size;
     buddy->buddy_flags = 0;
     buddy_tree_init(buddy->buddy_tree, buddy_tree_order);
@@ -408,7 +408,7 @@ struct buddy *buddy_embed(unsigned char *main, size_t memory_size) {
     }
 
     buddy->buddy_flags |= BUDDY_RELATIVE_MODE;
-    buddy->main_offset = (unsigned char *)buddy - main;
+    buddy->arena.main_offset = (unsigned char *)buddy - main;
     return buddy;
 }
 
@@ -472,7 +472,7 @@ static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memor
 
     /* Update the main offset in the allocator */
     struct buddy *relocated = (struct buddy *) buddy_destination;
-    relocated->main_offset = buddy_destination - main;
+    relocated->arena.main_offset = buddy_destination - main;
 
     return relocated;
 }
@@ -834,9 +834,9 @@ static struct buddy_tree_pos position_for_address(struct buddy *buddy, const uns
 
 static unsigned char *buddy_main(struct buddy *buddy) {
     if (buddy_relative_mode(buddy)) {
-        return (unsigned char *)buddy - buddy->main_offset;
+        return (unsigned char *)buddy - buddy->arena.main_offset;
     }
-    return buddy->main;
+    return buddy->arena.main;
 }
 
 static unsigned int buddy_relative_mode(struct buddy *buddy) {
