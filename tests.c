@@ -821,7 +821,7 @@ void test_buddy_safe_free_invalid_free_02() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
 	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
-	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
+	unsigned char buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
@@ -844,7 +844,7 @@ void test_buddy_safe_free_invalid_free_03() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
 	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
-	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
+	unsigned char buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
@@ -869,7 +869,7 @@ void test_buddy_safe_free_invalid_free_04() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
 	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
-	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
+	unsigned char buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
