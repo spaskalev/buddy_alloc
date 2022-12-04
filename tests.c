@@ -56,8 +56,9 @@ void test_ceiling_power_of_two() {
 }
 
 void test_popcount_byte() {
-	for (uint8_t i = 0; i < 256; i++) {
-		assert(popcount_byte(i) == (popcount_byte(i / 2) + (i & 1)));
+	for (size_t i = 0; i < 256; i++) {
+		unsigned char c = (unsigned char) i;
+		assert(popcount_byte(c) == (popcount_byte(c / 2) + (c & 1)));
 	}
 }
 
