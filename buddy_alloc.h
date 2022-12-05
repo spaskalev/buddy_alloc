@@ -136,35 +136,22 @@ extern "C" {
 #define BUDDY_ALLOC_ALIGN (sizeof(size_t) * CHAR_BIT)
 #endif
 
-#ifdef _MSC_VER
-    
-/* Aligns value using provided mask
- *  x    - value to align
- *  mask - desired alignment minus one (2^n - 1)
- */
-#define BUDDY_ALIGNUP(x, mask) ((x) + (-(x) & mask))
+#ifndef BUDDY_DEFAULT_ALIGNMENT
+#define BUDDY_DEFAULT_ALIGNMENT 8
+#endif
 
-#ifndef _SSIZE_T_DEFINED
+#ifndef BUDDY_ALIGNOF
+#ifndef _MSC_VER
+#define BUDDY_ALIGNOF(x) __alignof__(x)
+#else
+#define BUDDY_ALIGNOF(x) _Alignof(x)
+#endif
+#endif
+
+// ssize_t is a POSIX extension
+#if defined(_MSC_VER) && !defined(_SSIZE_T_DEFINED)
 typedef signed long long ssize_t;
 #define _SSIZE_T_DEFINED
-#endif
-
-#ifndef __alignof__
-#define __alignof__(x) _Alignof(x)
-#endif
-
-/* Returns desired alignment for a single element */
-static size_t buddy_alignof( size_t what )
-{
-    // TO-DO
-    ((void*)what);
-    return CHAR_BIT;
-}
-
-#else
-
-#define buddy_alignof(x) __alignof__(x)
-
 #endif
 
 /*
@@ -408,11 +395,11 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
     if (at == main) {
         return NULL;
     }
-    size_t at_alignment = ((uintptr_t) at) % __alignof__(struct buddy);
+    size_t at_alignment = ((uintptr_t) at) % BUDDY_ALIGNOF(struct buddy);
     if (at_alignment != 0) {
         return NULL;
     }
-    size_t main_alignment = ((uintptr_t) main) % buddy_alignof(BUDDY_ALLOC_ALIGN);
+    size_t main_alignment = ((uintptr_t) main) % BUDDY_DEFAULT_ALIGNMENT;
     if (main_alignment != 0) {
         return NULL;
     }
@@ -1013,8 +1000,8 @@ static struct buddy_embed_check buddy_embed_offset(size_t memory_size) {
     }
 
     size_t offset = memory_size - buddy_size;
-    if (offset % __alignof__(struct buddy) != 0) {
-        buddy_size += offset % __alignof__(struct buddy);
+    if (offset % BUDDY_ALIGNOF(struct buddy) != 0) {
+        buddy_size += offset % BUDDY_ALIGNOF(struct buddy);
         if (buddy_size >= memory_size) {
             result.can_fit = 0;
         }
