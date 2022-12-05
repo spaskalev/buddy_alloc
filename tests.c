@@ -57,7 +57,8 @@ void test_ceiling_power_of_two() {
 
 void test_popcount_byte() {
 	for (size_t i = 0; i < 256; i++) {
-		assert(popcount_byte(i) == (popcount_byte(i / 2) + (i & 1)));
+		unsigned char c = (unsigned char) i;
+		assert(popcount_byte(c) == (popcount_byte(c / 2) + (c & 1)));
 	}
 }
 
@@ -97,7 +98,7 @@ void test_bitset_range() {
 
 void test_bitset_shift() {
 	start_test;
-	unsigned char buf[bitset_sizeof(16)];
+	unsigned char* buf = malloc(bitset_sizeof(16));
 	for (size_t i = 0; i < bitset_sizeof(16); i++) {
 		buf[i] = 0;
 	}
@@ -142,6 +143,7 @@ void test_bitset_shift() {
 	assert(!bitset_test(buf, 13));
 	assert(!bitset_test(buf, 14));
 	assert(!bitset_test(buf, 15));
+	free(buf);
 }
 
 void test_bitset_shift_invalid() {
@@ -171,7 +173,7 @@ void test_bitset_debug() {
 
 void test_buddy_init_null() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	{
 		struct buddy *buddy = buddy_init(NULL, data_buf, 4096);
@@ -181,6 +183,7 @@ void test_buddy_init_null() {
 		struct buddy *buddy = buddy_init(buddy_buf, NULL, 4096);
 		assert(buddy == NULL);
 	}
+	free(buddy_buf);
 }
 
 void test_buddy_init_overlap() {
@@ -221,7 +224,7 @@ void test_buddy_embed_misalignment() {
 
 void test_buddy_invalid_datasize() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	{
 		assert(buddy_sizeof(0) == 0);
@@ -231,31 +234,34 @@ void test_buddy_invalid_datasize() {
 		struct buddy *buddy = buddy_init(buddy_buf, data_buf, 0);
 		assert(buddy == NULL);
 	}
+	free(buddy_buf);
 }
 
 void test_buddy_init() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	{
 		struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 		assert(buddy != NULL);
 	}
+	free(buddy_buf);
 }
 
 void test_buddy_init_virtual_slots() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(1024)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(1024));
 	unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1020);
 	assert(buddy != NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_init_non_power_of_two_memory_01() {
 	start_test;
 	size_t buddy_size = PSS(4096);
-	unsigned char buddy_buf[buddy_sizeof(buddy_size)];
-	unsigned char data_buf[buddy_size];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(buddy_size));
+	unsigned char* data_buf  = malloc(buddy_size);
 
 	size_t cutoff = PSS(256);
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, buddy_size-cutoff);
@@ -265,13 +271,16 @@ void test_buddy_init_non_power_of_two_memory_01() {
 		assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) != NULL);
 	}
 	assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) == NULL);
+	
+	free(buddy_buf);
+	free(data_buf);
 }
 
 void test_buddy_init_non_power_of_two_memory_02() {
 	start_test;
 	size_t buddy_size = PSS(4096);
-	unsigned char buddy_buf[buddy_sizeof(buddy_size)];
-	unsigned char data_buf[buddy_size];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(buddy_size));
+	unsigned char* data_buf  = malloc(buddy_size);
 
 	size_t cutoff = PSS(256+(sizeof(size_t)/2));
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, buddy_size-cutoff);
@@ -281,13 +290,16 @@ void test_buddy_init_non_power_of_two_memory_02() {
 		assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) != NULL);
 	}
 	assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) == NULL);
+
+	free(buddy_buf);
+	free(data_buf);
 }
 
 void test_buddy_init_non_power_of_two_memory_03() {
 	start_test;
 	size_t buddy_size = PSS(4096);
-	unsigned char buddy_buf[buddy_sizeof(buddy_size)];
-	unsigned char data_buf[buddy_size];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(buddy_size));
+	unsigned char* data_buf  = malloc(buddy_size);
 
 	size_t cutoff = PSS(256-(sizeof(size_t)/2));
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, buddy_size-cutoff);
@@ -297,74 +309,84 @@ void test_buddy_init_non_power_of_two_memory_03() {
 		assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) != NULL);
 	}
 	assert(buddy_malloc(buddy, BUDDY_ALLOC_ALIGN) == NULL);
+
+	free(buddy_buf);
+	free(data_buf);
 }
 
 void test_buddy_resize_noop() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(1024)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(1024));
 	unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1024);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 1024) == buddy);
+	free(buddy_buf);
 }
 
 void test_buddy_resize_up_within_reserved() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(1024)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(1024));
 	unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 896) == buddy);
+	free(buddy_buf);
 }
 
 void test_buddy_resize_up_at_reserved() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(1024)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(1024));
 	unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 1024) == buddy);
+	free(buddy_buf);
 }
 
 void test_buddy_resize_up_after_reserved() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 2048) == buddy);
+	free(buddy_buf);
 }
 
 void test_buddy_resize_down_to_virtual() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(1024)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(1024));
 	unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1024);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 832) == buddy);
+	free(buddy_buf);
 }
 
 void test_buddy_resize_down_to_virtual_partial() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(1024)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(1024));
 	unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1024);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 832-1) == buddy);
+	free(buddy_buf);
 }
 
 void test_buddy_resize_down_within_reserved() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(1024)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(1024));
 	unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 640) == buddy);
+	free(buddy_buf);
 }
 
 void test_buddy_resize_down_within_reserved_failure() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(1024)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(1024));
 	unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
@@ -374,35 +396,39 @@ void test_buddy_resize_down_within_reserved_failure() {
 	assert(r256 != NULL);
 	buddy_free(buddy, r512);
 	assert(buddy_resize(buddy, 640) == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_resize_down_at_reserved() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(1024)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(1024));
 	unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 512) == buddy);
+	free(buddy_buf);
 }
 
 void test_buddy_resize_down_before_reserved() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(1024)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(1024));
 	unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 448) == buddy);
+	free(buddy_buf);
 }
 
 void test_buddy_resize_down_already_used() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
 	void *r1024 = buddy_malloc(buddy, 1024);
 	assert(r1024 == data_buf);
 	assert(buddy_resize(buddy, 256) == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_resize_embedded_up_within_reserved() {
@@ -550,26 +576,28 @@ void test_buddy_malloc_null() {
 
 void test_buddy_malloc_zero() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
 	/* This is implementation-defined in the standard! */
 	assert(buddy_malloc(buddy, 0) != NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_malloc_larger() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
 	assert(buddy_malloc(buddy, 8192) == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_malloc_basic_01() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(1024)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(1024));
 	unsigned char data_buf[1024];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1024);
 	assert(buddy != NULL);
@@ -578,11 +606,12 @@ void test_buddy_malloc_basic_01() {
 	buddy_free(buddy, data_buf);
 	assert(buddy_malloc(buddy, 1024) == data_buf);
 	assert(buddy_malloc(buddy, 1024) == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_malloc_basic_02() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
@@ -594,11 +623,12 @@ void test_buddy_malloc_basic_02() {
 	assert(buddy_malloc(buddy, 2048) == data_buf);
 	assert(buddy_malloc(buddy, 2048) == data_buf+2048);
 	assert(buddy_malloc(buddy, 2048) == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_malloc_basic_03() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
@@ -613,21 +643,23 @@ void test_buddy_malloc_basic_03() {
 	assert(buddy_malloc(buddy, 2048) == data_buf+2048);
 	assert(buddy_malloc(buddy, 1024) == data_buf+1024);
 	assert(buddy_malloc(buddy, 1024) == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_malloc_basic_04() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
 	assert(buddy_malloc(buddy, 64) == data_buf);
 	assert(buddy_malloc(buddy, 32) == data_buf+64);
+	free(buddy_buf);
 }
 
 void test_buddy_free_coverage() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf+1024, 1024);
 	assert(buddy != NULL);
@@ -636,21 +668,23 @@ void test_buddy_free_coverage() {
 	buddy_free(buddy, NULL);
 	buddy_free(buddy, data_buf);
 	buddy_free(buddy, data_buf+2048);
+	free(buddy_buf);
 }
 
 void test_buddy_free_alignment() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	buddy_free(buddy, data_buf+1);
+	free(buddy_buf);
 }
 
 void test_buddy_free_invalid_free_01() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
-	unsigned char buddy_buf[buddy_sizeof(size)];
-	unsigned char buddy_buf_control[buddy_sizeof(size)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
+	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
@@ -664,13 +698,15 @@ void test_buddy_free_invalid_free_01() {
 	// that will propagate to a partially-allocated parent
 	buddy_free(buddy, r);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+	free(buddy_buf);
+	free(buddy_buf_control);
 }
 
 void test_buddy_free_invalid_free_02() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
-	unsigned char buddy_buf[buddy_sizeof(size)];
-	unsigned char buddy_buf_control[buddy_sizeof(size)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
+	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
@@ -685,13 +721,15 @@ void test_buddy_free_invalid_free_02() {
 	// that will propagate to a unallocated parent
 	buddy_free(buddy, r);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+	free(buddy_buf);
+	free(buddy_buf_control);
 }
 
 void test_buddy_free_invalid_free_03() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
-	unsigned char buddy_buf[buddy_sizeof(size)];
-	unsigned char buddy_buf_control[buddy_sizeof(size)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
+	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
@@ -708,13 +746,15 @@ void test_buddy_free_invalid_free_03() {
 	// that will propagate to a fully-allocated parent
 	buddy_free(buddy, r);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+	free(buddy_buf);
+	free(buddy_buf_control);
 }
 
 void test_buddy_free_invalid_free_04() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
-	unsigned char buddy_buf[buddy_sizeof(size)];
-	unsigned char buddy_buf_control[buddy_sizeof(size)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
+	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
@@ -729,11 +769,13 @@ void test_buddy_free_invalid_free_04() {
 	buddy_free(buddy, l);
 	/* the use check in buddy_tree_release handles this case */
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+	free(buddy_buf);
+	free(buddy_buf_control);
 }
 
 void test_buddy_safe_free_coverage() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf+1024, 1024);
 	assert(buddy != NULL);
@@ -742,21 +784,23 @@ void test_buddy_safe_free_coverage() {
 	buddy_safe_free(buddy, NULL, 0);
 	buddy_safe_free(buddy, data_buf, 0);
 	buddy_safe_free(buddy, data_buf+2048, 0);
+	free(buddy_buf);
 }
 
 void test_buddy_safe_free_alignment() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	buddy_safe_free(buddy, data_buf+1, 0);
+	free(buddy_buf);
 }
 
 void test_buddy_safe_free_invalid_free_01() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
-	unsigned char buddy_buf[buddy_sizeof(size)];
-	unsigned char buddy_buf_control[buddy_sizeof(size)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
+	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
@@ -770,13 +814,15 @@ void test_buddy_safe_free_invalid_free_01() {
 	// that will propagate to a partially-allocated parent
 	buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+	free(buddy_buf);
+	free(buddy_buf_control);
 }
 
 void test_buddy_safe_free_invalid_free_02() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
-	unsigned char buddy_buf[buddy_sizeof(size)];
-	unsigned char buddy_buf_control[buddy_sizeof(size)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
+	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
@@ -791,13 +837,15 @@ void test_buddy_safe_free_invalid_free_02() {
 	// that will propagate to a unallocated parent
 	buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+	free(buddy_buf);
+	free(buddy_buf_control);
 }
 
 void test_buddy_safe_free_invalid_free_03() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
-	unsigned char buddy_buf[buddy_sizeof(size)];
-	unsigned char buddy_buf_control[buddy_sizeof(size)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
+	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
@@ -814,13 +862,15 @@ void test_buddy_safe_free_invalid_free_03() {
 	// that will propagate to a fully-allocated parent
 	buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+	free(buddy_buf);
+	free(buddy_buf_control);
 }
 
 void test_buddy_safe_free_invalid_free_04() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
-	unsigned char buddy_buf[buddy_sizeof(size)];
-	unsigned char buddy_buf_control[buddy_sizeof(size)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
+	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
@@ -835,13 +885,15 @@ void test_buddy_safe_free_invalid_free_04() {
 	buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN);
 	/* the use check in buddy_tree_release handles this case */
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+	free(buddy_buf);
+	free(buddy_buf_control);
 }
 
 void test_buddy_safe_free_invalid_free_05() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
-	unsigned char buddy_buf[buddy_sizeof(size)];
-	unsigned char buddy_buf_control[buddy_sizeof(size)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
+	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
@@ -849,13 +901,15 @@ void test_buddy_safe_free_invalid_free_05() {
 	// safe free with double size
 	buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN * 2);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+	free(buddy_buf);
+	free(buddy_buf_control);
 }
 
 void test_buddy_safe_free_invalid_free_06() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
-	unsigned char buddy_buf[buddy_sizeof(size)];
-	unsigned char buddy_buf_control[buddy_sizeof(size)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
+	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *m = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN*2);
@@ -863,13 +917,15 @@ void test_buddy_safe_free_invalid_free_06() {
 	// safe free with half size
 	buddy_safe_free(buddy, m, BUDDY_ALLOC_ALIGN);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+	free(buddy_buf);
+	free(buddy_buf_control);
 }
 
 void test_buddy_safe_free_invalid_free_07() {
 	start_test;
 	size_t size = BUDDY_ALLOC_ALIGN * 2;
-	unsigned char buddy_buf[buddy_sizeof(size)];
-	unsigned char buddy_buf_control[buddy_sizeof(size)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(size));
+	unsigned char* buddy_buf_control = malloc(buddy_sizeof(size));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, size);
 	void *m = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN*2);
@@ -877,6 +933,8 @@ void test_buddy_safe_free_invalid_free_07() {
 	// safe free with zero size
 	buddy_safe_free(buddy, m, 0);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
+	free(buddy_buf);
+	free(buddy_buf_control);
 }
 
 void test_buddy_demo() {
@@ -914,7 +972,7 @@ void test_buddy_demo_embedded() {
 
 void test_buddy_calloc() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	memset(data_buf, 1, 4096);
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
@@ -922,61 +980,67 @@ void test_buddy_calloc() {
 	for (size_t i = 0; i < 4096; i++) {
 		assert(result[i] == 0);
 	}
+	free(buddy_buf);
 }
 
 void test_buddy_calloc_no_members() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	char *result = buddy_calloc(buddy, 0, 4096);
 	/* This is implementation-defined in the standard! */
 	assert(result != NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_calloc_no_size() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	char *result = buddy_calloc(buddy, sizeof(char), 0);
 	/* This is implementation-defined in the standard! */
 	assert(result != NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_calloc_overflow() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	short *result = buddy_calloc(buddy, sizeof(short), SIZE_MAX);
 	assert(result == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_realloc_01() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
 	/* This is implementation-defined! */
 	void *result = buddy_realloc(buddy, NULL, 0);
 	assert(result != NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_realloc_02() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
 	void *result = buddy_realloc(buddy, NULL, 128);
 	assert(result == data_buf);
+	free(buddy_buf);
 }
 
 void test_buddy_realloc_03() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
@@ -984,11 +1048,12 @@ void test_buddy_realloc_03() {
 	assert(result == data_buf);
 	result = buddy_realloc(buddy, result, 128);
 	assert(result == data_buf);
+	free(buddy_buf);
 }
 
 void test_buddy_realloc_04() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
@@ -996,11 +1061,12 @@ void test_buddy_realloc_04() {
 	assert(result == data_buf);
 	result = buddy_realloc(buddy, result, 64);
 	assert(result == data_buf);
+	free(buddy_buf);
 }
 
 void test_buddy_realloc_05() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	assert(buddy != NULL);
@@ -1008,11 +1074,12 @@ void test_buddy_realloc_05() {
 	assert(result == data_buf);
 	result = buddy_realloc(buddy, result, 256);
 	assert(result == data_buf);
+	free(buddy_buf);
 }
 
 void test_buddy_realloc_06() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	assert(buddy != NULL);
@@ -1020,11 +1087,12 @@ void test_buddy_realloc_06() {
 	assert(result == data_buf);
 	result = buddy_realloc(buddy, result, 0);
 	assert(result == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_realloc_07() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	assert(buddy != NULL);
@@ -1032,11 +1100,12 @@ void test_buddy_realloc_07() {
 	assert(result == data_buf);
 	result = buddy_realloc(buddy, result, 1024);
 	assert(result == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_realloc_08() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	assert(buddy != NULL);
@@ -1045,42 +1114,47 @@ void test_buddy_realloc_08() {
 	assert(result == data_buf + 256);
 	result = buddy_realloc(buddy, result, 512);
 	assert(result == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_realloc_alignment() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy_realloc(buddy, data_buf+1, 2048) == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_reallocarray_01() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	void *result = buddy_reallocarray(buddy, NULL, 0, 0);
 	/* This is implementation-defined! */
 	assert(result != NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_reallocarray_02() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	void *result = buddy_reallocarray(buddy, NULL, sizeof(short), SIZE_MAX);
 	assert(result == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_reallocarray_03() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	void *result = buddy_reallocarray(buddy, NULL, sizeof(char), 256);
 	assert(result == data_buf);
+	free(buddy_buf);
 }
 
 void test_buddy_embedded_not_enough_memory() {
@@ -1117,7 +1191,7 @@ void test_buddy_embedded_malloc_01() {
 
 void test_buddy_mixed_use_01() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	void *addr[8] = {0};
@@ -1135,11 +1209,12 @@ void test_buddy_mixed_use_01() {
 	assert(buddy_malloc(buddy, 64) != NULL);
 	assert(buddy_malloc(buddy, 64) != NULL);
 	assert(buddy_malloc(buddy, 64) == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_mixed_use_02() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	void *addr[8] = {0};
@@ -1155,11 +1230,12 @@ void test_buddy_mixed_use_02() {
 	assert(buddy_malloc(buddy, 64) != NULL);
 	assert(buddy_malloc(buddy, 64) != NULL);
 	assert(buddy_malloc(buddy, 64) == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_mixed_use_03() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	void *addr[4] = {0};
@@ -1173,6 +1249,7 @@ void test_buddy_mixed_use_03() {
 	assert(buddy_malloc(buddy, 256) != NULL);
 	assert(buddy_malloc(buddy, 256) != NULL);
 	assert(buddy_malloc(buddy, 256) == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_large_arena() {
@@ -1201,7 +1278,7 @@ void *walker_01(void *ctx, void *addr, size_t size) {
 
 void test_buddy_walk_01() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	assert(buddy_walk(NULL, walker_01, NULL) == NULL);
@@ -1220,6 +1297,7 @@ void test_buddy_walk_01() {
 	buddy_malloc(buddy, 64);
 	buddy_malloc(buddy, 64);
 	assert(buddy_walk(buddy, walker_01, &counter) != NULL);
+	free(buddy_buf);
 }
 
 void *walker_02(void *ctx, void *addr, size_t size) {
@@ -1234,7 +1312,7 @@ void *walker_02(void *ctx, void *addr, size_t size) {
 }
 void test_buddy_walk_02() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	size_t counter = 0;
@@ -1242,6 +1320,7 @@ void test_buddy_walk_02() {
 	buddy_malloc(buddy, 128);
 	buddy_malloc(buddy, 128);
 	assert(buddy_walk(buddy, walker_02, &counter) != NULL);
+	free(buddy_buf);
 }
 
 struct walker_03_entry {
@@ -1265,7 +1344,7 @@ void *walker_03(void *ctx, void *addr, size_t size) {
 
 void test_buddy_walk_03() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	struct walker_03_entry context[3];
@@ -1273,6 +1352,7 @@ void test_buddy_walk_03() {
 	context[1] = (struct walker_03_entry){.addr = buddy_malloc(buddy, 64), .size = 64};
 	context[2] = (struct walker_03_entry){.addr = buddy_malloc(buddy, 256), .size = 256};
 	assert(buddy_walk(buddy, walker_03, &context) == NULL);
+	free(buddy_buf);
 }
 
 void *walker_04(void *ctx, void *addr, size_t size) {
@@ -1285,7 +1365,7 @@ void *walker_04(void *ctx, void *addr, size_t size) {
 
 void test_buddy_walk_04() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	buddy_malloc(buddy, 128);
@@ -1293,6 +1373,7 @@ void test_buddy_walk_04() {
 	buddy_malloc(buddy, 256);
 	assert(buddy_walk(buddy, walker_04, buddy) == NULL);
 	assert(buddy_is_empty(buddy));
+	free(buddy_buf);
 }
 
 void *walker_05(void *ctx, void *addr, size_t size) {
@@ -1303,12 +1384,13 @@ void *walker_05(void *ctx, void *addr, size_t size) {
 
 void test_buddy_walk_05() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(4096)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 3648); // virtual slots
 	unsigned int ctx = 0;
 	assert(buddy_walk(buddy, walker_05, &ctx) == NULL);
 	assert(walker_05(&ctx, NULL, 0) == &ctx); // coverage
+	free(buddy_buf);
 }
 
 void *walker_06(void *ctx, void *addr, size_t size) {
@@ -1319,7 +1401,7 @@ void *walker_06(void *ctx, void *addr, size_t size) {
 
 void test_buddy_walk_06() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	void *a[8];
@@ -1340,68 +1422,75 @@ void test_buddy_walk_06() {
 	assert(buddy_malloc(buddy, 256) == NULL);
 	buddy_walk(buddy, walker_06, buddy);
 	assert(buddy_malloc(buddy, 256) != NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_reserve_01() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	buddy_reserve_range(buddy, buddy_buf, 512); // wrong dst
 	assert(buddy_malloc(buddy, 512) == data_buf); // entire buddy should be free
+	free(buddy_buf);
 }
 
 void test_buddy_reserve_02() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	buddy_reserve_range(buddy, data_buf, 0); // zero length
 	assert(buddy_malloc(buddy, 512) == data_buf); // entire buddy should be free
+	free(buddy_buf);
 }
 
 void test_buddy_reserve_03() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	buddy_reserve_range(buddy, data_buf, 512); // full length
 	assert(buddy_malloc(buddy, 512) == NULL); // entire buddy should be busy
+	free(buddy_buf);
 }
 
 void test_buddy_reserve_04() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	buddy_reserve_range(buddy, data_buf, 512-16); // almost-full length
 	assert(buddy_malloc(buddy, 512) == NULL); // entire buddy should be busy
+	free(buddy_buf);
 }
 
 void test_buddy_reserve_05() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	buddy_reserve_range(buddy, data_buf, 256); // half length
 	assert(buddy_malloc(buddy, 512) == NULL);
 	assert(buddy_malloc(buddy, 256) == (data_buf + 256));
 	assert(buddy_malloc(buddy, 256) == NULL);
+	free(buddy_buf);
 }
 
 void test_buddy_unsafe_release_01() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	buddy_malloc(buddy, 512); // Use all
 	buddy_unsafe_release_range(buddy, data_buf, 0); // Zero length
 	assert(buddy_malloc(buddy, 512) == NULL); // no release should have happened
+	free(buddy_buf);
 }
 
 void test_buddy_unsafe_release_02() {
 	start_test;
-	unsigned char buddy_buf[buddy_sizeof(512)];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
 	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 512);
 	buddy_reserve_range(buddy, data_buf, 256); // half length
@@ -1409,6 +1498,7 @@ void test_buddy_unsafe_release_02() {
 	assert(buddy_malloc(buddy, 256) == NULL); // no space
 	buddy_unsafe_release_range(buddy, data_buf, 256); // get back half
 	assert(buddy_malloc(buddy, 256) == data_buf); // there should be space now
+	free(buddy_buf);
 }
 
 void test_buddy_fragmentation() {
@@ -1418,8 +1508,8 @@ void test_buddy_fragmentation() {
 	// just through the allocator public interface
 
 	size_t buddy_size = PSS(265);
-	unsigned char buddy_buf[buddy_sizeof(buddy_size)];
-	unsigned char data_buf[buddy_size];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(buddy_size));
+	unsigned char* data_buf = malloc(buddy_size);
 	struct buddy *b = buddy_init(buddy_buf, data_buf, buddy_size);
 
 	// No fragmentation for invalid allocator
@@ -1436,6 +1526,9 @@ void test_buddy_fragmentation() {
 	// Some fragmentation for partially-used allocator
 	buddy_malloc(b, PSS(64));
 	assert(buddy_fragmentation(b) == 0.4375);
+
+	free(buddy_buf);
+	free(data_buf);
 }
 
 void test_buddy_bias() {
@@ -1445,8 +1538,8 @@ void test_buddy_bias() {
 	buddy_set_optimal_fit(NULL);
 
 	size_t buddy_size = PSS(265);
-	unsigned char buddy_buf[buddy_sizeof(buddy_size)];
-	unsigned char data_buf[buddy_size];
+	unsigned char* buddy_buf = malloc(buddy_sizeof(buddy_size));
+	unsigned char* data_buf = malloc(buddy_size);
 	struct buddy *b = buddy_init(buddy_buf, data_buf, buddy_size);
 
 	void *allocs[4];
@@ -1464,6 +1557,9 @@ void test_buddy_bias() {
 
 	buddy_set_optimal_fit(b);
 	assert(buddy_malloc(b, PSS(64)) == allocs[2]);
+	
+	free(buddy_buf);
+	free(data_buf);
 }
 
 void test_buddy_tree_init() {
