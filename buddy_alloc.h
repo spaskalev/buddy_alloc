@@ -136,9 +136,11 @@ extern "C" {
 #define BUDDY_ALLOC_ALIGN (sizeof(size_t) * CHAR_BIT)
 #endif
 
-#ifndef BUDDY_DEFAULT_ALIGNMENT
-#define BUDDY_DEFAULT_ALIGNMENT 8
-#endif
+#ifdef __cplusplus
+
+#define BUDDY_ALIGNOF(x) alignof(x)
+
+#else // not __cplusplus
 
 #ifndef BUDDY_ALIGNOF
 #ifndef _MSC_VER
@@ -147,6 +149,8 @@ extern "C" {
 #define BUDDY_ALIGNOF(x) _Alignof(x)
 #endif
 #endif
+
+#endif // __cplusplus
 
 // ssize_t is a POSIX extension
 #if defined(_MSC_VER) && !defined(_SSIZE_T_DEFINED)
@@ -399,7 +403,7 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
     if (at_alignment != 0) {
         return NULL;
     }
-    size_t main_alignment = ((uintptr_t) main) % BUDDY_DEFAULT_ALIGNMENT;
+    size_t main_alignment = ((uintptr_t) main) % BUDDY_ALIGNOF(size_t);
     if (main_alignment != 0) {
         return NULL;
     }
