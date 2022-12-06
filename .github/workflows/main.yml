@@ -17,6 +17,7 @@ jobs:
     - name: test-multiplatform
       run: make test-multiplatform
       working-directory: .
+  # Build Windows x86 32 and 64 -bit and run tests
   build-windows:
     runs-on: windows-latest
     strategy:
@@ -24,7 +25,6 @@ jobs:
         arch:
           - amd64
           - amd64_x86
-          #- amd64_arm64 # temporarily disable ARM64
     steps:
       - uses: actions/checkout@v2
       - uses: ilammy/msvc-dev-cmd@v1
@@ -35,3 +35,20 @@ jobs:
           cmake -G "NMake Makefiles" .
           nmake
           ./buddy_tests
+  # Cross-compile Windows x64 -> arm/arm64, doesn't run tests
+  cross-compile-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch:
+          - amd64_arm
+          - amd64_arm64
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+      - name: Build Windows target
+        run: |
+          cmake -G "NMake Makefiles" .
+          nmake
