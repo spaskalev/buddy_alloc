@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
+#include <assert.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -176,7 +177,11 @@ struct buddy_tree_pos {
     size_t depth;
 };
 
+#ifdef __cplusplus
+#define INVALID_POS buddy_tree_pos{}
+#else
 #define INVALID_POS ((struct buddy_tree_pos){ 0, 0 })
+#endif
 
 struct buddy_tree_interval {
     struct buddy_tree_pos from;
@@ -1225,7 +1230,8 @@ static uint8_t buddy_tree_order(struct buddy_tree *t) {
 }
 
 static struct buddy_tree_pos buddy_tree_root(void) {
-    return (struct buddy_tree_pos){ 1, 1 };
+    struct buddy_tree_pos identity = { 1, 1 };
+    return identity;
 }
 
 static struct buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t) {
@@ -1591,7 +1597,7 @@ static float buddy_tree_fragmentation(struct buddy_tree *t) {
         size_t pos_status = buddy_tree_status(t, state.current_pos);
         if (pos_status == 0) {
             // Empty node, process
-            size_t virtual_size = 1u << ((tree_order - state.current_pos.depth) % ((sizeof(size_t) * CHAR_BIT)-1));
+            size_t virtual_size = 1ul << ((tree_order - state.current_pos.depth) % ((sizeof(size_t) * CHAR_BIT)-1));
             quality += (virtual_size * virtual_size);
             total_free_size += virtual_size;
             // Ascend
