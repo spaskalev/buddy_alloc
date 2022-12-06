@@ -1615,8 +1615,6 @@ static float buddy_tree_fragmentation(struct buddy_tree *t) {
  * A char-backed bitset implementation
  */
 
-#define BUDDY_BITSET_SIZEOF(elements) (((elements) + CHAR_BIT - 1u) / CHAR_BIT)
-
 size_t bitset_sizeof(size_t elements) {
     return ((elements) + CHAR_BIT - 1u) / CHAR_BIT;
 }
