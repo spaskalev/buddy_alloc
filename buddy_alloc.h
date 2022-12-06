@@ -22,6 +22,10 @@
 #include <string.h>
 #include <sys/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct buddy;
 
 /* Returns the size of a buddy required to manage of block of the specified size */
@@ -63,7 +67,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size);
 
 /* Realloc-like behavior that checks for overflow. See reallocarray*/
 void *buddy_reallocarray(struct buddy *buddy, void *ptr,
-	size_t members_count, size_t member_size);
+    size_t members_count, size_t member_size);
 
 /* Use the specified buddy to free memory. See free. */
 void buddy_free(struct buddy *buddy, void *ptr);
@@ -115,13 +119,47 @@ void buddy_set_left_bias(struct buddy *buddy);
  */
 void buddy_set_optimal_fit(struct buddy *buddy);
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* BUDDY_ALLOC_H */
 
 #ifdef BUDDY_ALLOC_IMPLEMENTATION
 #undef BUDDY_ALLOC_IMPLEMENTATION
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef BUDDY_ALLOC_ALIGN
 #define BUDDY_ALLOC_ALIGN (sizeof(size_t) * CHAR_BIT)
+#endif
+
+#ifdef __cplusplus
+
+#define BUDDY_ALIGNOF(x) alignof(x)
+
+#else // not __cplusplus
+
+#ifndef BUDDY_ALIGNOF
+#ifndef _MSC_VER
+#define BUDDY_ALIGNOF(x) __alignof__(x)
+#else
+#define BUDDY_ALIGNOF(x) _Alignof(x)
+#endif
+#endif
+
+#endif // __cplusplus
+
+// ssize_t is a POSIX extension
+#if defined(_MSC_VER) && !defined(_SSIZE_T_DEFINED)
+#if _WIN64
+typedef signed long long ssize_t;
+#else
+typedef signed long ssize_t;
+#endif
+#define _SSIZE_T_DEFINED
 #endif
 
 /*
@@ -352,7 +390,7 @@ size_t buddy_sizeof(size_t memory_size) {
         return 0; /* invalid */
     }
     size_t buddy_tree_order = buddy_tree_order_for_memory(memory_size);
-    return sizeof(struct buddy) + buddy_tree_sizeof(buddy_tree_order);
+    return sizeof(struct buddy) + buddy_tree_sizeof((uint8_t)buddy_tree_order);
 }
 
 struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_size) {
@@ -365,11 +403,11 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
     if (at == main) {
         return NULL;
     }
-    size_t at_alignment = ((uintptr_t) at) % __alignof__(struct buddy);
+    size_t at_alignment = ((uintptr_t) at) % BUDDY_ALIGNOF(struct buddy);
     if (at_alignment != 0) {
         return NULL;
     }
-    size_t main_alignment = ((uintptr_t) main) % __alignof__(BUDDY_ALLOC_ALIGN);
+    size_t main_alignment = ((uintptr_t) main) % BUDDY_ALIGNOF(size_t);
     if (main_alignment != 0) {
         return NULL;
     }
@@ -388,7 +426,7 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
     buddy->arena.main = main;
     buddy->memory_size = memory_size;
     buddy->buddy_flags = 0;
-    buddy_tree_init(buddy->buddy_tree, buddy_tree_order);
+    buddy_tree_init(buddy->buddy_tree, (uint8_t) buddy_tree_order);
     buddy_toggle_virtual_slots(buddy, 1);
     return buddy;
 }
@@ -440,7 +478,7 @@ static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memor
 
     /* Calculate new tree order and resize it */
     size_t new_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size);
-    buddy_tree_resize(buddy_tree(buddy), new_buddy_tree_order);
+    buddy_tree_resize(buddy_tree(buddy), (uint8_t) new_buddy_tree_order);
 
     /* Store the new memory size and reconstruct any virtual slots */
     buddy->memory_size = new_memory_size;
@@ -524,7 +562,7 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
 
     size_t target_depth = depth_for_size(buddy, requested_size);
     struct buddy_tree *tree = buddy_tree(buddy);
-    struct buddy_tree_pos pos = buddy_tree_find_free(tree, target_depth, buddy_is_left_biased(buddy));
+    struct buddy_tree_pos pos = buddy_tree_find_free(tree, (uint8_t) target_depth, (uint8_t) buddy_is_left_biased(buddy));
 
     if (! buddy_tree_valid(tree, pos)) {
         return NULL; /* no slot found */
@@ -587,7 +625,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
 
     /* Release the position and perform a search */
     buddy_tree_release(tree, origin);
-    struct buddy_tree_pos new_pos = buddy_tree_find_free(tree, target_depth, buddy_is_left_biased(buddy));
+    struct buddy_tree_pos new_pos = buddy_tree_find_free(tree, (uint8_t) target_depth, buddy_is_left_biased(buddy));
 
     if (! buddy_tree_valid(tree, new_pos)) {
         /* allocation failure, restore mark and return null */
@@ -970,8 +1008,8 @@ static struct buddy_embed_check buddy_embed_offset(size_t memory_size) {
     }
 
     size_t offset = memory_size - buddy_size;
-    if (offset % __alignof__(struct buddy) != 0) {
-        buddy_size += offset % __alignof__(struct buddy);
+    if (offset % BUDDY_ALIGNOF(struct buddy) != 0) {
+        buddy_size += offset % BUDDY_ALIGNOF(struct buddy);
         if (buddy_size >= memory_size) {
             result.can_fit = 0;
         }
@@ -1048,7 +1086,7 @@ static inline struct internal_position buddy_tree_internal_position_order(
         size_t tree_order, struct buddy_tree_pos pos) {
     struct internal_position p = {0};
     p.local_offset = tree_order - buddy_tree_depth(pos) + 1;
-    size_t total_offset = size_for_order(tree_order, p.local_offset);
+    size_t total_offset = size_for_order((uint8_t) tree_order, (uint8_t) p.local_offset);
     size_t local_index = buddy_tree_index_internal(pos);
     p.bitset_location = total_offset + (p.local_offset * local_index);
     return p;
@@ -1058,7 +1096,7 @@ static inline struct internal_position buddy_tree_internal_position_tree(
         struct buddy_tree *t, struct buddy_tree_pos pos) {
     struct internal_position p = {0};
     p.local_offset = t->order - buddy_tree_depth(pos) + 1;
-    size_t total_offset = buddy_tree_size_for_order(t, p.local_offset);
+    size_t total_offset = buddy_tree_size_for_order(t, (uint8_t) p.local_offset);
     size_t local_index = buddy_tree_index_internal(pos);
     p.bitset_location = total_offset + (p.local_offset * local_index);
     return p;
@@ -1172,7 +1210,7 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
         }
 
         /* Advance the order */
-        t->order = next_order;
+        t->order = (uint8_t) next_order;
         t->upper_pos_bound = 1u << t->order;
         buddy_tree_populate_size_for_order(t);
     }
@@ -1265,7 +1303,7 @@ static void buddy_tree_populate_size_for_order(struct buddy_tree *t) {
     t->size_for_order_offset = bitset_offset / sizeof(size_t);
     t->size_for_order_offset++;
     for (size_t i = 0; i <= t->order; i++) {
-        *(t->data+t->size_for_order_offset+i) = size_for_order(t->order, i);
+        *(t->data+t->size_for_order_offset+i) = size_for_order(t->order, (uint8_t) i);
     }
 }
 
@@ -1553,7 +1591,7 @@ static float buddy_tree_fragmentation(struct buddy_tree *t) {
         size_t pos_status = buddy_tree_status(t, state.current_pos);
         if (pos_status == 0) {
             // Empty node, process
-            size_t virtual_size = 1ul << ((tree_order - state.current_pos.depth) % ((sizeof(size_t) * CHAR_BIT)-1));
+            size_t virtual_size = 1u << ((tree_order - state.current_pos.depth) % ((sizeof(size_t) * CHAR_BIT)-1));
             quality += (virtual_size * virtual_size);
             total_free_size += virtual_size;
             // Ascend
@@ -1713,7 +1751,7 @@ static unsigned int popcount_byte(unsigned char b) {
 
 /* Returns the higest set bit position for the given value. Returns zero for zero. */
 static size_t highest_bit_position(size_t value) {
-    int result = 0;
+    size_t result = 0;
     /* some other millenia when size_t becomes 128-bit this will break :) */
 #if SIZE_MAX == 0xFFFFFFFFFFFFFFFF
     const size_t all_set[] = {4294967295, 65535, 255, 15, 7, 3, 1};
@@ -1736,7 +1774,7 @@ static size_t highest_bit_position(size_t value) {
 
 static inline size_t ceiling_power_of_two(size_t value) {
     value += !value; /* branchless x -> { 1 for 0, x for x } */
-    return 1ul << (highest_bit_position(value + value - 1)-1);
+    return ((size_t)1u) << (highest_bit_position(value + value - 1)-1);
 }
 
 static inline float approximate_square_root(float f) {
@@ -1747,5 +1785,9 @@ static inline float approximate_square_root(float f) {
     val.i += 1 << 29;   /* Add ((b + 1) / 2) * 2^m. */
     return val.f;       /* Interpret again as float */
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BUDDY_ALLOC_IMPLEMENTATION */
