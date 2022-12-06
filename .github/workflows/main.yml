@@ -5,7 +5,7 @@ on:
   pull_request:
     branches: [ main ]
 jobs:
-  build:
+  build-ubuntu:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -17,3 +17,21 @@ jobs:
     - name: test-multiplatform
       run: make test-multiplatform
       working-directory: .
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch:
+          - amd64
+          - amd64_x86
+          #- amd64_arm64 # temporarily disable ARM64
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+      - name: Build Windows target
+        run: |
+          cmake -G "NMake Makefiles" .
+          nmake
+          ./buddy_tests

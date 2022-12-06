@@ -154,7 +154,11 @@ extern "C" {
 
 // ssize_t is a POSIX extension
 #if defined(_MSC_VER) && !defined(_SSIZE_T_DEFINED)
+#if _WIN64
 typedef signed long long ssize_t;
+#else
+typedef signed long ssize_t;
+#endif
 #define _SSIZE_T_DEFINED
 #endif
 
