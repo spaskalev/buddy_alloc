@@ -1,9 +1,9 @@
 name: cicd
 on:
   push:
-    branches: [ feature/CPP-interop-test ]
+    branches: [ main ]
   pull_request:
-    branches: [ feature/CPP-interop-test ]
+    branches: [ main ]
 jobs:
   build-ubuntu:
     runs-on: ubuntu-latest
