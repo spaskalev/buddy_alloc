@@ -981,7 +981,7 @@ static unsigned int buddy_is_free(struct buddy *buddy, size_t from) {
 
     struct buddy_tree *t = buddy_tree(buddy);
 
-    struct buddy_tree_interval query_range = {0, 0};
+    struct buddy_tree_interval query_range = {0};
     query_range.from = deepest_position_for_offset(buddy, from);
     query_range.to = deepest_position_for_offset(buddy, to);
 
