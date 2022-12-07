@@ -1,9 +1,9 @@
 name: cicd
 on:
   push:
-    branches: [ main ]
+    branches: [ feature/CPP-interop-test ]
   pull_request:
-    branches: [ main ]
+    branches: [ feature/CPP-interop-test ]
 jobs:
   build-ubuntu:
     runs-on: ubuntu-latest
@@ -16,6 +16,9 @@ jobs:
       working-directory: .
     - name: test-multiplatform
       run: make test-multiplatform
+      working-directory: .
+    - name: test-cpp-translation-unit
+      run: make LLVM_VERSION=10 test-cpp-translation-unit
       working-directory: .
   build-windows:
     runs-on: windows-latest

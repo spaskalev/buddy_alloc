@@ -8,12 +8,15 @@ MAKEFLAGS += --no-builtin-rules
 
 LLVM_VERSION?=11
 CC=clang-$(LLVM_VERSION)
+CXX=clang-$(LLVM_VERSION)
 CFLAGS=-std=c99 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -pedantic -Wall -Wextra -Werror -Wfatal-errors -Wformat --coverage
+CXXFLAGS=-x=C++ -std=c++11 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -pedantic -Wall -Wextra -Werror -Wfatal-errors -Wformat --coverage
 LLVM_COV=llvm-cov-$(LLVM_VERSION)
 CTIDY=clang-tidy-$(LLVM_VERSION)
 CTIDY_CHECKS='bugprone-*,performance-*,readability-*,-readability-magic-numbers,-clang-analyzer-security.*'
 CTIDY_EXTRA='-std=c99'
 TESTS_SRC=tests.c
+TESTCXX_SRC=testcxx.cpp
 LIB_SRC=buddy_alloc.h
 
 test: tests.out spell
@@ -31,6 +34,9 @@ test-clang-tidy: $(TESTS_SRC)
 
 test-cppcheck: $(TESTS_SRC)
 	cppcheck --error-exitcode=1 --quiet $^
+
+test-cpp-translation-unit: $(TESTCXX_SRC)
+	$(CXX) $(CXXFLAGS) $(TESTCXX_SRC) -o $@
 
 test-multiplatform: $(TESTS_SRC)
 	# 64-bit
@@ -52,4 +58,4 @@ spell:
 
 .PHONY: test clean test-clang-tidy test-cppcheck spell
 
-.PRECIOUS: tests.out
+.PRECIOUS: tests.out testcxx.out
