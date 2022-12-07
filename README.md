@@ -21,8 +21,9 @@ This is a buddy memory allocator that might be suitable for use in applications 
 - Fixed call stack use, no recursion
 - C99-compatibility for code and tests
 - 100% line and branch test coverage
-- Supports on 32-bit and 64-bit platforms
+- Supports 32-bit and 64-bit platforms
 - Endian-agnostic, works on both LE and BE
+- Compiles with GCC, Clang and MSVC
 
 ## Usage
 
