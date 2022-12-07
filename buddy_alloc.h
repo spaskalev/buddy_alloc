@@ -138,8 +138,10 @@ extern "C" {
 #endif
 
 #ifdef __cplusplus
-
+    
+#ifndef BUDDY_ALIGNOF
 #define BUDDY_ALIGNOF(x) alignof(x)
+#endif
 
 #else // not __cplusplus
 
@@ -178,7 +180,7 @@ struct buddy_tree_pos {
 };
 
 #ifdef __cplusplus
-#define INVALID_POS buddy_tree_pos{}
+#define INVALID_POS buddy_tree_pos{ 0, 0 }
 #else
 #define INVALID_POS ((struct buddy_tree_pos){ 0, 0 })
 #endif
