@@ -17,6 +17,9 @@ jobs:
     - name: test-multiplatform
       run: make test-multiplatform
       working-directory: .
+    - name: test-cpp-translation-unit
+      run: make LLVM_VERSION=10 test-cpp-translation-unit
+      working-directory: .
   build-windows:
     runs-on: windows-latest
     strategy:
