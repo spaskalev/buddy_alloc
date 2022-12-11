@@ -18,9 +18,8 @@ CTIDY_EXTRA='-std=c99'
 TESTS_SRC=tests.c
 TESTCXX_SRC=testcxx.cpp
 LIB_SRC=buddy_alloc.h
-SPELL?=spell
 
-test: tests.out spell
+test: tests.out
 	rm -f *.gcda
 	./tests.out
 	$(LLVM_COV) gcov -b $(TESTS_SRC) | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
@@ -52,10 +51,6 @@ check-recursion: $(LIB_SRC)
 
 clean:
 	rm -f a.out *.gcda *.gcno *.gcov tests.out
-
-spell:
-	$(SPELL) -d .dict *.md
-	[ -z "$$($(SPELL) -d .dict *.md)" ]
 
 .PHONY: test clean test-clang-tidy test-cppcheck spell
 
