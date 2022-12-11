@@ -7,17 +7,18 @@ MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
 LLVM_VERSION?=11
-CC=clang-$(LLVM_VERSION)
-CXX=clang++-$(LLVM_VERSION)
+CC?=clang-$(LLVM_VERSION)
+CXX?=clang++-$(LLVM_VERSION)
 CFLAGS=-std=c99 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -pedantic -Wall -Wextra -Werror -Wfatal-errors -Wformat --coverage
 CXXFLAGS=-std=c++11 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -pedantic -Wall -Wextra -Wformat --coverage
-LLVM_COV=llvm-cov-$(LLVM_VERSION)
-CTIDY=clang-tidy-$(LLVM_VERSION)
-CTIDY_CHECKS='bugprone-*,performance-*,readability-*,-readability-magic-numbers,-clang-analyzer-security.*'
+LLVM_COV?=llvm-cov-$(LLVM_VERSION)
+CTIDY?=clang-tidy-$(LLVM_VERSION)
+CTIDY_CHECKS='bugprone-*,performance-*,readability-*,-readability-magic-numbers,-readability-function-cognitive-complexity,-clang-analyzer-security.*'
 CTIDY_EXTRA='-std=c99'
 TESTS_SRC=tests.c
 TESTCXX_SRC=testcxx.cpp
 LIB_SRC=buddy_alloc.h
+SPELL?=spell
 
 test: tests.out spell
 	rm -f *.gcda
@@ -53,8 +54,8 @@ clean:
 	rm -f a.out *.gcda *.gcno *.gcov tests.out
 
 spell:
-	spell -d .dict *.md
-	[ -z "$$(spell -d .dict *.md)" ]
+	$(SPELL) -d .dict *.md
+	[ -z "$$($(SPELL) -d .dict *.md)" ]
 
 .PHONY: test clean test-clang-tidy test-cppcheck spell
 
