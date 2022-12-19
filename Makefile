@@ -15,6 +15,7 @@ LLVM_COV?=llvm-cov-$(LLVM_VERSION)
 CTIDY?=clang-tidy-$(LLVM_VERSION)
 CTIDY_CHECKS='bugprone-*,performance-*,readability-*,-readability-magic-numbers,-readability-function-cognitive-complexity,-clang-analyzer-security.*'
 CTIDY_EXTRA='-std=c99'
+CPPCHECK?=cppcheck
 TESTS_SRC=tests.c
 TESTCXX_SRC=testcxx.cpp
 LIB_SRC=buddy_alloc.h
@@ -33,7 +34,7 @@ test-clang-tidy: $(TESTS_SRC)
 	$(CTIDY) -checks=$(CTIDY_CHECKS) -warnings-as-errors='*' --extra-arg=$(CTIDY_EXTRA) $^ --
 
 test-cppcheck: $(TESTS_SRC)
-	cppcheck --error-exitcode=1 --quiet $^
+	$(CPPCHECK) --error-exitcode=1 --quiet $^
 
 test-cpp-translation-unit: $(TESTCXX_SRC)
 	$(CXX) $(CXXFLAGS) $(TESTCXX_SRC) -o $@
