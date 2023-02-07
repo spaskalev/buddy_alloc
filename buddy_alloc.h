@@ -1,7 +1,7 @@
 /*
  * Copyright 2021 Stanislav Paskalev <spaskalev@protonmail.com>
  */
-// 
+
 /*
  * A binary buddy memory allocator
  *
