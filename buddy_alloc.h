@@ -1,7 +1,7 @@
 /*
  * Copyright 2021 Stanislav Paskalev <spaskalev@protonmail.com>
  */
-
+// 
 /*
  * A binary buddy memory allocator
  *
@@ -1241,6 +1241,7 @@ static struct buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t) {
 }
 
 static struct buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order) {
+    assert(tree_order);
     struct buddy_tree_pos result;
     result.index = 1u << (tree_order - 1u);
     result.depth = tree_order;
@@ -1444,6 +1445,7 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
 }
 
 static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth, uint8_t left_bias) {
+    assert(target_depth <= t->order);
     struct buddy_tree_pos start = buddy_tree_root();
     uint8_t target_status = target_depth - 1;
     size_t current_depth = buddy_tree_depth(start);
