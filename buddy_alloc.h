@@ -278,7 +278,7 @@ static void buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos);
 /* Returns a free position at the specified depth or an invalid position */
 static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth, uint8_t left_bias);
 
-/* Tests if the incidated position is available for allocation */
+/* Tests if the indicated position is available for allocation */
 static unsigned int buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_pos pos);
 
 /* Tests if the tree can be shrank in half */
@@ -1174,7 +1174,7 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
             current_pos = buddy_tree_parent(current_pos);
             next_pos = buddy_tree_parent(next_pos);
         }
-        /* Advance the order and refrest the root */
+        /* Advance the order and refresh the root */
         t->order += 1u;
         t->upper_pos_bound = 1u << t->order;
         buddy_tree_populate_size_for_order(t);
@@ -1241,7 +1241,6 @@ static struct buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t) {
 }
 
 static struct buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order) {
-    assert(tree_order);
     struct buddy_tree_pos result;
     result.index = 1u << (tree_order - 1u);
     result.depth = tree_order;
@@ -1333,7 +1332,7 @@ static void write_to_internal_position(unsigned char *bitset, struct internal_po
 
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos) {
     if (! bitset_test(bitset, pos.bitset_location)) {
-        return 0; /* Fast test without complete extration */
+        return 0; /* Fast test without complete extraction */
     }
     return bitset_count_range(bitset, pos.bitset_location, pos.bitset_location+pos.local_offset-1);
 }
@@ -1445,7 +1444,6 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
 }
 
 static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth, uint8_t left_bias) {
-    assert(target_depth <= t->order);
     struct buddy_tree_pos start = buddy_tree_root();
     uint8_t target_status = target_depth - 1;
     size_t current_depth = buddy_tree_depth(start);
@@ -1757,10 +1755,10 @@ static unsigned int popcount_byte(unsigned char b) {
     return popcount_lookup[b & 15] + popcount_lookup[b >> 4];
 }
 
-/* Returns the higest set bit position for the given value. Returns zero for zero. */
+/* Returns the highest set bit position for the given value. Returns zero for zero. */
 static size_t highest_bit_position(size_t value) {
     size_t result = 0;
-    /* some other millenia when size_t becomes 128-bit this will break :) */
+    /* some other millennia when size_t becomes 128-bit this will break :) */
 #if SIZE_MAX == 0xFFFFFFFFFFFFFFFF
     const size_t all_set[] = {4294967295, 65535, 255, 15, 7, 3, 1};
     const size_t count[] = {32, 16, 8, 4, 2, 1, 1};
@@ -1775,7 +1773,7 @@ static size_t highest_bit_position(size_t value) {
         if (value >= all_set[i]) {
             value >>= count[i];
             result += count[i];
-        }       
+        }
     }
     return result + value;
 }
