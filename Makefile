@@ -57,7 +57,7 @@ check-recursion: $(LIB_SRC)
 	[ $$( cflow --no-main $(LIB_SRC) | grep -c 'recursive:' ) -eq "0" ]
 
 clean:
-	rm -f a.out *.gcda *.gcno *.gcov tests.out
+	rm -f a.out *.gcda *.gcno *.gcov tests.out bench
 
 .PHONY: test clean test-clang-tidy test-cppcheck
 
