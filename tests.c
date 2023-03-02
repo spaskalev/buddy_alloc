@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define BUDDY_ALLOC_SAFETY
 #define BUDDY_ALLOC_IMPLEMENTATION
 #include "buddy_alloc.h"
 #undef BUDDY_ALLOC_IMPLEMENTATION

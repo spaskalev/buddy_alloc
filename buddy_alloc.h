@@ -854,11 +854,9 @@ static struct buddy_tree_pos position_for_address(struct buddy *buddy, const uns
     unsigned char *main = buddy_main(buddy);
     ptrdiff_t offset = addr - main;
 
-#ifdef BUDDY_ALLOC_SAFETY
     if (offset % BUDDY_ALLOC_ALIGN) {
         return INVALID_POS; /* invalid alignment */
     }
-#endif
 
     struct buddy_tree *tree = buddy_tree(buddy);
     struct buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
@@ -868,11 +866,9 @@ static struct buddy_tree_pos position_for_address(struct buddy *buddy, const uns
         pos = buddy_tree_parent(pos);
     }
 
-#ifdef BUDDY_ALLOC_SAFETY
     if (address_for_position(buddy, pos) != addr) {
         return INVALID_POS; /* invalid alignment */
     }
-#endif
 
     return pos;
 }
@@ -1408,11 +1404,9 @@ static void buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos) 
     /* Calling release on an unused or a partially-used position a bug in caller */
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
 
-#ifdef BUDDY_ALLOC_SAFETY
     if (read_from_internal_position(buddy_tree_bits(t), internal) != internal.local_offset) {
         return;
     }
-#endif
 
     /* Mark the node as unused */
     write_to_internal_position(buddy_tree_bits(t), internal, 0);
