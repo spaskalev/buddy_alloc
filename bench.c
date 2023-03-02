@@ -8,9 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <sys/time.h>
 
-#define BUDDY_ALLOC_SAFETY
+#define BUDDY_ALLOC_ALIGN 64
 #define BUDDY_ALLOC_IMPLEMENTATION
 #include "buddy_alloc.h"
 #undef BUDDY_ALLOC_IMPLEMENTATION
@@ -32,11 +31,11 @@ double test(size_t alloc_size, size_t iterations) {
 
 	unsigned char *buddy_buf = malloc(buddy_sizeof(1 << 30));
 	unsigned char *data_buf = malloc(1 << 30);
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1 << 30);
 
 	printf("Starting test with alloc size [%zu] and [%zu] iterations.\n", alloc_size, iterations);
 	time_t start_time = time(NULL);
 	for (size_t i = 0; i < iterations; i++) {
-		struct buddy *buddy = buddy_init(buddy_buf, data_buf, 1 << 30);
 		while (buddy_malloc(buddy, alloc_size)) {
 			// fill it up
 		}
