@@ -22,10 +22,6 @@ LIB_SRC=buddy_alloc.h
 BENCH_SRC=bench.c
 BENCH_CFLAGS?=-O2
 
-bench: $(BENCH_SRC) $(LIB_SRC)
-	$(CC) $(BENCH_CFLAGS) $(BENCH_SRC) -o $@
-	./$@
-
 test: tests.out
 	rm -f *.gcda
 	./tests.out
@@ -52,6 +48,10 @@ test-multiplatform: $(TESTS_SRC)
 	# 32-bit
 	i686-linux-gnu-gcc -static -g tests.c && ./a.out
 	powerpc-linux-gnu-gcc -static $(TESTS_SRC) && ./a.out
+
+bench: $(BENCH_SRC) $(LIB_SRC)
+	$(CC) $(BENCH_CFLAGS) $(BENCH_SRC) -o $@
+	./$@
 
 check-recursion: $(LIB_SRC)
 	[ $$( cflow --no-main $(LIB_SRC) | grep -c 'recursive:' ) -eq "0" ]
