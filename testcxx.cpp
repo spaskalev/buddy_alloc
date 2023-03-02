@@ -3,7 +3,6 @@
  */
 
 // Just include buddy_alloc from C++
-#define BUDDY_ALLOC_SAFETY
 #define BUDDY_ALLOC_IMPLEMENTATION
 #include "buddy_alloc.h"
 #undef BUDDY_ALLOC_IMPLEMENTATION
