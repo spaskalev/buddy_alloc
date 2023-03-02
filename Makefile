@@ -59,6 +59,6 @@ check-recursion: $(LIB_SRC)
 clean:
 	rm -f a.out *.gcda *.gcno *.gcov tests.out
 
-.PHONY: test clean test-clang-tidy test-cppcheck spell
+.PHONY: test clean test-clang-tidy test-cppcheck
 
 .PRECIOUS: tests.out testcxx.out
