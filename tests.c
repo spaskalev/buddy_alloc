@@ -576,6 +576,43 @@ void test_buddy_arena_size() {
 	assert(buddy_arena_size(buddy) == 4096);
 }
 
+void test_buddy_arena_free_size_01() {
+	start_test;
+	unsigned char *buddy_buf = malloc(buddy_sizeof(4096));
+	unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
+	assert(buddy_arena_free_size(buddy) == 4096);
+	void *slot = buddy_malloc(buddy, 4096);
+	assert(buddy_arena_free_size(buddy) == 0);
+	buddy_free(buddy, slot);
+	assert(buddy_arena_free_size(buddy) == 4096);
+	free(buddy_buf);
+}
+
+void test_buddy_arena_free_size_02() {
+	start_test;
+	unsigned char *buddy_buf = malloc(buddy_sizeof(4096));
+	unsigned char data_buf[4096];
+	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 3072);
+	assert(buddy_arena_free_size(buddy) == 3072);
+	void *slot = buddy_malloc(buddy, 2048);
+	assert(buddy_arena_free_size(buddy) == 1024);
+	buddy_free(buddy, slot);
+	assert(buddy_arena_free_size(buddy) == 3072);
+	free(buddy_buf);
+}
+
+void test_buddy_arena_free_size_03() {
+	start_test;
+	unsigned char shared_buf[8192];
+	struct buddy *buddy = buddy_embed(shared_buf, 8192);
+	size_t current_free = buddy_arena_free_size(buddy);
+	void *slot = buddy_malloc(buddy, 2048);
+	assert(buddy_arena_free_size(buddy) == current_free - 2048);
+	buddy_free(buddy, slot);
+	assert(buddy_arena_free_size(buddy) == current_free);
+}
+
 void test_buddy_malloc_null() {
 	start_test;
 	assert(buddy_malloc(NULL, 1024) == NULL);
@@ -2061,6 +2098,9 @@ int main() {
 
 		test_buddy_can_shrink();
 		test_buddy_arena_size();
+		test_buddy_arena_free_size_01();
+		test_buddy_arena_free_size_02();
+		test_buddy_arena_free_size_03();
 
 		test_buddy_malloc_null();
 		test_buddy_malloc_zero();
