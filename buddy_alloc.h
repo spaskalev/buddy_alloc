@@ -56,6 +56,10 @@ unsigned int buddy_is_full(struct buddy *buddy);
 /* Reports the arena size */
 size_t buddy_arena_size(struct buddy *buddy);
 
+/* Reports the arena's free size. Note that this is (often) not a continuous size
+   but the sum of all free slots in the buddy. */
+size_t buddy_arena_free_size(struct buddy *buddy);
+
 /*
  * Allocation functions
  */
@@ -545,6 +549,26 @@ size_t buddy_arena_size(struct buddy *buddy) {
         return 0;
     }
     return buddy->memory_size;
+}
+
+size_t buddy_arena_free_size(struct buddy *buddy) {
+    size_t result = 0;
+    struct buddy_tree *tree = buddy_tree(buddy);
+    size_t tree_order = buddy_tree_order(tree);
+
+    struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
+    do {
+        size_t pos_status = buddy_tree_status(tree, state.current_pos);
+        if (pos_status == (tree_order - state.current_pos.depth + 1)) { // Fully-allocated
+            state.going_up = 1;
+        } else if (pos_status == 0) { // Free
+            state.going_up = 1;
+            result += size_for_depth(buddy, state.current_pos.depth);
+        } else { // Partial
+            continue;
+        }
+    } while (buddy_tree_walk(tree, &state));
+    return result;
 }
 
 static size_t buddy_tree_order_for_memory(size_t memory_size) {
