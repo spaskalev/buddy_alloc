@@ -26,12 +26,6 @@ int main() {
 		total += test_malloc(64 << i);
 	}
 	printf("Total malloc runtime was %f seconds.\n\n", total);
-
-	total = 0;
-	for (size_t i = 0; i <= 6; i++) {
-		total += test_malloc_firstfit(64 << i);
-	}
-	printf("Total walk malloc runtime was %f seconds.\n\n", total);
 }
 
 double test_malloc(size_t alloc_size) {
@@ -45,37 +39,6 @@ double test_malloc(size_t alloc_size) {
 	time_t start_time = time(NULL);
 
 	while (buddy_malloc(buddy, alloc_size)) {
-		// fill it up
-	}
-	time_t alloc_time = time(NULL);
-
-	assert(buddy_is_full(buddy));
-
-	buddy_walk(buddy, freeing_callback, buddy);
-	assert(buddy_is_empty(buddy));
-
-	time_t end_time = time(NULL);
-	double delta = difftime(end_time, start_time);
-	printf("Test took %.f seconds in total. Allocation: %.f freeing: %.f\n", delta,
-		difftime(alloc_time, start_time), difftime(end_time, alloc_time));
-
-	free(data_buf);
-	free(buddy_buf);
-
-	return delta;
-}
-
-double test_malloc_firstfit(size_t alloc_size) {
-
-	size_t arena_size = 1 << 30;
-	unsigned char *buddy_buf = malloc(buddy_sizeof(arena_size));
-	unsigned char *data_buf = malloc(arena_size);
-	struct buddy *buddy = buddy_init(buddy_buf, data_buf, arena_size);
-
-	printf("Starting test with alloc size [%zu].\n", alloc_size);
-	time_t start_time = time(NULL);
-
-	while (buddy_malloc_firstfit(buddy, alloc_size)) {
 		// fill it up
 	}
 	time_t alloc_time = time(NULL);
