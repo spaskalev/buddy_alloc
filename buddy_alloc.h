@@ -832,8 +832,8 @@ void *buddy_malloc_firstfit(struct buddy *buddy, size_t requested_size) {
     struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
     do {
         size_t pos_status = buddy_tree_status(tree, state.current_pos);
+        size_t pos_size = effective_memory_size >> (state.current_pos.depth - 1u);
         if (pos_status == 0) {
-            size_t pos_size = effective_memory_size >> (state.current_pos.depth - 1u);
             if (requested_size <= (pos_size/2)) {
                 continue;
             }
@@ -843,6 +843,9 @@ void *buddy_malloc_firstfit(struct buddy *buddy, size_t requested_size) {
             /* Find and return the actual memory address */
             return address_for_position(buddy, state.current_pos);
         } else if (pos_status != (tree_order - state.current_pos.depth + 1)) { // Partially-allocated
+            if (requested_size > (pos_size/2)) {
+                state.going_up = 1;
+            }
             continue;
         } else { // Fully-allocated
             state.going_up = 1;
