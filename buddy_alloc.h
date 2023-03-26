@@ -67,9 +67,6 @@ size_t buddy_arena_free_size(struct buddy *buddy);
 /* Use the specified buddy to allocate memory. See malloc. */
 void *buddy_malloc(struct buddy *buddy, size_t requested_size);
 
-/* Faster for small-sized requests. Beware of fragmentation. See buddy_malloc. */
-void *buddy_malloc_firstfit(struct buddy *buddy, size_t requested_size);
-
 /* Use the specified buddy to allocate zeroed memory. See calloc. */
 void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size);
 
@@ -812,43 +809,6 @@ void *buddy_walk(struct buddy *buddy,
                     return result;
                 }
             }
-        }
-    } while (buddy_tree_walk(tree, &state));
-    return NULL;
-}
-
-void *buddy_malloc_firstfit(struct buddy *buddy, size_t requested_size) {
-    if (buddy == NULL) {
-        return NULL;
-    }
-    if (requested_size < BUDDY_ALLOC_ALIGN) {
-        requested_size = BUDDY_ALLOC_ALIGN;
-    }
-
-    size_t effective_memory_size = buddy_effective_memory_size(buddy);
-    struct buddy_tree *tree = buddy_tree(buddy);
-    size_t tree_order = buddy_tree_order(tree);
-
-    struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
-    do {
-        size_t pos_status = buddy_tree_status(tree, state.current_pos);
-        size_t pos_size = effective_memory_size >> (state.current_pos.depth - 1u);
-        if (pos_status == 0) {
-            if (requested_size <= (pos_size/2)) {
-                continue;
-            }
-            /* Allocate the slot */
-            buddy_tree_mark(buddy_tree(buddy), state.current_pos);
-
-            /* Find and return the actual memory address */
-            return address_for_position(buddy, state.current_pos);
-        } else if (pos_status != (tree_order - state.current_pos.depth + 1)) { // Partially-allocated
-            if (requested_size > (pos_size/2)) {
-                state.going_up = 1;
-            }
-            continue;
-        } else { // Fully-allocated
-            state.going_up = 1;
         }
     } while (buddy_tree_walk(tree, &state));
     return NULL;

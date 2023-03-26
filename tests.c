@@ -701,39 +701,6 @@ void test_buddy_malloc_basic_04() {
 	free(buddy_buf);
 }
 
-void test_buddy_malloc_firstfit_01() {
-	start_test;
-	unsigned char *buddy_buf = malloc(buddy_sizeof(4096));
-	unsigned char data_buf[4096];
-	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
-	assert(buddy != NULL);
-	assert(buddy_malloc_firstfit(buddy, 64) == data_buf);
-	assert(buddy_malloc_firstfit(buddy, 32) == data_buf+64);
-	free(buddy_buf);
-}
-
-void test_buddy_malloc_firstfit_02() {
-	start_test;
-	unsigned char *buddy_buf = malloc(buddy_sizeof(4096));
-	unsigned char data_buf[4096];
-	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
-	assert(buddy != NULL);
-	assert(buddy_malloc_firstfit(buddy, 4096) == data_buf);
-	assert(buddy_malloc_firstfit(buddy, 4096) == 0);
-	free(buddy_buf);
-}
-
-void test_buddy_malloc_firstfit_03() {
-	start_test;
-	unsigned char *buddy_buf = malloc(buddy_sizeof(4096));
-	unsigned char data_buf[4096];
-	struct buddy *buddy = buddy_init(buddy_buf, data_buf, 4096);
-	assert(buddy != NULL);
-	assert(buddy_malloc_firstfit(buddy, 2048) == data_buf);
-	assert(buddy_malloc_firstfit(buddy, 3072) == 0);
-	free(buddy_buf);
-}
-
 void test_buddy_free_coverage() {
 	start_test;
 	unsigned char *buddy_buf = malloc(buddy_sizeof(4096));
@@ -2132,10 +2099,6 @@ int main() {
 		test_buddy_malloc_basic_02();
 		test_buddy_malloc_basic_03();
 		test_buddy_malloc_basic_04();
-
-		test_buddy_malloc_firstfit_01();
-		test_buddy_malloc_firstfit_02();
-		test_buddy_malloc_firstfit_03();
 
 		test_buddy_free_coverage();
 		test_buddy_free_alignment();
