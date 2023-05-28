@@ -1625,7 +1625,7 @@ void test_buddy_slot_alignment() {
 	size_t arena_size = 4096;
 	size_t max_alignment = 4096;
 	void *arena = my_aligned_malloc(arena_size, max_alignment);
-	for (size_t alignment = 16; alignment <= max_alignment; alignment <<= 1) {
+	for (size_t alignment = 1; alignment <= max_alignment; alignment <<= 1) {
 		void *alloc = malloc(buddy_sizeof_alignment(arena_size, alignment));
 		struct buddy *buddy = buddy_init_alignment(alloc, arena, arena_size, alignment);
 
@@ -1638,6 +1638,19 @@ void test_buddy_slot_alignment() {
 		free(alloc);
 	}
 	my_aligned_free(arena);
+}
+
+void test_buddy_invalid_slot_alignment() {
+	start_test;
+	size_t arena_size = 4096;
+	unsigned char arena[4096];
+	unsigned char buddy[4096];
+	assert(buddy_sizeof_alignment(arena_size, 0) == 0);
+	assert(buddy_sizeof_alignment(arena_size, 3) == 0);
+	assert(buddy_init_alignment(buddy, arena, 4096, 0) == NULL);
+	assert(buddy_init_alignment(buddy, arena, 4096, 3) == NULL);
+	assert(buddy_embed_alignment(arena, 4096, 0) == NULL);
+	assert(buddy_embed_alignment(arena, 4096, 3) == NULL);
 }
 
 void test_buddy_tree_init() {
@@ -2207,6 +2220,7 @@ int main() {
 		test_buddy_is_full();
 
 		test_buddy_slot_alignment();
+		test_buddy_invalid_slot_alignment();
 	}
 
 	{
