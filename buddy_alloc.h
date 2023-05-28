@@ -386,6 +386,7 @@ struct buddy_embed_check {
     size_t buddy_size;
 };
 
+static unsigned int is_valid_alignment(size_t alignment);
 static size_t buddy_tree_order_for_memory(size_t memory_size, size_t alignment);
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size);
 static inline size_t size_for_depth(struct buddy *buddy, size_t depth);
@@ -409,6 +410,9 @@ size_t buddy_sizeof(size_t memory_size) {
 }
 
 size_t buddy_sizeof_alignment(size_t memory_size, size_t alignment) {
+    if (!is_valid_alignment(alignment)) {
+        return 0; /* invalid */
+    }
     if (memory_size < alignment) {
         return 0; /* invalid */
     }
@@ -430,6 +434,9 @@ struct buddy *buddy_init_alignment(unsigned char *at, unsigned char *main, size_
     }
     if (at == main) {
         return NULL;
+    }
+    if (!is_valid_alignment(alignment)) {
+        return 0; /* invalid */
     }
     size_t at_alignment = ((uintptr_t) at) % BUDDY_ALIGNOF(struct buddy);
     if (at_alignment != 0) {
@@ -467,6 +474,9 @@ struct buddy *buddy_embed(unsigned char *main, size_t memory_size) {
 struct buddy *buddy_embed_alignment(unsigned char *main, size_t memory_size, size_t alignment) {
     if (! main) {
         return NULL;
+    }
+    if (!is_valid_alignment(alignment)) {
+        return 0; /* invalid */
     }
     struct buddy_embed_check result = buddy_embed_offset(memory_size);
     if (! result.can_fit) {
@@ -598,6 +608,10 @@ size_t buddy_arena_free_size(struct buddy *buddy) {
         }
     } while (buddy_tree_walk(tree, &state));
     return result;
+}
+
+static unsigned int is_valid_alignment(size_t alignment) {
+    return ceiling_power_of_two(alignment) == alignment;
 }
 
 static size_t buddy_tree_order_for_memory(size_t memory_size, size_t alignment) {
