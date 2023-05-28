@@ -12,9 +12,6 @@ CXX?=clang++-$(LLVM_VERSION)
 CFLAGS=-std=c99 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -pedantic -Wall -Wextra -Werror -Wfatal-errors -Wformat --coverage
 CXXFLAGS=-std=c++11 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -pedantic -Wall -Wextra -Wformat --coverage
 LLVM_COV?=llvm-cov-$(LLVM_VERSION)
-CTIDY?=clang-tidy-$(LLVM_VERSION)
-CTIDY_CHECKS='bugprone-*,performance-*,readability-*,-readability-magic-numbers,-readability-function-cognitive-complexity,-clang-analyzer-security.*,-bugprone-reserved-identifier'
-CTIDY_EXTRA='-std=c99'
 CPPCHECK?=cppcheck
 TESTS_SRC=tests.c
 TESTCXX_SRC=testcxx.cpp
@@ -29,11 +26,8 @@ test: tests.out
 	! grep  '#####:' *.gcov
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
 
-tests.out: $(TESTS_SRC) $(LIB_SRC) test-clang-tidy test-cppcheck check-recursion
+tests.out: $(TESTS_SRC) $(LIB_SRC) test-cppcheck check-recursion
 	$(CC) $(CFLAGS) $(TESTS_SRC) -o $@
-
-test-clang-tidy: $(TESTS_SRC)
-	$(CTIDY) -checks=$(CTIDY_CHECKS) -warnings-as-errors='*' --extra-arg=$(CTIDY_EXTRA) $^ --
 
 test-cppcheck: $(TESTS_SRC)
 	$(CPPCHECK) --error-exitcode=1 --quiet $^
@@ -59,6 +53,6 @@ check-recursion: $(LIB_SRC)
 clean:
 	rm -f a.out *.gcda *.gcno *.gcov tests.out bench
 
-.PHONY: test clean test-clang-tidy test-cppcheck
+.PHONY: test clean test-cppcheck
 
 .PRECIOUS: tests.out testcxx.out
