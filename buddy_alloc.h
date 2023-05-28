@@ -436,7 +436,7 @@ struct buddy *buddy_init_alignment(unsigned char *at, unsigned char *main, size_
         return NULL;
     }
     if (!is_valid_alignment(alignment)) {
-        return 0; /* invalid */
+        return NULL; /* invalid */
     }
     size_t at_alignment = ((uintptr_t) at) % BUDDY_ALIGNOF(struct buddy);
     if (at_alignment != 0) {
@@ -476,7 +476,7 @@ struct buddy *buddy_embed_alignment(unsigned char *main, size_t memory_size, siz
         return NULL;
     }
     if (!is_valid_alignment(alignment)) {
-        return 0; /* invalid */
+        return NULL; /* invalid */
     }
     struct buddy_embed_check result = buddy_embed_offset(memory_size);
     if (! result.can_fit) {
