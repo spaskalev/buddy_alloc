@@ -29,11 +29,11 @@ extern "C" {
 
 struct buddy;
 
-/* Returns the size of a buddy required to manage of block of the specified size */
+/* Returns the size of a buddy required to manage a block of the specified size */
 size_t buddy_sizeof(size_t memory_size);
 
 /*
- * Returns the size of a buddy required to manage of block of the specified size
+ * Returns the size of a buddy required to manage a block of the specified size
  * using a non-default alignment.
  */
 size_t buddy_sizeof_alignment(size_t memory_size, size_t alignment);

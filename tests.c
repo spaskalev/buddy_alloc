@@ -4,6 +4,7 @@
 
 
 #define start_test printf("Running test: %s in %s:%d\n", __func__, __FILE__, __LINE__);
+#define _POSIX_C_SOURCE 200112L
 
 #include <assert.h>
 #include <errno.h>
@@ -39,6 +40,21 @@
 #ifdef _MSC_VER
 #undef assert
 #define assert(x) if(!(x)){ printf("Assertion failed on ( " #x " )"); exit(1); }
+void *my_aligned_malloc(size_t size, size_t alignment) {
+	return _aligned_malloc(size, alignment);
+}
+void my_aligned_free(void *aligned_ptr) {
+	_aligned_free(aligned_ptr);
+}
+#else
+void *my_aligned_malloc(size_t size, size_t alignment) {
+	void *ptr = NULL;
+	assert(posix_memalign(&ptr, alignment, size) == 0);
+	return ptr;
+}
+void my_aligned_free(void *aligned_ptr) {
+	free(aligned_ptr);
+}
 #endif
 
 void test_highest_bit_position() {
@@ -1592,7 +1608,6 @@ void test_buddy_is_empty() {
 void test_buddy_is_full() {
 	start_test;
 
-
 	size_t buddy_size = 1024;
 	unsigned char *buddy_buf = malloc(buddy_sizeof(buddy_size));
 	unsigned char *data_buf = malloc(buddy_size);
@@ -1603,6 +1618,26 @@ void test_buddy_is_full() {
 
 	free(buddy_buf);
 	free(data_buf);
+}
+
+void test_buddy_slot_alignment() {
+	start_test;
+	size_t arena_size = 4096;
+	size_t max_alignment = 4096;
+	void *arena = my_aligned_malloc(arena_size, max_alignment);
+	for (size_t alignment = 16; alignment <= max_alignment; alignment <<= 1) {
+		void *alloc = malloc(buddy_sizeof_alignment(arena_size, alignment));
+		struct buddy *buddy = buddy_init_alignment(alloc, arena, arena_size, alignment);
+
+		for(size_t i = 0; i < (arena_size/alignment); i++) {
+			void *slot = buddy_malloc(buddy, alignment);
+			assert((((uintptr_t) slot) % alignment) == 0);
+		}
+
+		assert(buddy_arena_free_size(buddy) == 0);
+		free(alloc);
+	}
+	my_aligned_free(arena);
 }
 
 void test_buddy_tree_init() {
@@ -2170,6 +2205,8 @@ int main() {
 
 		test_buddy_is_empty();
 		test_buddy_is_full();
+
+		test_buddy_slot_alignment();
 	}
 
 	{
