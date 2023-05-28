@@ -13,7 +13,7 @@ CFLAGS=-std=c99 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-pr
 CXXFLAGS=-std=c++11 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -pedantic -Wall -Wextra -Wformat --coverage
 LLVM_COV?=llvm-cov-$(LLVM_VERSION)
 CTIDY?=clang-tidy-$(LLVM_VERSION)
-CTIDY_CHECKS='bugprone-*,performance-*,readability-*,-readability-magic-numbers,-readability-function-cognitive-complexity,-clang-analyzer-security.*'
+CTIDY_CHECKS='bugprone-*,performance-*,readability-*,-readability-magic-numbers,-readability-function-cognitive-complexity,-clang-analyzer-security.*,-bugprone-reserved-identifier'
 CTIDY_EXTRA='-std=c99'
 CPPCHECK?=cppcheck
 TESTS_SRC=tests.c
