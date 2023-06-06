@@ -1132,6 +1132,7 @@ static void buddy_tree_populate_size_for_order(struct buddy_tree *t);
 static inline size_t buddy_tree_size_for_order(struct buddy_tree *t, uint8_t to);
 static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value);
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos);
+static size_t compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value);
 
 static inline size_t size_for_order(uint8_t order, uint8_t to) {
     size_t result = 0;
@@ -1376,14 +1377,12 @@ static inline size_t buddy_tree_size_for_order(struct buddy_tree *t,
 }
 
 static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
-    if (! value) {
-        bitset_clear(bitset, pos.bitset_location);
-        return;
-    }
     bitset_clear_range(bitset, pos.bitset_location,
         pos.bitset_location+pos.local_offset-1);
-    bitset_set_range(bitset, pos.bitset_location,
-        pos.bitset_location+value-1);
+    if (value) {
+        bitset_set_range(bitset, pos.bitset_location,
+            pos.bitset_location+value-1);
+    }
 }
 
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos) {
@@ -1391,6 +1390,13 @@ static size_t read_from_internal_position(unsigned char *bitset, struct internal
         return 0; /* Fast test without complete extraction */
     }
     return bitset_count_range(bitset, pos.bitset_location, pos.bitset_location+pos.local_offset-1);
+}
+
+static size_t compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
+    if (value > pos.local_offset) {
+        return 0;
+    }
+    return bitset_test(bitset, pos.bitset_location+value-1);
 }
 
 static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, struct buddy_tree_pos pos) {
@@ -1499,50 +1505,36 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
 
 static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth) {
     assert(target_depth <= t->order);
-    struct buddy_tree_pos start = buddy_tree_root();
+    struct buddy_tree_pos current_pos = buddy_tree_root();
     uint8_t target_status = target_depth - 1;
-    size_t current_depth = buddy_tree_depth(start);
-    size_t current_status = buddy_tree_status(t, start);
-    if (current_status > target_status) {
+    size_t current_depth = buddy_tree_depth(current_pos);
+    if (buddy_tree_status(t, current_pos) > target_status) {
         return INVALID_POS; /* No position available down the tree */
     }
-    while (1) {
-        if (current_depth == target_depth) {
-            return start;
-        }
-
+    while (current_depth != target_depth) {
         /* Advance criteria */
         target_status -= 1;
         current_depth += 1;
 
-        /* Do an optimal fit followed by left-first fit */
-        struct buddy_tree_pos left_pos = buddy_tree_left_child(start);
+        struct buddy_tree_pos left_pos = buddy_tree_left_child(current_pos);
         struct buddy_tree_pos right_pos = buddy_tree_sibling(left_pos);
-        struct internal_position internal = buddy_tree_internal_position_tree(t, left_pos);
-        size_t left_status = read_from_internal_position(buddy_tree_bits(t), internal);
-        internal.bitset_location += internal.local_offset; /* advance to the right */
-        size_t right_status = read_from_internal_position(buddy_tree_bits(t), internal);
 
-        if (left_status > target_status) { /* left branch is busy, pick right */
-            start = right_pos;
-            current_status = right_status;
-            continue;
-        }
+        struct internal_position left_internal = buddy_tree_internal_position_tree(t, left_pos);
 
-        if (right_status > target_status) { /* right branch is busy, pick left */
-            start = left_pos;
-            current_status = left_status;
-            continue;
-        }
+        struct internal_position right_internal = left_internal;
+        right_internal.bitset_location += right_internal.local_offset; /* advance to the right */
 
-        if (left_status >= right_status) {
-            start = left_pos;
-            current_status = left_status;
+        if (compare_with_internal_position(buddy_tree_bits(t), left_internal, target_status+1)) { /* left branch is busy, pick right */
+            current_pos = right_pos;
+        } else if (compare_with_internal_position(buddy_tree_bits(t), right_internal, target_status+1)) { /* right branch is busy, pick left */
+            current_pos = left_pos;
         } else {
-            start = right_pos;
-            current_status = right_status;
+            size_t left_status = read_from_internal_position(buddy_tree_bits(t), left_internal);
+            size_t right_status = read_from_internal_position(buddy_tree_bits(t), right_internal);
+            current_pos = left_status >= right_status ? left_pos : right_pos;
         }
     }
+    return current_pos;
 }
 
 static unsigned int buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_pos pos) {
