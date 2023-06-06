@@ -1503,12 +1503,12 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
     uint8_t target_status = target_depth - 1;
     size_t current_depth = buddy_tree_depth(start);
     size_t current_status = buddy_tree_status(t, start);
+    if (current_status > target_status) {
+        return INVALID_POS; /* No position available down the tree */
+    }
     while (1) {
         if (current_depth == target_depth) {
             return current_status == 0 ? start : INVALID_POS;
-        }
-        if (current_status > target_status) {
-            return INVALID_POS; /* No position available down the tree */
         }
 
         /* Advance criteria */
