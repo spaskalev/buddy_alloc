@@ -1508,7 +1508,7 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
     }
     while (1) {
         if (current_depth == target_depth) {
-            return current_status == 0 ? start : INVALID_POS;
+            return start;
         }
 
         /* Advance criteria */
