@@ -1529,9 +1529,18 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
         } else if (compare_with_internal_position(buddy_tree_bits(t), right_internal, target_status+1)) { /* right branch is busy, pick left */
             current_pos = left_pos;
         } else {
-            size_t left_status = read_from_internal_position(buddy_tree_bits(t), left_internal);
+            /* One of the child nodes must be read in order to compare it to its sibling. */
+            right_internal.local_offset = target_status; // reduce the read span since we know the right_status is equal or less than target_status
             size_t right_status = read_from_internal_position(buddy_tree_bits(t), right_internal);
-            current_pos = left_status >= right_status ? left_pos : right_pos;
+            if (right_status) {
+                if (compare_with_internal_position(buddy_tree_bits(t), left_internal, right_status)) {
+                    current_pos = left_pos; // Left is equal or more busy than right, prefer left
+                } else {
+                    current_pos = right_pos;
+                }
+            } else { // Right is empty, prefer left
+                current_pos = left_pos;
+            }
         }
     }
     return current_pos;
