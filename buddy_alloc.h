@@ -884,7 +884,6 @@ static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
 }
 
 static inline size_t size_for_depth(struct buddy *buddy, size_t depth) {
-    depth += !depth; /* Silences a clang warning about undefined right shift */
     return ceiling_power_of_two(buddy->memory_size) >> (depth-1);
 }
 
@@ -1349,10 +1348,7 @@ static size_t buddy_tree_index(struct buddy_tree_pos pos) {
 static inline size_t buddy_tree_index_internal(struct buddy_tree_pos pos) {
     /* Clear out the highest bit, this gives us the index
      * in a row of sibling nodes */
-    /* % ((sizeof(size_t) * CHAR_BIT)-1) ensures we don't shift into
-     * undefined behavior and stops clang from barking :)
-     * Hopefully clang also optimizes it away :) */
-    size_t mask = 1u << (pos.depth - 1) % ((sizeof(size_t) * CHAR_BIT)-1);
+    size_t mask = 1u << (pos.depth - 1u);
     size_t result = pos.index & ~mask;
     return result;
 }
