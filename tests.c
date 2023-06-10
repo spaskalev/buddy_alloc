@@ -576,6 +576,8 @@ void test_buddy_debug(void) {
 	buddy_debug(buddy); /* code coverage */
 	buddy = buddy_init_alignment(buddy_buf, data_buf, 4096, 4096);
 	buddy_debug(buddy); /* code coverage */
+	buddy = buddy_embed(data_buf, 4096);
+	buddy_debug(buddy); /* code coverage */
 	free(buddy_buf);
 }
 
