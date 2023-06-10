@@ -15,12 +15,14 @@
 #ifndef BUDDY_ALLOC_H
 #define BUDDY_ALLOC_H
 
+#ifndef BUDDY_HEADER
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -309,8 +311,10 @@ static void buddy_tree_debug(struct buddy_tree *t, struct buddy_tree_pos pos, si
 /* Implementation defined */
 static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct buddy_tree_pos pos);
 
+#ifndef BUDDY_FRAG_OPTIONAL
 /* Report fragmentation in a 0.0 - 1.0 range */
 static float buddy_tree_fragmentation(struct buddy_tree *t);
+#endif
 
 /*
  * A char-backed bitset implementation
@@ -908,12 +912,14 @@ void *buddy_walk(struct buddy *buddy,
     return NULL;
 }
 
+#ifndef BUDDY_FRAG_OPTIONAL
 float buddy_fragmentation(struct buddy *buddy) {
     if (buddy == NULL) {
         return 0;
     }
     return buddy_tree_fragmentation(buddy_tree(buddy));
 }
+#endif
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
     size_t depth, effective_memory_size;
@@ -1003,7 +1009,7 @@ static unsigned char *buddy_main(struct buddy *buddy) {
 }
 
 static unsigned int buddy_relative_mode(struct buddy *buddy) {
-    return buddy->buddy_flags & BUDDY_RELATIVE_MODE;
+    return (unsigned int)buddy->buddy_flags & BUDDY_RELATIVE_MODE;
 }
 
 static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) {
@@ -1161,7 +1167,11 @@ static void buddy_debug(struct buddy *buddy) {
     BUDDY_PRINTF("buddy allocator at: %p arena at: %p\n", (void *)buddy, (void *)buddy_main(buddy));
     BUDDY_PRINTF("memory size: %zu\n", buddy->memory_size);
     BUDDY_PRINTF("mode: ");
-    BUDDY_PRINTF(buddy_relative_mode(buddy) ? "embedded" : "standard");
+    if (buddy_relative_mode(buddy)) {
+        BUDDY_PRINTF("embedded");
+    } else {
+        BUDDY_PRINTF("standard");
+    }
     BUDDY_PRINTF("\n");
     BUDDY_PRINTF("virtual slots: %zu\n", buddy_virtual_slots(buddy));
     BUDDY_PRINTF("allocator tree follows:\n");
@@ -1711,6 +1721,7 @@ static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct budd
     return fail;
 }
 
+#ifndef BUDDY_FRAG_OPTIONAL
 /*
  * Calculate tree fragmentation based on free slots.
  * Based on https://asawicki.info/news_1757_a_metric_for_memory_fragmentation
@@ -1754,6 +1765,7 @@ static float buddy_tree_fragmentation(struct buddy_tree *t) {
     fragmentation = 1 - (quality_percent * quality_percent);
     return fragmentation;
 }
+#endif
 
 /*
  * A char-backed bitset implementation
