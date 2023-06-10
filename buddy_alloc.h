@@ -843,7 +843,7 @@ void *buddy_walk(struct buddy *buddy,
             /* Current node is allocated, process */
             size_t pos_size = effective_memory_size >> (state.current_pos.depth - 1u);
             unsigned char *addr = address_for_position(buddy, state.current_pos);
-            if (((size_t)(addr - main + pos_size)) > buddy->memory_size) {
+            if (((size_t)(addr - main) + pos_size) > buddy->memory_size) {
                 /*
                  * Do not process virtual slots
                  * As virtual slots are on the right side of the tree
@@ -922,7 +922,7 @@ static struct buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, si
 static struct buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr) {
     /* Find the deepest position tracking this address */
     unsigned char *main = buddy_main(buddy);
-    ptrdiff_t offset = addr - main;
+    size_t offset = (size_t) (addr - main);
 
     if (offset % buddy->alignment) {
         return INVALID_POS; /* invalid alignment */
@@ -1017,7 +1017,7 @@ static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_
 
     /* Find the deepest position tracking this address */
     struct buddy_tree *tree = buddy_tree(buddy);
-    ptrdiff_t offset = dst - main;
+    size_t offset = (size_t) (dst - main);
     struct buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
 
     /* Advance one position at a time and process */
@@ -1662,7 +1662,7 @@ static float buddy_tree_fragmentation(struct buddy_tree *t) {
         return 0;
     }
 
-    float quality_percent = approximate_square_root((float) quality) / total_free_size;
+    float quality_percent = approximate_square_root((float) quality) / (float) total_free_size;
     float fragmentation = 1 - (quality_percent * quality_percent);
     return fragmentation;
 }
@@ -1776,9 +1776,9 @@ static void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_
 }
 
 static void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by) {
-    ssize_t length = to_pos - from_pos;
+    ssize_t length = (ssize_t) to_pos - (ssize_t) from_pos;
     while (length >= 0) {
-        size_t at = from_pos + length;
+        size_t at = from_pos + (size_t) length;
         if (bitset_test(bitset, at)) {
             bitset_set(bitset, at+by);
         } else {
