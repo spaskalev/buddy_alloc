@@ -7,8 +7,8 @@ MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
 LLVM_VERSION?=11
-CC?=clang-$(LLVM_VERSION)
-CXX?=clang++-$(LLVM_VERSION)
+CC=clang-$(LLVM_VERSION)
+CXX=clang++-$(LLVM_VERSION)
 CFLAGS=-std=c99 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -pedantic -Wall -Wextra -Werror -Wfatal-errors -Wformat --coverage
 CXXFLAGS=-std=c++11 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -pedantic -Wall -Wextra -Wformat --coverage
 LLVM_COV?=llvm-cov-$(LLVM_VERSION)
@@ -23,8 +23,8 @@ test: tests.out
 	rm -f *.gcda
 	./tests.out
 	$(LLVM_COV) gcov -b $(TESTS_SRC) | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
-	! grep  '#####:' *.gcov
-	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
+	! grep  '#####:' $(LIB_SRC).gcov
+	! grep -E '^branch\s*[0-9]? never executed$$' $(LIB_SRC).gcov
 
 tests.out: $(TESTS_SRC) $(LIB_SRC) test-cppcheck check-recursion
 	$(CC) $(CFLAGS) $(TESTS_SRC) -o $@

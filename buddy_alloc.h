@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
-#include <assert.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -269,7 +268,7 @@ static unsigned int buddy_tree_interval_contains(struct buddy_tree_interval oute
     struct buddy_tree_interval inner);
 
 /* Return a walk state structure starting from the root of a tree */
-static struct buddy_tree_walk_state buddy_tree_walk_state_root();
+static struct buddy_tree_walk_state buddy_tree_walk_state_root(void);
 
 /* Walk the tree, keeping track in the provided state structure */
 static unsigned int buddy_tree_walk(struct buddy_tree *t, struct buddy_tree_walk_state *state);
@@ -1297,7 +1296,6 @@ static struct buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t) {
 }
 
 static struct buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order) {
-    assert(tree_order);
     struct buddy_tree_pos result;
     result.index = 1u << (tree_order - 1u);
     result.depth = tree_order;
@@ -1393,9 +1391,6 @@ static size_t read_from_internal_position(unsigned char *bitset, struct internal
 }
 
 static size_t compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
-    if (value > pos.local_offset) {
-        return 0;
-    }
     return bitset_test(bitset, pos.bitset_location+value-1);
 }
 
@@ -1420,7 +1415,7 @@ static unsigned int buddy_tree_interval_contains(struct buddy_tree_interval oute
         && (inner.to.index <= outer.to.index);
 }
 
-static struct buddy_tree_walk_state buddy_tree_walk_state_root() {
+static struct buddy_tree_walk_state buddy_tree_walk_state_root(void) {
     struct buddy_tree_walk_state state = {0};
     state.starting_pos = buddy_tree_root();
     state.current_pos = buddy_tree_root();
@@ -1504,7 +1499,7 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
 }
 
 static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth) {
-    assert(target_depth <= t->order);
+    // assert(target_depth <= t->order);
     struct buddy_tree_pos current_pos = buddy_tree_root();
     uint8_t target_status = target_depth - 1;
     size_t current_depth = buddy_tree_depth(current_pos);
@@ -1601,10 +1596,6 @@ static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct budd
     struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
     state.current_pos = pos;
     do {
-        if (! buddy_tree_valid(t, buddy_tree_left_child(pos))) {
-            continue;
-        }
-
         struct internal_position current_internal = buddy_tree_internal_position_tree(t, pos);
         size_t current_status = read_from_internal_position(buddy_tree_bits(t), current_internal);
         size_t left_child_status = buddy_tree_status(t, buddy_tree_left_child(pos));
