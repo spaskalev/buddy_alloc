@@ -557,9 +557,13 @@ void test_buddy_resize_embedded_too_small(void) {
 
 void test_buddy_debug(void) {
 	start_test;
+	unsigned char *buddy_buf = malloc(buddy_sizeof(4096));
 	unsigned char data_buf[4096];
-	struct buddy *buddy = buddy_embed(data_buf, 256);
+	struct buddy *buddy = buddy_init_alignment(buddy_buf, data_buf, 64, 32);
 	buddy_debug(stdout, buddy); /* code coverage */
+	buddy = buddy_init_alignment(buddy_buf, data_buf, 4096, 4096);
+	buddy_debug(stdout, buddy); /* code coverage */
+	free(buddy_buf);
 }
 
 void test_buddy_can_shrink(void) {
