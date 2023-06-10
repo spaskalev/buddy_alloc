@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
-#include <assert.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -156,7 +155,7 @@ extern "C" {
 #define BUDDY_ALIGNOF(x) alignof(x)
 #endif
 
-#else // not __cplusplus
+#else /* not __cplusplus */
 
 #ifndef BUDDY_ALIGNOF
 #ifndef _MSC_VER
@@ -166,9 +165,9 @@ extern "C" {
 #endif
 #endif
 
-#endif // __cplusplus
+#endif /* __cplusplus */
 
-// ssize_t is a POSIX extension
+/* ssize_t is a POSIX extension */
 #if defined(_MSC_VER) && !defined(_SSIZE_T_DEFINED)
 #if _WIN64
 typedef signed long long ssize_t;
@@ -269,7 +268,7 @@ static unsigned int buddy_tree_interval_contains(struct buddy_tree_interval oute
     struct buddy_tree_interval inner);
 
 /* Return a walk state structure starting from the root of a tree */
-static struct buddy_tree_walk_state buddy_tree_walk_state_root();
+static struct buddy_tree_walk_state buddy_tree_walk_state_root(void);
 
 /* Walk the tree, keeping track in the provided state structure */
 static unsigned int buddy_tree_walk(struct buddy_tree *t, struct buddy_tree_walk_state *state);
@@ -598,12 +597,12 @@ size_t buddy_arena_free_size(struct buddy *buddy) {
     struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
     do {
         size_t pos_status = buddy_tree_status(tree, state.current_pos);
-        if (pos_status == (tree_order - state.current_pos.depth + 1)) { // Fully-allocated
+        if (pos_status == (tree_order - state.current_pos.depth + 1)) { /* Fully-allocated */
             state.going_up = 1;
-        } else if (pos_status == 0) { // Free
+        } else if (pos_status == 0) { /* Free */
             state.going_up = 1;
             result += size_for_depth(buddy, state.current_pos.depth);
-        } else { // Partial
+        } else { /* Partial */
             continue;
         }
     } while (buddy_tree_walk(tree, &state));
@@ -824,30 +823,34 @@ void *buddy_walk(struct buddy *buddy,
     struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
     do {
         size_t pos_status = buddy_tree_status(tree, state.current_pos);
-        if (pos_status == 0) { // Empty position
+        if (pos_status == 0) { /* Empty position */
             state.going_up = 1;
-        } else if (pos_status != (tree_order - state.current_pos.depth + 1)) { // Partially-allocated
+        } else if (pos_status != (tree_order - state.current_pos.depth + 1)) { /* Partially-allocated */
             continue;
-        } else { // Fully-allocated
-            // The tree doesn't make a distinction of a fully-allocated node
-            //  due to a single allocation and a fully-allocated due to maxed out
-            //  child allocations - we need to check the children.
-            // A child-allocated node will have both children set to their maximum
-            //  but it is sufficient to check just one for non-zero.
+        } else { /* Fully-allocated */
+            /*
+             * The tree doesn't make a distinction of a fully-allocated node
+             *  due to a single allocation and a fully-allocated due to maxed out
+             *  child allocations - we need to check the children.
+             * A child-allocated node will have both children set to their maximum
+             *  but it is sufficient to check just one for non-zero.
+             */
             struct buddy_tree_pos left = buddy_tree_left_child(state.current_pos);
             if (buddy_tree_valid(tree, left) && buddy_tree_status(tree, left)) {
                 continue;
             }
 
-            // Current node is allocated, process
+            /* Current node is allocated, process */
             size_t pos_size = effective_memory_size >> (state.current_pos.depth - 1u);
             unsigned char *addr = address_for_position(buddy, state.current_pos);
             if (((size_t)(addr - main + pos_size)) > buddy->memory_size) {
-                // Do not process virtual slots
-                // As virtual slots are on the right side of the tree
-                //  if we see a one with the current iteration order this
-                //  means that all subsequent slots will be virtual,
-                //  hence we can return early.
+                /*
+                 * Do not process virtual slots
+                 * As virtual slots are on the right side of the tree
+                 *  if we see a one with the current iteration order this
+                 *  means that all subsequent slots will be virtual,
+                 *  hence we can return early.
+                 */
                 return NULL;
             } else {
                 void *result = (fp)(ctx, addr, pos_size);
@@ -972,20 +975,20 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) 
     while (delta) {
         size_t current_pos_size = size_for_depth(buddy, buddy_tree_depth(pos));
         if (delta == current_pos_size) {
-            // toggle current pos
+            /* toggle current pos */
             (*toggle)(tree, pos);
             break;
         }
         if (delta <= (current_pos_size / 2)) {
-            // re-run for right child
+            /* re-run for right child */
             pos = buddy_tree_right_child(pos);
             continue;
         } else {
-            // toggle right child
+            /* toggle right child */
             (*toggle)(tree, buddy_tree_right_child(pos));
-            // reduce delta
+            /* reduce delta */
             delta -= current_pos_size / 2;
-            // re-run for left child
+            /* re-run for left child */
             pos = buddy_tree_left_child(pos);
             continue;
         }
@@ -1297,7 +1300,6 @@ static struct buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t) {
 }
 
 static struct buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order) {
-    assert(tree_order);
     struct buddy_tree_pos result;
     result.index = 1u << (tree_order - 1u);
     result.depth = tree_order;
@@ -1393,9 +1395,6 @@ static size_t read_from_internal_position(unsigned char *bitset, struct internal
 }
 
 static size_t compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
-    if (value > pos.local_offset) {
-        return 0;
-    }
     return bitset_test(bitset, pos.bitset_location+value-1);
 }
 
@@ -1420,7 +1419,7 @@ static unsigned int buddy_tree_interval_contains(struct buddy_tree_interval oute
         && (inner.to.index <= outer.to.index);
 }
 
-static struct buddy_tree_walk_state buddy_tree_walk_state_root() {
+static struct buddy_tree_walk_state buddy_tree_walk_state_root(void) {
     struct buddy_tree_walk_state state = {0};
     state.starting_pos = buddy_tree_root();
     state.current_pos = buddy_tree_root();
@@ -1434,15 +1433,15 @@ static unsigned int buddy_tree_walk(struct buddy_tree *t, struct buddy_tree_walk
                 state->walk_done = 1;
                 state->going_up = 0;
             } else if (state->current_pos.index & 1u) {
-                state->current_pos = buddy_tree_parent(state->current_pos); // Ascend
+                state->current_pos = buddy_tree_parent(state->current_pos); /* Ascend */
             } else {
-                state->current_pos = buddy_tree_right_adjacent(state->current_pos); // Descend right
+                state->current_pos = buddy_tree_right_adjacent(state->current_pos); /* Descend right */
                 state->going_up = 0;
             }
         } else if (buddy_tree_valid(t, buddy_tree_left_child(state->current_pos))) {
-            // Descend left
+            /* Descend left */
             state->current_pos = buddy_tree_left_child(state->current_pos);
-        } else { // Ascend
+        } else { /* Ascend */
             state->going_up = 1;
         }
     } while(state->going_up);
@@ -1504,7 +1503,6 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
 }
 
 static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth) {
-    assert(target_depth <= t->order);
     struct buddy_tree_pos current_pos = buddy_tree_root();
     uint8_t target_status = target_depth - 1;
     size_t current_depth = buddy_tree_depth(current_pos);
@@ -1530,15 +1528,15 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
             current_pos = left_pos;
         } else {
             /* One of the child nodes must be read in order to compare it to its sibling. */
-            right_internal.local_offset = target_status; // reduce the read span since we know the right_status is equal or less than target_status
+            right_internal.local_offset = target_status; /* reduce the read span since we know the right_status is equal or less than target_status */
             size_t right_status = read_from_internal_position(buddy_tree_bits(t), right_internal);
             if (right_status) {
                 if (compare_with_internal_position(buddy_tree_bits(t), left_internal, right_status)) {
-                    current_pos = left_pos; // Left is equal or more busy than right, prefer left
+                    current_pos = left_pos; /* Left is equal or more busy than right, prefer left */
                 } else {
                     current_pos = right_pos;
                 }
-            } else { // Right is empty, prefer left
+            } else { /* Right is empty, prefer left */
                 current_pos = left_pos;
             }
         }
@@ -1601,10 +1599,6 @@ static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct budd
     struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
     state.current_pos = pos;
     do {
-        if (! buddy_tree_valid(t, buddy_tree_left_child(pos))) {
-            continue;
-        }
-
         struct internal_position current_internal = buddy_tree_internal_position_tree(t, pos);
         size_t current_status = read_from_internal_position(buddy_tree_bits(t), current_internal);
         size_t left_child_status = buddy_tree_status(t, buddy_tree_left_child(pos));
@@ -1652,14 +1646,14 @@ static float buddy_tree_fragmentation(struct buddy_tree *t) {
     do {
         size_t pos_status = buddy_tree_status(t, state.current_pos);
         if (pos_status == 0) {
-            // Empty node, process
+            /* Empty node, process */
             size_t virtual_size = 1ul << ((tree_order - state.current_pos.depth) % ((sizeof(size_t) * CHAR_BIT)-1));
             quality += (virtual_size * virtual_size);
             total_free_size += virtual_size;
-            // Ascend
+            /* Ascend */
             state.going_up = 1;
         } else if (pos_status == (tree_order - state.current_pos.depth + 1)) {
-            // Busy node, ascend
+            /* Busy node, ascend */
             state.going_up = 1;
         }
     } while (buddy_tree_walk(t, &state));

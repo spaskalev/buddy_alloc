@@ -18,7 +18,7 @@ jobs:
       run: make test-multiplatform
       working-directory: .
     - name: test-cpp-translation-unit
-      run: make LLVM_VERSION=10 test-cpp-translation-unit
+      run: make LLVM_VERSION=12 test-cpp-translation-unit
       working-directory: .
     - uses: actions/upload-artifact@v3
       if: failure()
