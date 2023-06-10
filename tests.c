@@ -1587,14 +1587,14 @@ void test_buddy_fragmentation(void) {
 	struct buddy *b = buddy_init(buddy_buf, data_buf, buddy_size);
 
 	// No fragmentation for invalid allocator
-	assert(buddy_fragmentation(NULL) == 0);
+	assert(buddy_fragmentation(NULL) == 0.0);
 
 	// No fragmentation for empty allocator
-	assert(buddy_fragmentation(b) == 0);
+	assert(buddy_fragmentation(b) == 0.0);
 
 	// No fragmentation for full allocator either
 	buddy_malloc(b, buddy_size);
-	assert(buddy_fragmentation(b) == 0);
+	assert(buddy_fragmentation(b) == 0.0);
 	buddy_free(b, data_buf);
 
 	// Some fragmentation for partially-used allocator
@@ -2081,11 +2081,11 @@ void test_buddy_tree_fragmentation(void) {
 	struct buddy_tree *t = buddy_tree_init(buddy_tree_buf, 3);
 
 	// No fragmentation for empty tree
-	assert(buddy_tree_fragmentation(t) == 0);
+	assert(buddy_tree_fragmentation(t) == 0.0);
 
 	// No fragmentation for full tree either
 	buddy_tree_mark(t, buddy_tree_root());
-	assert(buddy_tree_fragmentation(t) == 0);
+	assert(buddy_tree_fragmentation(t) == 0.0);
 	buddy_tree_release(t, buddy_tree_root());
 
 	// Some fragmentation for partially-allocated tree
