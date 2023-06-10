@@ -9,8 +9,8 @@ MAKEFLAGS += --no-builtin-rules
 LLVM_VERSION?=11
 CC=clang-$(LLVM_VERSION)
 CXX=clang++-$(LLVM_VERSION)
-CFLAGS=-std=c99 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -fsanitize=bounds -pedantic -Wall -Wextra -Werror -Wfatal-errors -Wformat -Wconversion --coverage
-CXXFLAGS=-std=c++11 -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -fsanitize=bounds -pedantic -Wall -Wextra -Wformat -Wconversion --coverage
+CFLAGS=-std=c99 --coverage -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -fsanitize=bounds -pedantic -Wall -Wextra -Werror -Wfatal-errors -Wformat=2 -Wformat-security -Wconversion -Wcast-qual -Wnull-dereference -Wstack-protector -Warray-bounds -Warray-bounds-pointer-arithmetic -Wassign-enum -Wbad-function-cast -Wconditional-uninitialized -Wfloat-equal -Wformat-type-confusion -Widiomatic-parentheses -Wimplicit-fallthrough -Wloop-analysis -Wpointer-arith -Wshift-sign-overflow -Wshorten-64-to-32 -Wswitch-enum -Wtautological-constant-in-range-compare -Wunreachable-code-aggressive -Wthread-safety -Wthread-safety-beta -Wcomma -D_FORTIFY_SOURCE=3
+CXXFLAGS=-std=c++11 --coverage -pg -no-pie -fno-builtin -g -O0 -Og -fstrict-aliasing -fstack-protector-all -fsanitize=undefined -fsanitize=bounds -pedantic -Wall -Wextra -Wformat=2 -Wformat-security -Wconversion -Wcast-qual -Wnull-dereference -Wstack-protector -Warray-bounds -Warray-bounds-pointer-arithmetic -Wassign-enum -Wbad-function-cast -Wconditional-uninitialized -Wfloat-equal -Wformat-type-confusion -Widiomatic-parentheses -Wimplicit-fallthrough -Wloop-analysis -Wpointer-arith -Wshift-sign-overflow -Wshorten-64-to-32 -Wswitch-enum -Wtautological-constant-in-range-compare -Wunreachable-code-aggressive -Wthread-safety -Wthread-safety-beta -Wcomma -D_FORTIFY_SOURCE=3
 LLVM_COV?=llvm-cov-$(LLVM_VERSION)
 CPPCHECK?=cppcheck
 TESTS_SRC=tests.c
