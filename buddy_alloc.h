@@ -401,7 +401,7 @@ static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size);
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
 static unsigned int buddy_is_free(struct buddy *buddy, size_t from);
-static struct buddy_embed_check buddy_embed_offset(size_t memory_size);
+static struct buddy_embed_check buddy_embed_offset(size_t memory_size, size_t alignment);
 static struct buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, size_t offset);
 
 size_t buddy_sizeof(size_t memory_size) {
@@ -477,19 +477,18 @@ struct buddy *buddy_embed_alignment(unsigned char *main, size_t memory_size, siz
     if (!is_valid_alignment(alignment)) {
         return NULL; /* invalid */
     }
-    struct buddy_embed_check result = buddy_embed_offset(memory_size);
+    struct buddy_embed_check result = buddy_embed_offset(memory_size, alignment);
     if (! result.can_fit) {
         return NULL;
     }
 
-    struct buddy *buddy = buddy_init(main+result.offset, main, result.offset);
+    struct buddy *buddy = buddy_init_alignment(main+result.offset, main, result.offset, alignment);
     if (! buddy) { /* regular initialization failed */
         return NULL;
     }
 
     buddy->buddy_flags |= BUDDY_RELATIVE_MODE;
     buddy->arena.main_offset = (unsigned char *)buddy - main;
-    buddy->alignment = alignment;
     return buddy;
 }
 
@@ -533,7 +532,7 @@ static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memor
 
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size) {
     /* Ensure that the embedded allocator can fit */
-    struct buddy_embed_check result = buddy_embed_offset(new_memory_size);
+    struct buddy_embed_check result = buddy_embed_offset(new_memory_size, buddy->alignment);
     if (! result.can_fit) {
         return NULL;
     }
@@ -1066,11 +1065,11 @@ static unsigned int buddy_is_free(struct buddy *buddy, size_t from) {
     return 1;
 }
 
-static struct buddy_embed_check buddy_embed_offset(size_t memory_size) {
+static struct buddy_embed_check buddy_embed_offset(size_t memory_size, size_t alignment) {
     struct buddy_embed_check result = {0};
     result.can_fit = 1;
 
-    size_t buddy_size = buddy_sizeof(memory_size);
+    size_t buddy_size = buddy_sizeof_alignment(memory_size, alignment);
     if (buddy_size >= memory_size) {
         result.can_fit = 0;
     }

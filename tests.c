@@ -1253,6 +1253,22 @@ void test_buddy_embedded_malloc_01(void) {
 	assert(buddy_malloc(buddy, 2048) == NULL);
 }
 
+void test_buddy_embedded_malloc_alignment(void) {
+	unsigned char buf[4096];
+	struct buddy *buddy;
+	start_test;
+	buddy = buddy_embed_alignment(buf, 4096, 0);
+	assert(buddy == NULL);
+	buddy = buddy_embed_alignment(buf, 4096, 4096);
+	assert(buddy == NULL);
+	buddy = buddy_embed_alignment(buf, 4096, 2048);
+	assert(buddy_arena_size(buddy) == 2048);
+	buddy = buddy_embed_alignment(buf, 4096, 1024);
+	assert(buddy_arena_size(buddy) == 3072);
+	buddy = buddy_embed_alignment(buf, 4096, 512);
+	assert(buddy_arena_size(buddy) == 3584);
+}
+
 void test_buddy_mixed_use_01(void) {
 	start_test;
 	unsigned char *buddy_buf = malloc(buddy_sizeof(512));
@@ -2207,6 +2223,7 @@ int main(void) {
 		test_buddy_embedded_null();
 		test_buddy_embedded_01();
 		test_buddy_embedded_malloc_01();
+		test_buddy_embedded_malloc_alignment();
 
 		test_buddy_mixed_use_01();
 		test_buddy_mixed_use_02();
