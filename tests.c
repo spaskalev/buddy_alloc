@@ -1597,7 +1597,7 @@ void test_buddy_fragmentation(void) {
 	// This test verified the same as test_buddy_tree_fragmentation,
 	// just through the allocator public interface
 
-	size_t buddy_size = PSS(265);
+	size_t buddy_size = PSS(256);
 	unsigned char *buddy_buf = malloc(buddy_sizeof(buddy_size));
 	unsigned char *data_buf = malloc(buddy_size);
 	struct buddy *b = buddy_init(buddy_buf, data_buf, buddy_size);

@@ -449,7 +449,7 @@ struct buddy *buddy_init_alignment(unsigned char *at, unsigned char *main, size_
     if (memory_size % alignment) {
         memory_size -= (memory_size % alignment);
     }
-    size_t size = buddy_sizeof(memory_size);
+    size_t size = buddy_sizeof_alignment(memory_size, alignment);
     if (size == 0) {
         return NULL;
     }
@@ -930,8 +930,12 @@ static struct buddy_tree_pos position_for_address(struct buddy *buddy, const uns
     struct buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
 
     /* Find the actual allocated position tracking this address */
-    while (buddy_tree_valid(tree, pos) && !buddy_tree_status(tree, pos)) {
+    while (!buddy_tree_status(tree, pos)) {
         pos = buddy_tree_parent(pos);
+
+        if (!buddy_tree_valid(tree, pos)) {
+            return INVALID_POS;
+        }
     }
 
     if (address_for_position(buddy, pos) != addr) {
