@@ -150,7 +150,6 @@ extern "C" {
 #endif
 
 #ifdef __cplusplus
-    
 #ifndef BUDDY_ALIGNOF
 #define BUDDY_ALIGNOF(x) alignof(x)
 #endif
@@ -409,13 +408,15 @@ size_t buddy_sizeof(size_t memory_size) {
 }
 
 size_t buddy_sizeof_alignment(size_t memory_size, size_t alignment) {
+    size_t buddy_tree_order;
+
     if (!is_valid_alignment(alignment)) {
         return 0; /* invalid */
     }
     if (memory_size < alignment) {
         return 0; /* invalid */
     }
-    size_t buddy_tree_order = buddy_tree_order_for_memory(memory_size, alignment);
+    buddy_tree_order = buddy_tree_order_for_memory(memory_size, alignment);
     return sizeof(struct buddy) + buddy_tree_sizeof((uint8_t)buddy_tree_order);
 }
 
@@ -425,6 +426,9 @@ struct buddy *buddy_init(unsigned char *at, unsigned char *main, size_t memory_s
 
 struct buddy *buddy_init_alignment(unsigned char *at, unsigned char *main, size_t memory_size,
         size_t alignment) {
+    size_t at_alignment, main_alignment, buddy_size, buddy_tree_order;
+    struct buddy *buddy;
+
     if (at == NULL) {
         return NULL;
     }
@@ -437,11 +441,11 @@ struct buddy *buddy_init_alignment(unsigned char *at, unsigned char *main, size_
     if (!is_valid_alignment(alignment)) {
         return NULL; /* invalid */
     }
-    size_t at_alignment = ((uintptr_t) at) % BUDDY_ALIGNOF(struct buddy);
+    at_alignment = ((uintptr_t) at) % BUDDY_ALIGNOF(struct buddy);
     if (at_alignment != 0) {
         return NULL;
     }
-    size_t main_alignment = ((uintptr_t) main) % BUDDY_ALIGNOF(size_t);
+    main_alignment = ((uintptr_t) main) % BUDDY_ALIGNOF(size_t);
     if (main_alignment != 0) {
         return NULL;
     }
@@ -449,14 +453,14 @@ struct buddy *buddy_init_alignment(unsigned char *at, unsigned char *main, size_
     if (memory_size % alignment) {
         memory_size -= (memory_size % alignment);
     }
-    size_t size = buddy_sizeof_alignment(memory_size, alignment);
-    if (size == 0) {
+    buddy_size = buddy_sizeof_alignment(memory_size, alignment);
+    if (buddy_size == 0) {
         return NULL;
     }
-    size_t buddy_tree_order = buddy_tree_order_for_memory(memory_size, alignment);
+    buddy_tree_order = buddy_tree_order_for_memory(memory_size, alignment);
 
     /* TODO check for overlap between buddy metadata and main block */
-    struct buddy *buddy = (struct buddy *) at;
+    buddy = (struct buddy *) at;
     buddy->arena.main = main;
     buddy->memory_size = memory_size;
     buddy->buddy_flags = 0;
@@ -471,18 +475,21 @@ struct buddy *buddy_embed(unsigned char *main, size_t memory_size) {
 }
 
 struct buddy *buddy_embed_alignment(unsigned char *main, size_t memory_size, size_t alignment) {
+    struct buddy_embed_check check_result;
+    struct buddy *buddy;
+
     if (! main) {
         return NULL;
     }
     if (!is_valid_alignment(alignment)) {
         return NULL; /* invalid */
     }
-    struct buddy_embed_check result = buddy_embed_offset(memory_size, alignment);
-    if (! result.can_fit) {
+    check_result = buddy_embed_offset(memory_size, alignment);
+    if (! check_result.can_fit) {
         return NULL;
     }
 
-    struct buddy *buddy = buddy_init_alignment(main+result.offset, main, result.offset, alignment);
+    buddy = buddy_init_alignment(main+check_result.offset, main, check_result.offset, alignment);
     if (! buddy) { /* regular initialization failed */
         return NULL;
     }
@@ -505,6 +512,8 @@ struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size) {
 }
 
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size) {
+    size_t new_buddy_tree_order;
+
     /* Trim down memory to alignment */
     if (new_memory_size % buddy->alignment) {
         new_memory_size -= (new_memory_size % buddy->alignment);
@@ -519,7 +528,7 @@ static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memor
     buddy_toggle_virtual_slots(buddy, 0);
 
     /* Calculate new tree order and resize it */
-    size_t new_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size, buddy->alignment);
+    new_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size, buddy->alignment);
     buddy_tree_resize(buddy_tree(buddy), (uint8_t) new_buddy_tree_order);
 
     /* Store the new memory size and reconstruct any virtual slots */
@@ -531,27 +540,31 @@ static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memor
 }
 
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size) {
+    struct buddy_embed_check check_result;
+    unsigned char *main, *buddy_destination;
+    struct buddy *resized, *relocated;
+
     /* Ensure that the embedded allocator can fit */
-    struct buddy_embed_check result = buddy_embed_offset(new_memory_size, buddy->alignment);
-    if (! result.can_fit) {
+    check_result = buddy_embed_offset(new_memory_size, buddy->alignment);
+    if (! check_result.can_fit) {
         return NULL;
     }
 
     /* Resize the allocator in the normal way */
-    struct buddy *resized = buddy_resize_standard(buddy, result.offset);
+    resized = buddy_resize_standard(buddy, check_result.offset);
     if (! resized) {
         return NULL;
     }
 
     /* Get the absolute main address. The relative will be invalid after relocation. */
-    unsigned char *main = buddy_main(buddy);
+    main = buddy_main(buddy);
 
     /* Relocate the allocator */
-    unsigned char *buddy_destination = buddy_main(buddy) + result.offset;
-    memmove(buddy_destination, resized, result.buddy_size);
+    buddy_destination = buddy_main(buddy) + check_result.offset;
+    memmove(buddy_destination, resized, check_result.buddy_size);
 
     /* Update the main offset in the allocator */
-    struct buddy *relocated = (struct buddy *) buddy_destination;
+    relocated = (struct buddy *) buddy_destination;
     relocated->arena.main_offset = buddy_destination - main;
 
     return relocated;
@@ -572,13 +585,15 @@ unsigned int buddy_is_empty(struct buddy *buddy) {
 }
 
 unsigned int buddy_is_full(struct buddy *buddy) {
+    struct buddy_tree *tree;
+    struct buddy_tree_pos pos;
+
     if (buddy == NULL) {
         return 0;
     }
-    struct buddy_tree *tree = buddy_tree(buddy);
-    struct buddy_tree_pos pos = buddy_tree_root();
-    size_t status = buddy_tree_status(tree, pos);
-    return status == buddy_tree_order(tree);
+    tree = buddy_tree(buddy);
+    pos = buddy_tree_root();
+    return buddy_tree_status(tree, pos) == buddy_tree_order(tree);
 }
 
 size_t buddy_arena_size(struct buddy *buddy) {
@@ -618,6 +633,10 @@ static size_t buddy_tree_order_for_memory(size_t memory_size, size_t alignment) 
 }
 
 void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
+    size_t target_depth;
+    struct buddy_tree *tree;
+    struct buddy_tree_pos pos;
+
     if (buddy == NULL) {
         return NULL;
     }
@@ -636,9 +655,9 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
         return NULL;
     }
 
-    size_t target_depth = depth_for_size(buddy, requested_size);
-    struct buddy_tree *tree = buddy_tree(buddy);
-    struct buddy_tree_pos pos = buddy_tree_find_free(tree, (uint8_t) target_depth);
+    target_depth = depth_for_size(buddy, requested_size);
+    tree = buddy_tree(buddy);
+    pos = buddy_tree_find_free(tree, (uint8_t) target_depth);
 
     if (! buddy_tree_valid(tree, pos)) {
         return NULL; /* no slot found */
@@ -652,6 +671,9 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
 }
 
 void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size) {
+    size_t total_size;
+    void *result;
+
     if (members_count == 0 || member_size == 0) {
         /* See the gleeful remark in malloc */
         members_count = 1;
@@ -661,8 +683,8 @@ void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size
     if (((members_count * member_size)/members_count) != member_size) {
         return NULL;
     }
-    size_t total_size = members_count * member_size;
-    void *result = buddy_malloc(buddy, total_size);
+    total_size = members_count * member_size;
+    result = buddy_malloc(buddy, total_size);
     if (result) {
         memset(result, 0, total_size);
     }
@@ -670,6 +692,11 @@ void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size
 }
 
 void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
+    struct buddy_tree *tree;
+    struct buddy_tree_pos origin, new_pos;
+    size_t current_depth, target_depth;
+    void *source, *destination;
+
     /*
      * realloc is a joke:
      * - NULL ptr degrades into malloc
@@ -691,17 +718,17 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
     }
 
     /* Find the position tracking this address */
-    struct buddy_tree *tree = buddy_tree(buddy);
-    struct buddy_tree_pos origin = position_for_address(buddy, (unsigned char *) ptr);
+    tree = buddy_tree(buddy);
+    origin = position_for_address(buddy, (unsigned char *) ptr);
     if (! buddy_tree_valid(tree, origin)) {
         return NULL;
     }
-    size_t current_depth = buddy_tree_depth(origin);
-    size_t target_depth = depth_for_size(buddy, requested_size);
+    current_depth = buddy_tree_depth(origin);
+    target_depth = depth_for_size(buddy, requested_size);
 
     /* Release the position and perform a search */
     buddy_tree_release(tree, origin);
-    struct buddy_tree_pos new_pos = buddy_tree_find_free(tree, (uint8_t) target_depth);
+    new_pos = buddy_tree_find_free(tree, (uint8_t) target_depth);
 
     if (! buddy_tree_valid(tree, new_pos)) {
         /* allocation failure, restore mark and return null */
@@ -716,8 +743,8 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
     }
 
     /* Copy the content */
-    void *source = address_for_position(buddy, origin);
-    void *destination = address_for_position(buddy, new_pos);
+    source = address_for_position(buddy, origin);
+    destination = address_for_position(buddy, new_pos);
     memmove(destination, source, size_for_depth(buddy,
         current_depth > target_depth ? current_depth : target_depth));
     /* Allocate and return */
@@ -738,21 +765,25 @@ void *buddy_reallocarray(struct buddy *buddy, void *ptr,
 }
 
 void buddy_free(struct buddy *buddy, void *ptr) {
+    unsigned char *dst, *main;
+    struct buddy_tree *tree;
+    struct buddy_tree_pos pos;
+
     if (buddy == NULL) {
         return;
     }
     if (ptr == NULL) {
         return;
     }
-    unsigned char *dst = (unsigned char *)ptr;
-    unsigned char *main = buddy_main(buddy);
+    dst = (unsigned char *)ptr;
+    main = buddy_main(buddy);
     if ((dst < main) || (dst >= (main + buddy->memory_size))) {
         return;
     }
 
     /* Find the position tracking this address */
-    struct buddy_tree *tree = buddy_tree(buddy);
-    struct buddy_tree_pos pos = position_for_address(buddy, dst);
+    tree = buddy_tree(buddy);
+    pos = position_for_address(buddy, dst);
 
     if (! buddy_tree_valid(tree, pos)) {
         return;
@@ -763,27 +794,32 @@ void buddy_free(struct buddy *buddy, void *ptr) {
 }
 
 void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size) {
+    unsigned char *dst, *main;
+    struct buddy_tree *tree;
+    struct buddy_tree_pos pos;
+    size_t allocated_size_for_depth;
+
     if (buddy == NULL) {
         return;
     }
     if (ptr == NULL) {
         return;
     }
-    unsigned char *dst = (unsigned char *)ptr;
-    unsigned char *main = buddy_main(buddy);
+    dst = (unsigned char *)ptr;
+    main = buddy_main(buddy);
     if ((dst < main) || (dst >= (main + buddy->memory_size))) {
         return;
     }
 
     /* Find the position tracking this address */
-    struct buddy_tree *tree = buddy_tree(buddy);
-    struct buddy_tree_pos pos = position_for_address(buddy, dst);
+    tree = buddy_tree(buddy);
+    pos = position_for_address(buddy, dst);
 
     if (! buddy_tree_valid(tree, pos)) {
         return;
     }
 
-    size_t allocated_size_for_depth = size_for_depth(buddy, pos.depth);
+    allocated_size_for_depth = size_for_depth(buddy, pos.depth);
     if (requested_size < buddy->alignment) {
         requested_size = buddy->alignment;
     }
@@ -808,20 +844,26 @@ void buddy_unsafe_release_range(struct buddy *buddy, void *ptr, size_t requested
 
 void *buddy_walk(struct buddy *buddy,
         void *(fp)(void *ctx, void *addr, size_t slot_size), void *ctx) {
+    unsigned char *main;
+    size_t effective_memory_size, tree_order, pos_status, pos_size;
+    struct buddy_tree *tree;
+    unsigned char *addr;
+    struct buddy_tree_walk_state state;
+
     if (buddy == NULL) {
         return NULL;
     }
     if (fp == NULL) {
         return NULL;
     }
-    unsigned char *main = buddy_main(buddy);
-    size_t effective_memory_size = buddy_effective_memory_size(buddy);
-    struct buddy_tree *tree = buddy_tree(buddy);
-    size_t tree_order = buddy_tree_order(tree);
+    main = buddy_main(buddy);
+    effective_memory_size = buddy_effective_memory_size(buddy);
+    tree = buddy_tree(buddy);
+    tree_order = buddy_tree_order(tree);
 
-    struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
+    state = buddy_tree_walk_state_root();
     do {
-        size_t pos_status = buddy_tree_status(tree, state.current_pos);
+        pos_status = buddy_tree_status(tree, state.current_pos);
         if (pos_status == 0) { /* Empty position */
             state.going_up = 1;
         } else if (pos_status != (tree_order - state.current_pos.depth + 1)) { /* Partially-allocated */
@@ -840,8 +882,8 @@ void *buddy_walk(struct buddy *buddy,
             }
 
             /* Current node is allocated, process */
-            size_t pos_size = effective_memory_size >> (state.current_pos.depth - 1u);
-            unsigned char *addr = address_for_position(buddy, state.current_pos);
+            pos_size = effective_memory_size >> (state.current_pos.depth - 1u);
+            addr = address_for_position(buddy, state.current_pos);
             if (((size_t)(addr - main) + pos_size) > buddy->memory_size) {
                 /*
                  * Do not process virtual slots
@@ -870,11 +912,12 @@ float buddy_fragmentation(struct buddy *buddy) {
 }
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
+    size_t depth, effective_memory_size;
     if (requested_size < buddy->alignment) {
         requested_size = buddy->alignment;
     }
-    size_t depth = 1;
-    size_t effective_memory_size = buddy_effective_memory_size(buddy);
+    depth = 1;
+    effective_memory_size = buddy_effective_memory_size(buddy);
     while ((effective_memory_size / requested_size) >> 1u) {
         depth++;
         effective_memory_size >>= 1u;
@@ -900,8 +943,7 @@ static size_t buddy_virtual_slots(struct buddy *buddy) {
     if (effective_memory_size == memory_size) {
         return 0;
     }
-    size_t delta = effective_memory_size - memory_size;
-    return delta / buddy->alignment;
+    return (effective_memory_size - memory_size) / buddy->alignment;
 }
 
 static unsigned char *address_for_position(struct buddy *buddy, struct buddy_tree_pos pos) {
@@ -918,16 +960,20 @@ static struct buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, si
 }
 
 static struct buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr) {
-    /* Find the deepest position tracking this address */
-    unsigned char *main = buddy_main(buddy);
-    size_t offset = (size_t) (addr - main);
+    unsigned char *main;
+    struct buddy_tree *tree;
+    struct buddy_tree_pos pos;
+    size_t offset;
+
+    main = buddy_main(buddy);
+    offset = (size_t) (addr - main);
 
     if (offset % buddy->alignment) {
         return INVALID_POS; /* invalid alignment */
     }
 
-    struct buddy_tree *tree = buddy_tree(buddy);
-    struct buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
+    tree = buddy_tree(buddy);
+    pos = deepest_position_for_offset(buddy, offset);
 
     /* Find the actual allocated position tracking this address */
     while (!buddy_tree_status(tree, pos)) {
@@ -957,23 +1003,27 @@ static unsigned int buddy_relative_mode(struct buddy *buddy) {
 }
 
 static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) {
-    size_t memory_size = buddy->memory_size;
+    size_t delta, memory_size, effective_memory_size;
+    void (*toggle)(struct buddy_tree *, struct buddy_tree_pos);
+    struct buddy_tree *tree;
+    struct buddy_tree_pos pos;
+
+    memory_size = buddy->memory_size;
     /* Mask/unmask the virtual space if memory is not a power of two */
-    size_t effective_memory_size = buddy_effective_memory_size(buddy);
+    effective_memory_size = buddy_effective_memory_size(buddy);
     if (effective_memory_size == memory_size) {
         return;
     }
 
     /* Get the area that we need to mask and pad it to alignment */
     /* Node memory size is already aligned to buddy->alignment */
-    size_t delta = effective_memory_size - memory_size;
+    delta = effective_memory_size - memory_size;
 
     /* Determine whether to mark or release */
-    void (*toggle)(struct buddy_tree *, struct buddy_tree_pos) =
-        state ? &buddy_tree_mark : &buddy_tree_release;
+    toggle = state ? &buddy_tree_mark : &buddy_tree_release;
 
-    struct buddy_tree *tree = buddy_tree(buddy);
-    struct buddy_tree_pos pos = buddy_tree_right_child(buddy_tree_root());
+    tree = buddy_tree(buddy);
+    pos = buddy_tree_right_child(buddy_tree_root());
     while (delta) {
         size_t current_pos_size = size_for_depth(buddy, buddy_tree_depth(pos));
         if (delta == current_pos_size) {
@@ -998,6 +1048,12 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) 
 }
 
 static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_t requested_size, unsigned int state) {
+    unsigned char *dst, *main;
+    void (*toggle)(struct buddy_tree *, struct buddy_tree_pos);
+    struct buddy_tree *tree;
+    size_t offset;
+    struct buddy_tree_pos pos;
+
     if (buddy == NULL) {
         return;
     }
@@ -1007,20 +1063,19 @@ static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_
     if (requested_size == 0) {
         return;
     }
-    unsigned char *dst = (unsigned char *)ptr;
-    unsigned char *main = buddy_main(buddy);
+    dst = (unsigned char *)ptr;
+    main = buddy_main(buddy);
     if ((dst < main) || ((dst + requested_size) > (main + buddy->memory_size))) {
         return;
     }
 
     /* Determine whether to mark or release */
-    void (*toggle)(struct buddy_tree *, struct buddy_tree_pos) =
-        state ? &buddy_tree_mark : &buddy_tree_release;
+    toggle = state ? &buddy_tree_mark : &buddy_tree_release;
 
     /* Find the deepest position tracking this address */
-    struct buddy_tree *tree = buddy_tree(buddy);
-    size_t offset = (size_t) (dst - main);
-    struct buddy_tree_pos pos = deepest_position_for_offset(buddy, offset);
+    tree = buddy_tree(buddy);
+    offset = (size_t) (dst - main);
+    pos = deepest_position_for_offset(buddy, offset);
 
     /* Advance one position at a time and process */
     while (requested_size) {
@@ -1034,33 +1089,36 @@ static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_
 
 /* Internal function that checks if there are any allocations
  after the indicated relative memory index. Used to check if
- the arena can be downsized. */
+ the arena can be downsized.
+ The from argument is already adjusted for alignment by caller */
 static unsigned int buddy_is_free(struct buddy *buddy, size_t from) {
-    /* from is already adjusted for alignment */
+    struct buddy_tree *tree;
+    struct buddy_tree_interval query_range;
+    struct buddy_tree_pos pos;
+    size_t effective_memory_size, virtual_slots, to;
 
-    size_t effective_memory_size = buddy_effective_memory_size(buddy);
-    size_t virtual_slots = buddy_virtual_slots(buddy);
-    size_t to = effective_memory_size -
+    effective_memory_size = buddy_effective_memory_size(buddy);
+    virtual_slots = buddy_virtual_slots(buddy);
+    to = effective_memory_size -
         ((virtual_slots ? virtual_slots : 1) * buddy->alignment);
 
-    struct buddy_tree *t = buddy_tree(buddy);
+    tree = buddy_tree(buddy);
 
-    struct buddy_tree_interval query_range = {0};
     query_range.from = deepest_position_for_offset(buddy, from);
     query_range.to = deepest_position_for_offset(buddy, to);
 
-    struct buddy_tree_pos pos = deepest_position_for_offset(buddy, from);
-    while(buddy_tree_valid(t, pos) && (pos.index < query_range.to.index)) {
-        struct buddy_tree_interval current_test_range = buddy_tree_interval(t, pos);
+    pos = deepest_position_for_offset(buddy, from);
+    while(buddy_tree_valid(tree, pos) && (pos.index < query_range.to.index)) {
+        struct buddy_tree_interval current_test_range = buddy_tree_interval(tree, pos);
         struct buddy_tree_interval parent_test_range =
-            buddy_tree_interval(t, buddy_tree_parent(pos));
+            buddy_tree_interval(tree, buddy_tree_parent(pos));
         while(buddy_tree_interval_contains(query_range, parent_test_range)) {
             pos = buddy_tree_parent(pos);
             current_test_range = parent_test_range;
-            parent_test_range = buddy_tree_interval(t, buddy_tree_parent(pos));
+            parent_test_range = buddy_tree_interval(tree, buddy_tree_parent(pos));
         }
         /* pos is now tracking an overlapping segment */
-        if (! buddy_tree_is_free(t, pos)) {
+        if (! buddy_tree_is_free(tree, pos)) {
             return 0;
         }
         /* Advance check */
@@ -1070,28 +1128,29 @@ static unsigned int buddy_is_free(struct buddy *buddy, size_t from) {
 }
 
 static struct buddy_embed_check buddy_embed_offset(size_t memory_size, size_t alignment) {
-    struct buddy_embed_check result = {0};
-    result.can_fit = 1;
+    size_t buddy_size, offset;
+    struct buddy_embed_check check_result = {0};
 
-    size_t buddy_size = buddy_sizeof_alignment(memory_size, alignment);
+    check_result.can_fit = 1;
+    buddy_size = buddy_sizeof_alignment(memory_size, alignment);
     if (buddy_size >= memory_size) {
-        result.can_fit = 0;
+        check_result.can_fit = 0;
     }
 
-    size_t offset = memory_size - buddy_size;
+    offset = memory_size - buddy_size;
     if (offset % BUDDY_ALIGNOF(struct buddy) != 0) {
         buddy_size += offset % BUDDY_ALIGNOF(struct buddy);
         if (buddy_size >= memory_size) {
-            result.can_fit = 0;
+            check_result.can_fit = 0;
         }
         offset = memory_size - buddy_size;
     }
 
-    if (result.can_fit) {
-        result.offset = offset;
-        result.buddy_size = buddy_size;
+    if (check_result.can_fit) {
+        check_result.offset = offset;
+        check_result.buddy_size = buddy_size;
     }
-    return result;
+    return check_result;
 }
 
 static void buddy_debug(FILE *stream, struct buddy *buddy) {
@@ -1153,9 +1212,11 @@ static inline size_t size_for_order(uint8_t order, uint8_t to) {
 static inline struct internal_position buddy_tree_internal_position_order(
         size_t tree_order, struct buddy_tree_pos pos) {
     struct internal_position p = {0};
+    size_t total_offset, local_index;
+
     p.local_offset = tree_order - buddy_tree_depth(pos) + 1;
-    size_t total_offset = size_for_order((uint8_t) tree_order, (uint8_t) p.local_offset);
-    size_t local_index = buddy_tree_index_internal(pos);
+    total_offset = size_for_order((uint8_t) tree_order, (uint8_t) p.local_offset);
+    local_index = buddy_tree_index_internal(pos);
     p.bitset_location = total_offset + (p.local_offset * local_index);
     return p;
 }
@@ -1163,22 +1224,26 @@ static inline struct internal_position buddy_tree_internal_position_order(
 static inline struct internal_position buddy_tree_internal_position_tree(
         struct buddy_tree *t, struct buddy_tree_pos pos) {
     struct internal_position p = {0};
+    size_t total_offset, local_index;
+
     p.local_offset = t->order - buddy_tree_depth(pos) + 1;
-    size_t total_offset = buddy_tree_size_for_order(t, (uint8_t) p.local_offset);
-    size_t local_index = buddy_tree_index_internal(pos);
+    total_offset = buddy_tree_size_for_order(t, (uint8_t) p.local_offset);
+    local_index = buddy_tree_index_internal(pos);
     p.bitset_location = total_offset + (p.local_offset * local_index);
     return p;
 }
 
 static size_t buddy_tree_sizeof(uint8_t order) {
-    size_t tree_size = sizeof(struct buddy_tree);
+    size_t tree_size, bitset_size, size_for_order_size;
+
+    tree_size = sizeof(struct buddy_tree);
     /* Account for the bitset */
-    size_t bitset_size = bitset_sizeof(size_for_order(order, 0));
+    bitset_size = bitset_sizeof(size_for_order(order, 0));
     if (bitset_size % sizeof(size_t)) {
         bitset_size += (bitset_size % sizeof(size_t));
     }
     /* Account for the size_for_order memoization */
-    size_t size_for_order_size = ((order+2) * sizeof(size_t));
+    size_for_order_size = ((order+2) * sizeof(size_t));
     return tree_size + bitset_size + size_for_order_size;
 }
 
@@ -1204,6 +1269,8 @@ static void buddy_tree_resize(struct buddy_tree *t, uint8_t desired_order) {
 }
 
 static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
+    struct buddy_tree_pos pos;
+
     while (desired_order > t->order) {
         /* Grow the tree a single order at a time */
         size_t current_order = t->order;
@@ -1241,31 +1308,33 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
         buddy_tree_populate_size_for_order(t);
 
         /* Update the root */
-        struct buddy_tree_pos right = buddy_tree_right_child(buddy_tree_root());
-        update_parent_chain(t, right, buddy_tree_internal_position_tree(t, right), 0);
+        pos = buddy_tree_right_child(buddy_tree_root());
+        update_parent_chain(t, pos, buddy_tree_internal_position_tree(t, pos), 0);
     }
 }
 
 static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
+    size_t current_order, next_order, node_count;
+    struct buddy_tree_pos left_start;
+    struct internal_position current_internal, next_internal;
+
     while (desired_order < t->order) {
         if (!buddy_tree_can_shrink(t)) {
             return;
         }
 
         /* Shrink the tree a single order at a time */
-        size_t current_order = t->order;
-        size_t next_order = current_order - 1;
+        current_order = t->order;
+        next_order = current_order - 1;
 
-        struct buddy_tree_pos left_start = buddy_tree_left_child(buddy_tree_root());
+        left_start = buddy_tree_left_child(buddy_tree_root());
         while(buddy_tree_valid(t, left_start)) {
             /* Get handles into the rows at the tracked depth */
-            struct internal_position current_internal = buddy_tree_internal_position_order(
-                current_order, left_start);
-            struct internal_position next_internal = buddy_tree_internal_position_order(
-                next_order, buddy_tree_parent(left_start));
+            current_internal = buddy_tree_internal_position_order(current_order, left_start);
+            next_internal = buddy_tree_internal_position_order(next_order, buddy_tree_parent(left_start));
 
             /* There are this many nodes at the current level */
-            size_t node_count = 1u << (left_start.depth - 1u);
+            node_count = 1u << (left_start.depth - 1u);
 
             /* Transfer the bits*/
             bitset_shift_left(buddy_tree_bits(t),
@@ -1399,9 +1468,11 @@ static size_t compare_with_internal_position(unsigned char *bitset, struct inter
 
 static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, struct buddy_tree_pos pos) {
     struct buddy_tree_interval result = {0};
+    size_t depth;
+
     result.from = pos;
     result.to = pos;
-    size_t depth = pos.depth;
+    depth = pos.depth;
     while (depth != t->order) {
         result.from = buddy_tree_left_child(result.from);
         result.to = buddy_tree_right_child(result.to);
@@ -1480,17 +1551,19 @@ static void buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos) 
 
 static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
         struct internal_position pos_internal, size_t size_current) {
+    size_t size_sibling, size_parent, target_parent;
     unsigned char *bits = buddy_tree_bits(t);
+
     while (pos.index != 1) {
         pos_internal.bitset_location += pos_internal.local_offset
             - (2 * pos_internal.local_offset * (pos.index & 1u));
-        size_t size_sibling = read_from_internal_position(bits, pos_internal);
+        size_sibling = read_from_internal_position(bits, pos_internal);
 
         pos = buddy_tree_parent(pos);
         pos_internal = buddy_tree_internal_position_tree(t, pos);
-        size_t size_parent = read_from_internal_position(bits, pos_internal);
+        size_parent = read_from_internal_position(bits, pos_internal);
 
-        size_t target_parent = (size_current || size_sibling)
+        target_parent = (size_current || size_sibling)
             * ((size_current <= size_sibling ? size_current : size_sibling) + 1);
         if (target_parent == size_parent) {
             return;
@@ -1502,9 +1575,14 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
 }
 
 static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t target_depth) {
-    struct buddy_tree_pos current_pos = buddy_tree_root();
-    uint8_t target_status = target_depth - 1;
-    size_t current_depth = buddy_tree_depth(current_pos);
+    struct buddy_tree_pos current_pos, left_pos, right_pos;
+    uint8_t target_status;
+    size_t current_depth, right_status;
+    struct internal_position left_internal, right_internal;
+
+    current_pos = buddy_tree_root();
+    target_status = target_depth - 1;
+    current_depth = buddy_tree_depth(current_pos);
     if (buddy_tree_status(t, current_pos) > target_status) {
         return INVALID_POS; /* No position available down the tree */
     }
@@ -1513,12 +1591,12 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
         target_status -= 1;
         current_depth += 1;
 
-        struct buddy_tree_pos left_pos = buddy_tree_left_child(current_pos);
-        struct buddy_tree_pos right_pos = buddy_tree_sibling(left_pos);
+        left_pos = buddy_tree_left_child(current_pos);
+        right_pos = buddy_tree_sibling(left_pos);
 
-        struct internal_position left_internal = buddy_tree_internal_position_tree(t, left_pos);
+        left_internal = buddy_tree_internal_position_tree(t, left_pos);
 
-        struct internal_position right_internal = left_internal;
+        right_internal = left_internal;
         right_internal.bitset_location += right_internal.local_offset; /* advance to the right */
 
         if (compare_with_internal_position(buddy_tree_bits(t), left_internal, target_status+1)) { /* left branch is busy, pick right */
@@ -1528,7 +1606,7 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
         } else {
             /* One of the child nodes must be read in order to compare it to its sibling. */
             right_internal.local_offset = target_status; /* reduce the read span since we know the right_status is equal or less than target_status */
-            size_t right_status = read_from_internal_position(buddy_tree_bits(t), right_internal);
+            right_status = read_from_internal_position(buddy_tree_bits(t), right_internal);
             if (right_status) {
                 if (compare_with_internal_position(buddy_tree_bits(t), left_internal, right_status)) {
                     current_pos = left_pos; /* Left is equal or more busy than right, prefer left */
@@ -1560,12 +1638,14 @@ static unsigned int buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_p
 }
 
 static unsigned int buddy_tree_can_shrink(struct buddy_tree *t) {
+    struct internal_position root_internal;
+    size_t root_value;
+
     if (buddy_tree_status(t, buddy_tree_right_child(buddy_tree_root())) != 0) {
         return 0; /* Refusing to shrink with right subtree still used! */
     }
-    struct internal_position root_internal =
-        buddy_tree_internal_position_tree(t, buddy_tree_root());
-    size_t root_value = read_from_internal_position(buddy_tree_bits(t), root_internal);
+    root_internal = buddy_tree_internal_position_tree(t, buddy_tree_root());
+    root_value = read_from_internal_position(buddy_tree_bits(t), root_internal);
     if (root_value == root_internal.local_offset) {
         return 0; /* Refusing to shrink with the root fully-allocated! */
     }
@@ -1632,21 +1712,26 @@ static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct budd
  * Based on https://asawicki.info/news_1757_a_metric_for_memory_fragmentation
  */
 static float buddy_tree_fragmentation(struct buddy_tree *t) {
-    uint8_t tree_order = buddy_tree_order(t);
-    size_t root_status = buddy_tree_status(t, buddy_tree_root());
+    uint8_t tree_order;
+    size_t root_status, quality, total_free_size, virtual_size;
+    struct buddy_tree_walk_state state;
+    float quality_percent, fragmentation;
+
+    tree_order = buddy_tree_order(t);
+    root_status = buddy_tree_status(t, buddy_tree_root());
     if (root_status == 0) { /* Emptry tree */
         return 0;
     }
 
-    size_t quality = 0;
-    size_t total_free_size = 0;
+    quality = 0;
+    total_free_size = 0;
 
-    struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
+    state = buddy_tree_walk_state_root();
     do {
         size_t pos_status = buddy_tree_status(t, state.current_pos);
         if (pos_status == 0) {
             /* Empty node, process */
-            size_t virtual_size = 1ul << ((tree_order - state.current_pos.depth) % ((sizeof(size_t) * CHAR_BIT)-1));
+            virtual_size = 1ul << ((tree_order - state.current_pos.depth) % ((sizeof(size_t) * CHAR_BIT)-1));
             quality += (virtual_size * virtual_size);
             total_free_size += virtual_size;
             /* Ascend */
@@ -1661,8 +1746,8 @@ static float buddy_tree_fragmentation(struct buddy_tree *t) {
         return 0;
     }
 
-    float quality_percent = approximate_square_root((float) quality) / (float) total_free_size;
-    float fragmentation = 1 - (quality_percent * quality_percent);
+    quality_percent = approximate_square_root((float) quality) / (float) total_free_size;
+    fragmentation = 1 - (quality_percent * quality_percent);
     return fragmentation;
 }
 
@@ -1742,6 +1827,8 @@ static void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_p
 }
 
 static size_t bitset_count_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
+    size_t result;
+
     size_t from_bucket = from_pos / CHAR_BIT;
     size_t to_bucket = to_pos / CHAR_BIT;
 
@@ -1752,7 +1839,7 @@ static size_t bitset_count_range(unsigned char *bitset, size_t from_pos, size_t 
         return popcount_byte(bitset[from_bucket] & bitset_char_mask[from_index][to_index]);
     }
 
-    size_t result = popcount_byte(bitset[from_bucket] & bitset_char_mask[from_index][7])
+    result = popcount_byte(bitset[from_bucket] & bitset_char_mask[from_index][7])
         + popcount_byte(bitset[to_bucket]  & bitset_char_mask[0][to_index]);
     while(++from_bucket != to_bucket) {
         result += popcount_byte(bitset[from_bucket]);
