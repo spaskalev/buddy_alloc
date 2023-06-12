@@ -191,7 +191,7 @@ void test_bitset_debug(void) {
 	start_test;
 	bitset_set(buf, 0);
 	bitset_clear(buf, 1);
-	bitset_debug(stdout, buf, 2); /* code coverage */
+	bitset_debug(buf, 2); /* code coverage */
 }
 
 void test_buddy_init_null(void) {
@@ -573,9 +573,9 @@ void test_buddy_debug(void) {
 	struct buddy *buddy;
 	start_test;
 	buddy = buddy_init_alignment(buddy_buf, data_buf, 64, 32);
-	buddy_debug(stdout, buddy); /* code coverage */
+	buddy_debug(buddy); /* code coverage */
 	buddy = buddy_init_alignment(buddy_buf, data_buf, 4096, 4096);
-	buddy_debug(stdout, buddy); /* code coverage */
+	buddy_debug(buddy); /* code coverage */
 	free(buddy_buf);
 }
 
@@ -2003,7 +2003,7 @@ void test_buddy_tree_debug_coverage(void) {
 	start_test;
 	t = buddy_tree_init(buddy_tree_buf, 2);
 	buddy_tree_mark(t, buddy_tree_root());
-	buddy_tree_debug(stdout, t, buddy_tree_root(), 0);printf("\n"); /* code coverage */
+	buddy_tree_debug(t, buddy_tree_root(), 0);printf("\n"); /* code coverage */
 }
 
 void test_buddy_tree_check_invariant_positive_01(void) {

@@ -176,12 +176,16 @@ typedef signed long ssize_t;
 #define _SSIZE_T_DEFINED
 #endif
 
+#ifndef BUDDY_PRINTF
+#define BUDDY_PRINTF printf
+#endif
+
 /*
  * Debug functions
  */
 
 /* Implementation defined */
-static void buddy_debug(FILE *stream, struct buddy *buddy);
+static void buddy_debug(struct buddy *buddy);
 
 struct buddy_tree;
 
@@ -300,7 +304,7 @@ static unsigned int buddy_tree_can_shrink(struct buddy_tree *t);
  */
 
 /* Implementation defined */
-static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, struct buddy_tree_pos pos, size_t start_size);
+static void buddy_tree_debug(struct buddy_tree *t, struct buddy_tree_pos pos, size_t start_size);
 
 /* Implementation defined */
 static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct buddy_tree_pos pos);
@@ -335,7 +339,7 @@ static void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to
  */
 
 /* Implementation defined */
-static void bitset_debug(FILE *stream, unsigned char *bitset, size_t length);
+static void bitset_debug(unsigned char *bitset, size_t length);
 
 /*
  * Bits
@@ -1153,15 +1157,15 @@ static struct buddy_embed_check buddy_embed_offset(size_t memory_size, size_t al
     return check_result;
 }
 
-static void buddy_debug(FILE *stream, struct buddy *buddy) {
-    fprintf(stream, "buddy allocator at: %p arena at: %p\n", (void *)buddy, (void *)buddy_main(buddy));
-    fprintf(stream, "memory size: %zu\n", buddy->memory_size);
-    fprintf(stream, "mode: ");
-    fprintf(stream, buddy_relative_mode(buddy) ? "embedded" : "standard");
-    fprintf(stream, "\n");
-    fprintf(stream, "virtual slots: %zu\n", buddy_virtual_slots(buddy));
-    fprintf(stream, "allocator tree follows:\n");
-    buddy_tree_debug(stream, buddy_tree(buddy), buddy_tree_root(), buddy_effective_memory_size(buddy));
+static void buddy_debug(struct buddy *buddy) {
+    BUDDY_PRINTF("buddy allocator at: %p arena at: %p\n", (void *)buddy, (void *)buddy_main(buddy));
+    BUDDY_PRINTF("memory size: %zu\n", buddy->memory_size);
+    BUDDY_PRINTF("mode: ");
+    BUDDY_PRINTF(buddy_relative_mode(buddy) ? "embedded" : "standard");
+    BUDDY_PRINTF("\n");
+    BUDDY_PRINTF("virtual slots: %zu\n", buddy_virtual_slots(buddy));
+    BUDDY_PRINTF("allocator tree follows:\n");
+    buddy_tree_debug(buddy_tree(buddy), buddy_tree_root(), buddy_effective_memory_size(buddy));
 }
 
 /*
@@ -1652,7 +1656,7 @@ static unsigned int buddy_tree_can_shrink(struct buddy_tree *t) {
     return 1;
 }
 
-static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, struct buddy_tree_pos pos,
+static void buddy_tree_debug(struct buddy_tree *t, struct buddy_tree_pos pos,
         size_t start_size) {
     struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
     state.current_pos = pos;
@@ -1660,16 +1664,16 @@ static void buddy_tree_debug(FILE *stream, struct buddy_tree *t, struct buddy_tr
         struct internal_position pos_internal = buddy_tree_internal_position_tree(t, state.current_pos);
         size_t pos_status = read_from_internal_position(buddy_tree_bits(t), pos_internal);
         size_t pos_size = start_size >> ((buddy_tree_depth(state.current_pos) - 1u) % ((sizeof(size_t) * CHAR_BIT)-1));
-        fprintf(stream, "%.*s",
+        BUDDY_PRINTF("%.*s",
             (int) buddy_tree_depth(state.current_pos),
             "                                                               ");
-        fprintf(stream, "pos index: %zu pos depth: %zu status: %zu bitset-len: %zu bitset-at: %zu",
+        BUDDY_PRINTF("pos index: %zu pos depth: %zu status: %zu bitset-len: %zu bitset-at: %zu",
             state.current_pos.index, state.current_pos.depth, pos_status,
             pos_internal.local_offset, pos_internal.bitset_location);
         if (pos_status == pos_internal.local_offset) {
-            fprintf(stream, " size: %zu", pos_size);
+            BUDDY_PRINTF(" size: %zu", pos_size);
         }
-        fprintf(stream, "\n");
+        BUDDY_PRINTF("\n");
     } while (buddy_tree_walk(t, &state));
 }
 
@@ -1698,8 +1702,8 @@ static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct budd
 
         if (violated) {
             fail = 1;
-            fprintf(stdout, "invariant violation at position [ index: %zu depth: %zu ]!\n", pos.index, pos.depth);
-            fprintf(stdout, "current: %zu left %zu right %zu max %zu\n",
+            BUDDY_PRINTF("invariant violation at position [ index: %zu depth: %zu ]!\n", pos.index, pos.depth);
+            BUDDY_PRINTF("current: %zu left %zu right %zu max %zu\n",
                 current_status, left_child_status, right_child_status, current_internal.local_offset);
         }
 
@@ -1875,9 +1879,9 @@ static void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to
     bitset_clear_range(bitset, from_pos, from_pos+by-1);
 }
 
-static void bitset_debug(FILE *stream, unsigned char *bitset, size_t length) {
+static void bitset_debug(unsigned char *bitset, size_t length) {
     for (size_t i = 0; i < length; i++) {
-        fprintf(stream, "%zu: %d\n", i, bitset_test(bitset, i) && 1);
+        BUDDY_PRINTF("%zu: %d\n", i, bitset_test(bitset, i) && 1);
     }
 }
 
