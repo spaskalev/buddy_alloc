@@ -383,7 +383,11 @@ struct buddy {
         ptrdiff_t main_offset;
     } arena;
     size_t buddy_flags;
+#ifndef __cplusplus
     unsigned char buddy_tree[];
+#else
+    unsigned char *buddy_tree;
+#endif
 };
 
 struct buddy_embed_check {
@@ -1139,7 +1143,11 @@ static unsigned int buddy_is_free(struct buddy *buddy, size_t from) {
 
 static struct buddy_embed_check buddy_embed_offset(size_t memory_size, size_t alignment) {
     size_t buddy_size, offset;
+#ifndef __cplusplus
     struct buddy_embed_check check_result = {0};
+#else
+    struct buddy_embed_check check_result;
+#endif
 
     check_result.can_fit = 1;
     buddy_size = buddy_sizeof_alignment(memory_size, alignment);
@@ -1186,7 +1194,11 @@ struct buddy_tree {
     size_t upper_pos_bound;
     size_t size_for_order_offset;
     uint8_t order;
+#ifndef __cplusplus
     size_t data[];
+#else
+    size_t *data;
+#endif
 };
 
 struct internal_position {
@@ -1225,7 +1237,11 @@ static inline size_t size_for_order(uint8_t order, uint8_t to) {
 
 static inline struct internal_position buddy_tree_internal_position_order(
         size_t tree_order, struct buddy_tree_pos pos) {
+#ifndef __cplusplus
     struct internal_position p = {0};
+#else
+    struct internal_position p;
+#endif
     size_t total_offset, local_index;
 
     p.local_offset = tree_order - buddy_tree_depth(pos) + 1;
@@ -1237,7 +1253,11 @@ static inline struct internal_position buddy_tree_internal_position_order(
 
 static inline struct internal_position buddy_tree_internal_position_tree(
         struct buddy_tree *t, struct buddy_tree_pos pos) {
+#ifndef __cplusplus
     struct internal_position p = {0};
+#else
+    struct internal_position p;
+#endif
     size_t total_offset, local_index;
 
     p.local_offset = t->order - buddy_tree_depth(pos) + 1;
@@ -1481,7 +1501,11 @@ static size_t compare_with_internal_position(unsigned char *bitset, struct inter
 }
 
 static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, struct buddy_tree_pos pos) {
+#ifndef __cplusplus
     struct buddy_tree_interval result = {0};
+#else
+    struct buddy_tree_interval result;
+#endif
     size_t depth;
 
     result.from = pos;
@@ -1504,7 +1528,11 @@ static unsigned int buddy_tree_interval_contains(struct buddy_tree_interval oute
 }
 
 static struct buddy_tree_walk_state buddy_tree_walk_state_root(void) {
+#ifndef __cplusplus
     struct buddy_tree_walk_state state = {0};
+#else
+    struct buddy_tree_walk_state state;
+#endif
     state.starting_pos = buddy_tree_root();
     state.current_pos = buddy_tree_root();
     return state;
@@ -1893,7 +1921,7 @@ static void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to
 
 static void bitset_debug(unsigned char *bitset, size_t length) {
     for (size_t i = 0; i < length; i++) {
-        BUDDY_PRINTF("%zu: %d\n", i, bitset_test(bitset, i) && 1);
+        BUDDY_PRINTF("%zu: %d\n", i, bitset_test(bitset, i) != 0);
     }
 }
 
