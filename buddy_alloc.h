@@ -19,7 +19,9 @@
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
+#ifndef BUDDY_PRINTF
 #include <stdio.h>
+#endif
 #include <string.h>
 #include <sys/types.h>
 #endif
