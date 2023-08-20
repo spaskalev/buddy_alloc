@@ -25,7 +25,9 @@
 #endif
 
 #ifdef __cplusplus
+#ifndef BUDDY_CPP_MANGLED
 extern "C" {
+#endif
 #endif
 
 struct buddy;
@@ -135,7 +137,9 @@ void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t s
 float buddy_fragmentation(struct buddy *buddy);
 
 #ifdef __cplusplus
+#ifndef BUDDY_CPP_MANGLED
 }
+#endif
 #endif
 
 #endif /* BUDDY_ALLOC_H */
@@ -144,7 +148,9 @@ float buddy_fragmentation(struct buddy *buddy);
 #undef BUDDY_ALLOC_IMPLEMENTATION
 
 #ifdef __cplusplus
+#ifndef BUDDY_CPP_MANGLED
 extern "C" {
+#endif
 #endif
 
 #ifndef BUDDY_ALLOC_ALIGN
@@ -1954,7 +1960,9 @@ static inline float approximate_square_root(float f) {
 }
 
 #ifdef __cplusplus
+#ifndef BUDDY_CPP_MANGLED
 }
+#endif
 #endif
 
 #endif /* BUDDY_ALLOC_IMPLEMENTATION */
