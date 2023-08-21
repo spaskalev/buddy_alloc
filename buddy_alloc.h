@@ -391,7 +391,8 @@ struct buddy {
         ptrdiff_t main_offset;
     } arena;
     size_t buddy_flags;
-    unsigned char buddy_tree[];
+    // Avoid the FAM due to CPP interop
+    // unsigned char buddy_tree[];
 };
 
 struct buddy_embed_check {
@@ -481,7 +482,9 @@ struct buddy *buddy_init_alignment(unsigned char *at, unsigned char *main, size_
     buddy->memory_size = memory_size;
     buddy->buddy_flags = 0;
     buddy->alignment = alignment;
-    buddy_tree_init(buddy->buddy_tree, (uint8_t) buddy_tree_order);
+    // Avoid using a FAM for CPP interop
+    // This is ~technically~ UB as it will read pass the object
+    buddy_tree_init((unsigned char *)buddy + sizeof(*buddy), (uint8_t) buddy_tree_order);
     buddy_toggle_virtual_slots(buddy, 1);
     return buddy;
 }
@@ -948,7 +951,9 @@ static inline size_t size_for_depth(struct buddy *buddy, size_t depth) {
 }
 
 static struct buddy_tree *buddy_tree(struct buddy *buddy) {
-    return (struct buddy_tree*) buddy->buddy_tree;
+    // Avoid using a FAM for CPP interop
+    // This is ~technically~ UB as it will read pass the object
+    return (struct buddy_tree*) ((unsigned char *)buddy + sizeof(*buddy));
 }
 
 static size_t buddy_effective_memory_size(struct buddy *buddy) {
