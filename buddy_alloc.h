@@ -195,7 +195,7 @@ typedef signed long ssize_t;
  */
 
 /* Implementation defined */
-static void buddy_debug(struct buddy *buddy);
+void buddy_debug(struct buddy *buddy);
 
 struct buddy_tree;
 
@@ -317,7 +317,7 @@ static unsigned int buddy_tree_can_shrink(struct buddy_tree *t);
 static void buddy_tree_debug(struct buddy_tree *t, struct buddy_tree_pos pos, size_t start_size);
 
 /* Implementation defined */
-static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct buddy_tree_pos pos);
+unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct buddy_tree_pos pos);
 
 #ifndef BUDDY_FRAG_OPTIONAL
 /* Report fragmentation in a 0.0 - 1.0 range */
@@ -351,7 +351,7 @@ static void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to
  */
 
 /* Implementation defined */
-static void bitset_debug(unsigned char *bitset, size_t length);
+void bitset_debug(unsigned char *bitset, size_t length);
 
 /*
  * Bits
@@ -1146,8 +1146,9 @@ static unsigned int buddy_is_free(struct buddy *buddy, size_t from) {
 
 static struct buddy_embed_check buddy_embed_offset(size_t memory_size, size_t alignment) {
     size_t buddy_size, offset;
-    struct buddy_embed_check check_result = {0};
+    struct buddy_embed_check check_result;
 
+    memset(&check_result, 0, sizeof(check_result));
     check_result.can_fit = 1;
     buddy_size = buddy_sizeof_alignment(memory_size, alignment);
     if (buddy_size >= memory_size) {
@@ -1170,7 +1171,7 @@ static struct buddy_embed_check buddy_embed_offset(size_t memory_size, size_t al
     return check_result;
 }
 
-static void buddy_debug(struct buddy *buddy) {
+void buddy_debug(struct buddy *buddy) {
     BUDDY_PRINTF("buddy allocator at: %p arena at: %p\n", (void *)buddy, (void *)buddy_main(buddy));
     BUDDY_PRINTF("memory size: %zu\n", buddy->memory_size);
     BUDDY_PRINTF("mode: ");
@@ -1231,7 +1232,7 @@ static inline size_t size_for_order(uint8_t order, uint8_t to) {
 
 static inline struct internal_position buddy_tree_internal_position_order(
         size_t tree_order, struct buddy_tree_pos pos) {
-    struct internal_position p = {0};
+    struct internal_position p;
     size_t total_offset, local_index;
 
     p.local_offset = tree_order - buddy_tree_depth(pos) + 1;
@@ -1243,7 +1244,7 @@ static inline struct internal_position buddy_tree_internal_position_order(
 
 static inline struct internal_position buddy_tree_internal_position_tree(
         struct buddy_tree *t, struct buddy_tree_pos pos) {
-    struct internal_position p = {0};
+    struct internal_position p;
     size_t total_offset, local_index;
 
     p.local_offset = t->order - buddy_tree_depth(pos) + 1;
@@ -1487,7 +1488,7 @@ static size_t compare_with_internal_position(unsigned char *bitset, struct inter
 }
 
 static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, struct buddy_tree_pos pos) {
-    struct buddy_tree_interval result = {0};
+    struct buddy_tree_interval result;
     size_t depth;
 
     result.from = pos;
@@ -1510,7 +1511,8 @@ static unsigned int buddy_tree_interval_contains(struct buddy_tree_interval oute
 }
 
 static struct buddy_tree_walk_state buddy_tree_walk_state_root(void) {
-    struct buddy_tree_walk_state state = {0};
+    struct buddy_tree_walk_state state;
+    memset(&state, 0, sizeof(state));
     state.starting_pos = buddy_tree_root();
     state.current_pos = buddy_tree_root();
     return state;
@@ -1693,7 +1695,7 @@ static void buddy_tree_debug(struct buddy_tree *t, struct buddy_tree_pos pos,
     } while (buddy_tree_walk(t, &state));
 }
 
-static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct buddy_tree_pos pos) {
+unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct buddy_tree_pos pos) {
     unsigned int fail = 0;
     struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
     state.current_pos = pos;
@@ -1897,9 +1899,9 @@ static void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to
     bitset_clear_range(bitset, from_pos, from_pos+by-1);
 }
 
-static void bitset_debug(unsigned char *bitset, size_t length) {
+void bitset_debug(unsigned char *bitset, size_t length) {
     for (size_t i = 0; i < length; i++) {
-        BUDDY_PRINTF("%zu: %d\n", i, bitset_test(bitset, i) && 1);
+        BUDDY_PRINTF("%zu: %d\n", i, bitset_test(bitset, i) > 0);
     }
 }
 
