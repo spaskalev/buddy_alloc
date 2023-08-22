@@ -391,8 +391,6 @@ struct buddy {
         ptrdiff_t main_offset;
     } arena;
     size_t buddy_flags;
-    // Avoid the FAM due to CPP interop
-    // unsigned char buddy_tree[];
 };
 
 struct buddy_embed_check {
@@ -482,8 +480,6 @@ struct buddy *buddy_init_alignment(unsigned char *at, unsigned char *main, size_
     buddy->memory_size = memory_size;
     buddy->buddy_flags = 0;
     buddy->alignment = alignment;
-    // Avoid using a FAM for CPP interop
-    // This is ~technically~ UB as it will read pass the object
     buddy_tree_init((unsigned char *)buddy + sizeof(*buddy), (uint8_t) buddy_tree_order);
     buddy_toggle_virtual_slots(buddy, 1);
     return buddy;
@@ -951,8 +947,6 @@ static inline size_t size_for_depth(struct buddy *buddy, size_t depth) {
 }
 
 static struct buddy_tree *buddy_tree(struct buddy *buddy) {
-    // Avoid using a FAM for CPP interop
-    // This is ~technically~ UB as it will read pass the object
     return (struct buddy_tree*) ((unsigned char *)buddy + sizeof(*buddy));
 }
 
@@ -1199,8 +1193,6 @@ struct buddy_tree {
     size_t upper_pos_bound;
     size_t size_for_order_offset;
     uint8_t order;
-    // Avoid the FAM due to CPP interop
-    // size_t data[];
 };
 
 struct internal_position {
@@ -1454,8 +1446,6 @@ static inline size_t buddy_tree_index_internal(struct buddy_tree_pos pos) {
 }
 
 static inline unsigned char *buddy_tree_bits(struct buddy_tree *t) {
-    // Avoid using a FAM for CPP interop
-    // This is ~technically~ UB as it will read pass the object
     return ((unsigned char *) t) + sizeof(*t);
 }
 
@@ -1467,16 +1457,12 @@ static void buddy_tree_populate_size_for_order(struct buddy_tree *t) {
     t->size_for_order_offset = bitset_offset / sizeof(size_t);
     t->size_for_order_offset++;
     for (size_t i = 0; i <= t->order; i++) {
-        // Avoid using a FAM for CPP interop
-        // This is ~technically~ UB as it will read pass the object
         *((size_t *)(((unsigned char *) t) + sizeof(*t)) + t->size_for_order_offset + i) = size_for_order(t->order, (uint8_t) i);
     }
 }
 
 static inline size_t buddy_tree_size_for_order(struct buddy_tree *t,
          uint8_t to) {
-    // Avoid using a FAM for CPP interop
-    // This is ~technically~ UB as it will read pass the object
     return *((size_t *)(((unsigned char *) t) + sizeof(*t)) + t->size_for_order_offset + to);
 }
 
