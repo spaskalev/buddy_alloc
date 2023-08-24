@@ -34,6 +34,11 @@ extern "C" {
 
 struct buddy;
 
+struct alloc_result {
+    void *addr;
+    size_t success : 1;
+};
+
 /* Returns the size of a buddy required to manage a block of the specified size */
 size_t buddy_sizeof(size_t memory_size);
 
@@ -97,6 +102,9 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size);
 /* Realloc-like behavior that checks for overflow. See reallocarray*/
 void *buddy_reallocarray(struct buddy *buddy, void *ptr,
     size_t members_count, size_t member_size);
+
+/* Malloc-like semantics with extra information in the result */
+struct alloc_result buddy_ex_malloc(struct buddy *buddy, size_t requested_size);
 
 /* Use the specified buddy to free memory. See free. */
 void buddy_free(struct buddy *buddy, void *ptr);
@@ -647,13 +655,16 @@ static size_t buddy_tree_order_for_memory(size_t memory_size, size_t alignment) 
     return highest_bit_position(ceiling_power_of_two(blocks));
 }
 
-void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
+struct alloc_result buddy_ex_malloc(struct buddy *buddy, size_t requested_size) {
     size_t target_depth;
     struct buddy_tree *tree;
     struct buddy_tree_pos pos;
+    struct alloc_result result;
 
+    memset(&result, 0, sizeof(result));
     if (buddy == NULL) {
-        return NULL;
+        result.success = 0;
+        return result;
     }
     if (requested_size == 0) {
         /*
@@ -667,22 +678,35 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
         requested_size = 1;
     }
     if (requested_size > buddy->memory_size) {
-        return NULL;
+        result.success = 0;
+        return result;
     }
 
     target_depth = depth_for_size(buddy, requested_size);
     tree = buddy_tree(buddy);
     pos = buddy_tree_find_free(tree, (uint8_t) target_depth);
 
-    if (! buddy_tree_valid(tree, pos)) {
-        return NULL; /* no slot found */
+    if (! buddy_tree_valid(tree, pos)) { /* no slot found */
+        result.success = 0;
+        return result;
     }
 
     /* Allocate the slot */
     buddy_tree_mark(tree, pos);
 
     /* Find and return the actual memory address */
-    return address_for_position(buddy, pos);
+    result.addr = address_for_position(buddy, pos);
+    result.success = 1;
+
+    return result;
+}
+
+void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
+    struct alloc_result result = buddy_ex_malloc(buddy, requested_size);
+    if (result.success) {
+        return result.addr;
+    }
+    return NULL;
 }
 
 void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size) {
