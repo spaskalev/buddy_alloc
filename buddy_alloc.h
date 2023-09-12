@@ -9,7 +9,7 @@
  * 3. In one of your source files #define BUDDY_ALLOC_IMPLEMENTATION
  *    and then import the header. This will insert the implementation.
  *
- * Lastest source is available at https://github.com/spaskalev/buddy_alloc
+ * Latest version is available at https://github.com/spaskalev/buddy_alloc
  */
 
 #ifndef BUDDY_ALLOC_H
