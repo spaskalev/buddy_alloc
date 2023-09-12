@@ -1,8 +1,6 @@
 /*
  * Copyright 2021 Stanislav Paskalev <spaskalev@protonmail.com>
- */
-
-/*
+ *
  * A binary buddy memory allocator
  *
  * To include and use it in your project do the following
@@ -10,6 +8,8 @@
  * 2. Include the header in places where you need to use the allocator
  * 3. In one of your source files #define BUDDY_ALLOC_IMPLEMENTATION
  *    and then import the header. This will insert the implementation.
+ *
+ * Latest version is available at https://github.com/spaskalev/buddy_alloc
  */
 
 #ifndef BUDDY_ALLOC_H
