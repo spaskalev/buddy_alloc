@@ -133,10 +133,10 @@ void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t s
  */
 
 /*
- * Calculates the fragmentation in the allocator in a 0.0 - 1.0 range.
+ * Calculates the fragmentation in the allocator in a 0 - 255 range.
  * NOTE: if you are using a non-power-of-two sized arena the maximum upper bound can be lower.
  */
-float buddy_fragmentation(struct buddy *buddy);
+unsigned char buddy_fragmentation(struct buddy *buddy);
 
 #ifdef __cplusplus
 #ifndef BUDDY_CPP_MANGLED
@@ -319,10 +319,8 @@ static void buddy_tree_debug(struct buddy_tree *t, struct buddy_tree_pos pos, si
 /* Implementation defined */
 unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct buddy_tree_pos pos);
 
-#ifndef BUDDY_FRAG_OPTIONAL
-/* Report fragmentation in a 0.0 - 1.0 range */
-static float buddy_tree_fragmentation(struct buddy_tree *t);
-#endif
+/* Report fragmentation in a 0 - 255 range */
+static unsigned char buddy_tree_fragmentation(struct buddy_tree *t);
 
 /*
  * A char-backed bitset implementation
@@ -370,8 +368,8 @@ static inline size_t ceiling_power_of_two(size_t value);
  * Math
  */
 
-/* Approximates the square root of a float */
-static inline float approximate_square_root(float f);
+/* Calculates the integer square root of an integer */
+static inline size_t integer_square_root(size_t f);
 
 /*
  Implementation
@@ -919,14 +917,12 @@ void *buddy_walk(struct buddy *buddy,
     return NULL;
 }
 
-#ifndef BUDDY_FRAG_OPTIONAL
-float buddy_fragmentation(struct buddy *buddy) {
+unsigned char buddy_fragmentation(struct buddy *buddy) {
     if (buddy == NULL) {
         return 0;
     }
     return buddy_tree_fragmentation(buddy_tree(buddy));
 }
-#endif
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
     size_t depth, effective_memory_size;
@@ -1729,16 +1725,17 @@ unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct buddy_tree_
     return fail;
 }
 
-#ifndef BUDDY_FRAG_OPTIONAL
 /*
  * Calculate tree fragmentation based on free slots.
  * Based on https://asawicki.info/news_1757_a_metric_for_memory_fragmentation
  */
-static float buddy_tree_fragmentation(struct buddy_tree *t) {
+static unsigned char buddy_tree_fragmentation(struct buddy_tree *t) {
+    const size_t fractional_bits = 8;
+    const size_t fractional_mask = 255;
+
     uint8_t tree_order;
-    size_t root_status, quality, total_free_size, virtual_size;
+    size_t root_status, quality, total_free_size, virtual_size, quality_percent;
     struct buddy_tree_walk_state state;
-    float quality_percent, fragmentation;
 
     tree_order = buddy_tree_order(t);
     root_status = buddy_tree_status(t, buddy_tree_root());
@@ -1769,11 +1766,11 @@ static float buddy_tree_fragmentation(struct buddy_tree *t) {
         return 0;
     }
 
-    quality_percent = approximate_square_root((float) quality) / (float) total_free_size;
-    fragmentation = 1 - (quality_percent * quality_percent);
-    return fragmentation;
+    quality_percent = (integer_square_root(quality) << fractional_bits) / total_free_size;
+    quality_percent *= quality_percent;
+    quality_percent >>= fractional_bits;
+    return fractional_mask - (quality_percent & fractional_mask);
 }
-#endif
 
 /*
  * A char-backed bitset implementation
@@ -1952,13 +1949,23 @@ static inline size_t ceiling_power_of_two(size_t value) {
     return ((size_t)1u) << (highest_bit_position(value + value - 1)-1);
 }
 
-static inline float approximate_square_root(float f) {
-    /* As listed in https://en.wikipedia.org/wiki/Methods_of_computing_square_roots */
-    union { float f; uint32_t i; } val = {f};
-    val.i -= 1 << 23;   /* Subtract 2^m. */
-    val.i >>= 1;        /* Divide by 2. */
-    val.i += 1 << 29;   /* Add ((b + 1) / 2) * 2^m. */
-    return val.f;       /* Interpret again as float */
+static inline size_t integer_square_root(size_t op) {
+    /* by Martin Guy, 1985 - http://medialab.freaknet.org/martin/src/sqrt/ */
+    size_t result = 0;
+    size_t cursor = (SIZE_MAX - (SIZE_MAX >> 1)) >> 1; /* second-to-top bit set */
+    while (cursor > op) {
+        cursor >>= 2;
+    }
+    /* "cursor" starts at the highest power of four <= than the argument. */
+    while (cursor != 0) {
+        if (op >= result + cursor) {
+            op -= result + cursor;
+            result += 2 * cursor;
+        }
+        result >>= 1;
+        cursor >>= 2;
+    }
+    return result;
 }
 
 #ifdef __cplusplus
