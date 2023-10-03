@@ -1703,6 +1703,7 @@ void test_buddy_unsafe_release_02(void) {
 
 void test_buddy_fragmentation(void) {
 	size_t buddy_size = PSS(256);
+	void *ptrs[4];
 	unsigned char *buddy_buf = malloc(buddy_sizeof(buddy_size));
 	unsigned char *data_buf = malloc(buddy_size);
 	struct buddy *b = buddy_init(buddy_buf, data_buf, buddy_size);
@@ -1713,19 +1714,27 @@ void test_buddy_fragmentation(void) {
 	// just through the allocator public interface
 
 	// No fragmentation for invalid allocator
-	assert(buddy_fragmentation(NULL) == 0.0);
+	assert(buddy_fragmentation(NULL) == 0);
 
 	// No fragmentation for empty allocator
-	assert(buddy_fragmentation(b) == 0.0);
+	assert(buddy_fragmentation(b) == 0);
 
 	// No fragmentation for full allocator either
 	buddy_malloc(b, buddy_size);
-	assert(buddy_fragmentation(b) == 0.0);
+	assert(buddy_fragmentation(b) == 0);
 	buddy_free(b, data_buf);
 
 	// Some fragmentation for partially-used allocator
 	buddy_malloc(b, PSS(64));
-	assert(buddy_fragmentation(b) == 0.4375);
+	assert(buddy_fragmentation(b) == 143);
+
+	buddy_free(b, data_buf);
+	for (size_t i = 0; i < 4; i++){
+		ptrs[i] = buddy_malloc(b, PSS(64));
+	}
+	buddy_free(b, ptrs[0]);
+	buddy_free(b, ptrs[2]);
+	assert(buddy_fragmentation(b) == 191);
 
 	free(buddy_buf);
 	free(data_buf);
@@ -2268,7 +2277,7 @@ void test_buddy_tree_fragmentation(void) {
 
 	// Some fragmentation for partially-allocated tree
 	buddy_tree_mark(t, buddy_tree_left_child(buddy_tree_left_child(buddy_tree_root())));
-	assert(buddy_tree_fragmentation(t) == 0.4375);
+	assert(buddy_tree_fragmentation(t) == 143);
 }
 
 int main(void) {
