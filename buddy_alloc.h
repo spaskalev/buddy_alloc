@@ -364,6 +364,9 @@ static size_t highest_bit_position(size_t value);
 /* Returns the nearest larger or equal power of two */
 static inline size_t ceiling_power_of_two(size_t value);
 
+/* Return two to the power of order */
+static inline size_t two_to_the_power_of(size_t order);
+
 /*
  * Math
  */
@@ -1269,7 +1272,7 @@ static struct buddy_tree *buddy_tree_init(unsigned char *at, uint8_t order) {
     struct buddy_tree *t = (struct buddy_tree*) at;
     memset(at, 0, size);
     t->order = order;
-    t->upper_pos_bound = 1u << t->order;
+    t->upper_pos_bound = two_to_the_power_of(t->order);
     buddy_tree_populate_size_for_order(t);
     return t;
 }
@@ -1301,7 +1304,7 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
                 t->order + 1u, next_pos);
 
             /* There are this many nodes at the current level */
-            size_t node_count = 1u << (current_order - 1u);
+            size_t node_count = two_to_the_power_of(current_order - 1u);
 
             /* Transfer the bits*/
             bitset_shift_right(buddy_tree_bits(t),
@@ -1321,7 +1324,7 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
         }
         /* Advance the order and refresh the root */
         t->order += 1u;
-        t->upper_pos_bound = 1u << t->order;
+        t->upper_pos_bound = two_to_the_power_of(t->order);
         buddy_tree_populate_size_for_order(t);
 
         /* Update the root */
@@ -1351,7 +1354,7 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
             next_internal = buddy_tree_internal_position_order(next_order, buddy_tree_parent(left_start));
 
             /* There are this many nodes at the current level */
-            node_count = 1u << (left_start.depth - 1u);
+            node_count = two_to_the_power_of(left_start.depth - 1u);
 
             /* Transfer the bits*/
             bitset_shift_left(buddy_tree_bits(t),
@@ -1365,7 +1368,7 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
 
         /* Advance the order */
         t->order = (uint8_t) next_order;
-        t->upper_pos_bound = 1u << t->order;
+        t->upper_pos_bound = two_to_the_power_of(t->order);
         buddy_tree_populate_size_for_order(t);
     }
 }
@@ -1389,7 +1392,7 @@ static struct buddy_tree_pos buddy_tree_leftmost_child(struct buddy_tree *t) {
 
 static struct buddy_tree_pos buddy_tree_leftmost_child_internal(size_t tree_order) {
     struct buddy_tree_pos result;
-    result.index = 1u << (tree_order - 1u);
+    result.index = two_to_the_power_of(tree_order - 1u);
     result.depth = tree_order;
     return result;
 }
@@ -1437,7 +1440,7 @@ static size_t buddy_tree_index(struct buddy_tree_pos pos) {
 static inline size_t buddy_tree_index_internal(struct buddy_tree_pos pos) {
     /* Clear out the highest bit, this gives us the index
      * in a row of sibling nodes */
-    size_t mask = 1u << (pos.depth - 1u);
+    size_t mask = two_to_the_power_of(pos.depth - 1u);
     size_t result = pos.index & ~mask;
     return result;
 }
@@ -1751,7 +1754,7 @@ static unsigned char buddy_tree_fragmentation(struct buddy_tree *t) {
         size_t pos_status = buddy_tree_status(t, state.current_pos);
         if (pos_status == 0) {
             /* Empty node, process */
-            virtual_size = 1ul << ((tree_order - state.current_pos.depth) % ((sizeof(size_t) * CHAR_BIT)-1));
+            virtual_size = two_to_the_power_of((tree_order - state.current_pos.depth) % ((sizeof(size_t) * CHAR_BIT)-1));
             quality += (virtual_size * virtual_size);
             total_free_size += virtual_size;
             /* Ascend */
@@ -1946,7 +1949,11 @@ static size_t highest_bit_position(size_t value) {
 
 static inline size_t ceiling_power_of_two(size_t value) {
     value += !value; /* branchless x -> { 1 for 0, x for x } */
-    return ((size_t)1u) << (highest_bit_position(value + value - 1)-1);
+    return two_to_the_power_of(highest_bit_position(value + value - 1)-1);
+}
+
+static inline size_t two_to_the_power_of(size_t order) {
+    return ((size_t)1) << order;
 }
 
 static inline size_t integer_square_root(size_t op) {
