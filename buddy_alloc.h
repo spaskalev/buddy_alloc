@@ -119,14 +119,14 @@ void buddy_unsafe_release_range(struct buddy *buddy, void *ptr, size_t requested
  */
 
 /*
- * Iterate through the allocated slots and call the provided function for each of them.
+ * Iterate through the free and allocated slots and call the provided function for each of them.
  *
  * If the provided function returns a non-NULL result the iteration stops and the result
  * is returned to called. NULL is returned upon completing iteration without stopping.
  *
  * The iteration order is implementation-defined and may change between versions.
  */
-void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t slot_size), void *ctx);
+void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t slot_size, size_t allocated), void *ctx);
 
 /*
  * Miscellaneous functions
@@ -859,12 +859,15 @@ void buddy_unsafe_release_range(struct buddy *buddy, void *ptr, size_t requested
 }
 
 void *buddy_walk(struct buddy *buddy,
-        void *(fp)(void *ctx, void *addr, size_t slot_size), void *ctx) {
+        void *(fp)(void *ctx, void *addr, size_t slot_size, size_t allocated),
+        void *ctx) {
     unsigned char *main;
     size_t effective_memory_size, tree_order, pos_status, pos_size;
     struct buddy_tree *tree;
     unsigned char *addr;
     struct buddy_tree_walk_state state;
+    struct buddy_tree_pos test_pos;
+    void *callback_result;
 
     if (buddy == NULL) {
         return NULL;
@@ -880,42 +883,41 @@ void *buddy_walk(struct buddy *buddy,
     state = buddy_tree_walk_state_root();
     do {
         pos_status = buddy_tree_status(tree, state.current_pos);
-        if (pos_status == 0) { /* Empty position */
-            state.going_up = 1;
-        } else if (pos_status != (tree_order - state.current_pos.depth + 1)) { /* Partially-allocated */
+        if (pos_status != (tree_order - state.current_pos.depth + 1)) { /* Partially-allocated */
             continue;
-        } else { /* Fully-allocated */
-            /*
-             * The tree doesn't make a distinction of a fully-allocated node
-             *  due to a single allocation and a fully-allocated due to maxed out
-             *  child allocations - we need to check the children.
-             * A child-allocated node will have both children set to their maximum
-             *  but it is sufficient to check just one for non-zero.
-             */
-            struct buddy_tree_pos left = buddy_tree_left_child(state.current_pos);
-            if (buddy_tree_valid(tree, left) && buddy_tree_status(tree, left)) {
-                continue;
-            }
-
-            /* Current node is allocated, process */
-            pos_size = effective_memory_size >> (state.current_pos.depth - 1u);
-            addr = address_for_position(buddy, state.current_pos);
-            if (((size_t)(addr - main) + pos_size) > buddy->memory_size) {
-                /*
-                 * Do not process virtual slots
-                 * As virtual slots are on the right side of the tree
-                 *  if we see a one with the current iteration order this
-                 *  means that all subsequent slots will be virtual,
-                 *  hence we can return early.
-                 */
-                return NULL;
-            } else {
-                void *result = (fp)(ctx, addr, pos_size);
-                if (result != NULL) {
-                    return result;
-                }
-            }
         }
+
+        /*
+         * The tree doesn't make a distinction of a fully-allocated node
+         *  due to a single allocation and a fully-allocated due to maxed out
+         *  child allocations - we need to check the children.
+         * A child-allocated node will have both children set to their maximum
+         *  but it is sufficient to check just one for non-zero.
+         */
+        test_pos = buddy_tree_left_child(state.current_pos);
+        if (buddy_tree_valid(tree, test_pos) && buddy_tree_status(tree, test_pos)) {
+            continue;
+        }
+
+        /* Current node is free or allocated, process */
+        pos_size = effective_memory_size >> (state.current_pos.depth - 1u);
+        addr = address_for_position(buddy, state.current_pos);
+        if (((size_t)(addr - main) + pos_size) > buddy->memory_size) {
+            /*
+             * Do not process virtual slots
+             * As virtual slots are on the right side of the tree
+             *  if we see a one with the current iteration order this
+             *  means that all subsequent slots will be virtual,
+             *  hence we can return early.
+             */
+            return NULL;
+        }
+        callback_result = (fp)(ctx, addr, pos_size, pos_status > 0);
+        if (callback_result != NULL) {
+            return callback_result;
+        }
+        state.going_up = 1;
+
     } while (buddy_tree_walk(tree, &state));
     return NULL;
 }
