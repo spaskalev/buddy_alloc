@@ -1438,10 +1438,11 @@ void test_buddy_large_arena(void) {
 	free(data_buf);
 }
 
-void *walker_01(void *ctx, void *addr, size_t size) {
+void *walker_01(void *ctx, void *addr, size_t size, size_t allocated) {
 	size_t *counter = (size_t *) ctx;
 	(void) addr;
 	assert(size == 64);
+	assert(allocated);
 	(*counter)++;
 	if ((*counter) > 2) {
 		return addr; /* cause a stop */
@@ -1476,10 +1477,11 @@ void test_buddy_walk_01(void) {
 	free(buddy_buf);
 }
 
-void *walker_02(void *ctx, void *addr, size_t size) {
+void *walker_02(void *ctx, void *addr, size_t size, size_t allocated) {
 	size_t *counter = (size_t *) ctx;
 	(void) addr;
 	assert(size == 128);
+	assert(allocated);
 	(*counter)++;
 	if ((*counter) > 2) {
 		return addr; /* cause a stop */
@@ -1506,7 +1508,7 @@ struct walker_03_entry {
 	size_t size;
 };
 
-void *walker_03(void *ctx, void *addr, size_t size) {
+void *walker_03(void *ctx, void *addr, size_t size, size_t allocated) {
 	struct walker_03_entry (*context) = (struct walker_03_entry *) ctx;
 	unsigned int found = 0;
 	for (size_t i = 0; i < 3; i++) {
@@ -1517,6 +1519,7 @@ void *walker_03(void *ctx, void *addr, size_t size) {
 		}
 	}
 	assert(found);
+	(void) allocated;
 	return NULL;
 }
 
@@ -1534,10 +1537,11 @@ void test_buddy_walk_03(void) {
 	free(buddy_buf);
 }
 
-void *walker_04(void *ctx, void *addr, size_t size) {
+void *walker_04(void *ctx, void *addr, size_t size, size_t allocated) {
 	struct buddy *buddy = (struct buddy *) ctx;
 	assert(addr != NULL);
 	assert(size != 0);
+	assert(allocated);
 	buddy_free(buddy, addr);
 	return NULL;
 }
@@ -1556,9 +1560,10 @@ void test_buddy_walk_04(void) {
 	free(buddy_buf);
 }
 
-void *walker_05(void *ctx, void *addr, size_t size) {
+void *walker_05(void *ctx, void *addr, size_t size, size_t allocated) {
 	(void) addr;
 	(void) size;
+	(void) allocated;
 	return ctx;
 }
 
@@ -1570,12 +1575,13 @@ void test_buddy_walk_05(void) {
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 3648); // virtual slots
 	assert(buddy_walk(buddy, walker_05, &ctx) == NULL);
-	assert(walker_05(&ctx, NULL, 0) == &ctx); // coverage
+	assert(walker_05(&ctx, NULL, 0, 1) == &ctx); // coverage
 	free(buddy_buf);
 }
 
-void *walker_06(void *ctx, void *addr, size_t size) {
+void *walker_06(void *ctx, void *addr, size_t size, size_t allocated) {
 	struct buddy *buddy = (struct buddy *) ctx;
+	assert(allocated);
 	buddy_realloc(buddy, addr, size);
 	return NULL;
 }
