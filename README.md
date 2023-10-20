@@ -18,7 +18,7 @@ This is a buddy memory allocator that might be suitable for use in applications 
 ## Features
 
 - Bounded allocation and deallocation cost
-- Fixed call stack use, no recursion
+- Fixed call stack usage, no recursion, no global state
 - C99-compatibility for code and tests
 - 100% line and branch test coverage
 - Supports 32-bit and 64-bit platforms
