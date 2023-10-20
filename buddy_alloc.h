@@ -1628,7 +1628,6 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
             current_pos = left_pos;
         } else {
             /* One of the child nodes must be read in order to compare it to its sibling. */
-            right_internal.local_offset = target_status; /* reduce the read span since we know the right_status is equal or less than target_status */
             right_status = read_from_internal_position(buddy_tree_bits(t), right_internal);
             if (right_status) {
                 if (compare_with_internal_position(buddy_tree_bits(t), left_internal, right_status)) {
