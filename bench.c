@@ -16,7 +16,7 @@
 
 double test_malloc(size_t alloc_size);
 double test_malloc_firstfit(size_t alloc_size);
-void *freeing_callback(void *ctx, void *addr, size_t slot_size);
+void *freeing_callback(void *ctx, void *addr, size_t slot_size, size_t allocated);
 
 int main() {
 	setvbuf(stdout, NULL, _IONBF, 0);
@@ -59,7 +59,10 @@ double test_malloc(size_t alloc_size) {
 	return delta;
 }
 
-void *freeing_callback(void *ctx, void *addr, size_t slot_size) {
+void *freeing_callback(void *ctx, void *addr, size_t slot_size, size_t allocated) {
+	if (! allocated) {
+		return NULL;
+	}
 	struct buddy *buddy = (struct buddy*) ctx;
 	buddy_free(buddy, addr);
 	return NULL;
