@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Use this template to report - bugs, performance and/or usability issues
+about: Use this template to report bugs, performance and usability issues
 title: ''
 labels: ''
 assignees: spaskalev
