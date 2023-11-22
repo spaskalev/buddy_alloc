@@ -25,7 +25,7 @@ int main(void)
                 } else {
                     size = size*2;
                 }
-                buddy_realloc(b, allocs[slot], size);
+                buddy_realloc(b, allocs[slot], size, true);
             }
             assert(buddy_tree_check_invariant(tree, buddy_tree_root()) == 0);
             allocs[slot] = 0;
