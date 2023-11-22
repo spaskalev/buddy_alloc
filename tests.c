@@ -1270,6 +1270,26 @@ void test_buddy_realloc_alignment(void) {
 	free(buddy_buf);
 }
 
+void test_buddy_realloc_ignore_01(void) {
+	unsigned char *buddy_buf = malloc(buddy_sizeof(4096));
+	unsigned char data_buf[4096];
+	struct buddy *buddy;
+	void *result;
+	unsigned char *ba;
+	start_test;
+	memset(data_buf, 0, 4096); /* make sure the buffer is empty */
+	buddy = buddy_init(buddy_buf, data_buf, 4096);
+	buddy_malloc(buddy, 64); /* allocate one slot */
+	result = buddy_malloc(buddy, 64); /* allocate its sibling */
+	memset(result, 255, 64); /* put some data in it */
+	result = buddy_realloc(buddy, result, 128, true); /* get a new slot, ignore data */
+	ba = (unsigned char *) result;
+	for (size_t i = 0; i < 64; i++) {
+		assert(ba[i] == 0);
+	}
+	free(buddy_buf);
+}
+
 void test_buddy_reallocarray_01(void) {
 	unsigned char *buddy_buf = malloc(buddy_sizeof(512));
 	unsigned char data_buf[512];
@@ -2391,6 +2411,8 @@ int main(void) {
 		test_buddy_realloc_07();
 		test_buddy_realloc_08();
 		test_buddy_realloc_alignment();
+
+	   test_buddy_realloc_ignore_01();
 
 		test_buddy_reallocarray_01();
 		test_buddy_reallocarray_02();
