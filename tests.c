@@ -1068,7 +1068,7 @@ void test_buddy_demo(void) {
 	/* Free using the buddy allocator */
 	buddy_free(buddy, data);
 
-	assert(buddy_is_empty(NULL) == 1);
+	assert(buddy_is_empty(NULL) == false);
 	assert(buddy_is_empty(buddy));
 
 	free(buddy_metadata);
@@ -1789,7 +1789,7 @@ void test_buddy_is_full(void) {
 	assert(buddy_is_full(buddy));
 	free(buddy_buf);
 	free(data_buf);
-	assert(buddy_is_full(NULL) == 0);
+	assert(buddy_is_full(NULL) == false);
 }
 
 void test_buddy_slot_alignment(void) {
@@ -1838,10 +1838,10 @@ void test_buddy_tree_valid(void) {
 	struct buddy_tree *t;
 	start_test;
 	t = buddy_tree_init(buddy_tree_buf, 8);
-	assert(buddy_tree_valid(t, (struct buddy_tree_pos){ 0, 0 }) == 0);
-	assert(buddy_tree_valid(t, (struct buddy_tree_pos){ 256, 0 }) == 0);
-	assert(buddy_tree_valid(t, (struct buddy_tree_pos){ 1, 1 }) == 1);
-	assert(buddy_tree_valid(t, (struct buddy_tree_pos){ 255, 8 }) == 1);
+	assert(!buddy_tree_valid(t, (struct buddy_tree_pos){ 0, 0 }));
+	assert(!buddy_tree_valid(t, (struct buddy_tree_pos){ 256, 0 }));
+	assert(buddy_tree_valid(t, (struct buddy_tree_pos){ 1, 1 }));
+	assert(buddy_tree_valid(t, (struct buddy_tree_pos){ 255, 8 }));
 }
 
 void test_buddy_tree_order(void) {
