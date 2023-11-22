@@ -1151,7 +1151,7 @@ void test_buddy_realloc_01(void) {
 	buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
 	/* This is implementation-defined! */
-	result = buddy_realloc(buddy, NULL, 0);
+	result = buddy_realloc(buddy, NULL, 0, false);
 	assert(result != NULL);
 	free(buddy_buf);
 }
@@ -1164,7 +1164,7 @@ void test_buddy_realloc_02(void) {
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
-	result = buddy_realloc(buddy, NULL, 128);
+	result = buddy_realloc(buddy, NULL, 128, false);
 	assert(result == data_buf);
 	free(buddy_buf);
 }
@@ -1177,9 +1177,9 @@ void test_buddy_realloc_03(void) {
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
-	result = buddy_realloc(buddy, NULL, 128);
+	result = buddy_realloc(buddy, NULL, 128, false);
 	assert(result == data_buf);
-	result = buddy_realloc(buddy, result, 128);
+	result = buddy_realloc(buddy, result, 128, false);
 	assert(result == data_buf);
 	free(buddy_buf);
 }
@@ -1192,9 +1192,9 @@ void test_buddy_realloc_04(void) {
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 4096);
 	assert(buddy != NULL);
-	result = buddy_realloc(buddy, NULL, 128);
+	result = buddy_realloc(buddy, NULL, 128, false);
 	assert(result == data_buf);
-	result = buddy_realloc(buddy, result, 64);
+	result = buddy_realloc(buddy, result, 64, false);
 	assert(result == data_buf);
 	free(buddy_buf);
 }
@@ -1207,9 +1207,9 @@ void test_buddy_realloc_05(void) {
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 512);
 	assert(buddy != NULL);
-	result = buddy_realloc(buddy, NULL, 128);
+	result = buddy_realloc(buddy, NULL, 128, false);
 	assert(result == data_buf);
-	result = buddy_realloc(buddy, result, 256);
+	result = buddy_realloc(buddy, result, 256, false);
 	assert(result == data_buf);
 	free(buddy_buf);
 }
@@ -1222,9 +1222,9 @@ void test_buddy_realloc_06(void) {
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 512);
 	assert(buddy != NULL);
-	result = buddy_realloc(buddy, NULL, 128);
+	result = buddy_realloc(buddy, NULL, 128, false);
 	assert(result == data_buf);
-	result = buddy_realloc(buddy, result, 0);
+	result = buddy_realloc(buddy, result, 0, false);
 	assert(result == NULL);
 	free(buddy_buf);
 }
@@ -1237,9 +1237,9 @@ void test_buddy_realloc_07(void) {
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 512);
 	assert(buddy != NULL);
-	result = buddy_realloc(buddy, NULL, 128);
+	result = buddy_realloc(buddy, NULL, 128, false);
 	assert(result == data_buf);
-	result = buddy_realloc(buddy, result, 1024);
+	result = buddy_realloc(buddy, result, 1024, false);
 	assert(result == NULL);
 	free(buddy_buf);
 }
@@ -1253,9 +1253,9 @@ void test_buddy_realloc_08(void) {
 	buddy = buddy_init(buddy_buf, data_buf, 512);
 	assert(buddy != NULL);
 	assert(buddy_malloc(buddy, 256) == data_buf);
-	result = buddy_realloc(buddy, NULL, 256);
+	result = buddy_realloc(buddy, NULL, 256, false);
 	assert(result == data_buf + 256);
-	result = buddy_realloc(buddy, result, 512);
+	result = buddy_realloc(buddy, result, 512, false);
 	assert(result == NULL);
 	free(buddy_buf);
 }
@@ -1266,7 +1266,27 @@ void test_buddy_realloc_alignment(void) {
 	struct buddy *buddy;
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 4096);
-	assert(buddy_realloc(buddy, data_buf+1, 2048) == NULL);
+	assert(buddy_realloc(buddy, data_buf+1, 2048, false) == NULL);
+	free(buddy_buf);
+}
+
+void test_buddy_realloc_ignore_01(void) {
+	unsigned char *buddy_buf = malloc(buddy_sizeof(4096));
+	unsigned char data_buf[4096];
+	struct buddy *buddy;
+	void *result;
+	unsigned char *ba;
+	start_test;
+	memset(data_buf, 0, 4096); /* make sure the buffer is empty */
+	buddy = buddy_init(buddy_buf, data_buf, 4096);
+	buddy_malloc(buddy, 64); /* allocate one slot */
+	result = buddy_malloc(buddy, 64); /* allocate its sibling */
+	memset(result, 255, 64); /* put some data in it */
+	result = buddy_realloc(buddy, result, 128, true); /* get a new slot, ignore data */
+	ba = (unsigned char *) result;
+	for (size_t i = 0; i < 64; i++) {
+		assert(ba[i] == 0);
+	}
 	free(buddy_buf);
 }
 
@@ -1277,7 +1297,7 @@ void test_buddy_reallocarray_01(void) {
 	void *result;
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 512);
-	result = buddy_reallocarray(buddy, NULL, 0, 0);
+	result = buddy_reallocarray(buddy, NULL, 0, 0, false);
 	/* This is implementation-defined! */
 	assert(result != NULL);
 	free(buddy_buf);
@@ -1290,7 +1310,7 @@ void test_buddy_reallocarray_02(void) {
 	void *result;
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 512);
-	result = buddy_reallocarray(buddy, NULL, sizeof(short), SIZE_MAX);
+	result = buddy_reallocarray(buddy, NULL, sizeof(short), SIZE_MAX, false);
 	assert(result == NULL);
 	free(buddy_buf);
 }
@@ -1302,7 +1322,7 @@ void test_buddy_reallocarray_03(void) {
 	void *result;
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 512);
-	result = buddy_reallocarray(buddy, NULL, sizeof(char), 256);
+	result = buddy_reallocarray(buddy, NULL, sizeof(char), 256, false);
 	assert(result == data_buf);
 	free(buddy_buf);
 }
@@ -1582,7 +1602,7 @@ void test_buddy_walk_05(void) {
 void *walker_06(void *ctx, void *addr, size_t size, size_t allocated) {
 	struct buddy *buddy = (struct buddy *) ctx;
 	assert(allocated);
-	buddy_realloc(buddy, addr, size);
+	buddy_realloc(buddy, addr, size, false);
 	return NULL;
 }
 
@@ -2391,6 +2411,8 @@ int main(void) {
 		test_buddy_realloc_07();
 		test_buddy_realloc_08();
 		test_buddy_realloc_alignment();
+
+	   test_buddy_realloc_ignore_01();
 
 		test_buddy_reallocarray_01();
 		test_buddy_reallocarray_02();

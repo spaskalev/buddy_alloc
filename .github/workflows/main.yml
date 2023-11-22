@@ -12,16 +12,16 @@ jobs:
     - name: setup
       run: sudo apt-get update && sudo apt-get -y -qq install clang-tidy cppcheck cflow spell gcc-powerpc64-linux-gnu gcc-powerpc-linux-gnu gcc-aarch64-linux-gnu gcc-i686-linux-gnu qemu-user-binfmt
     - name: test-main
-      run: make LLVM_VERSION=14
+      run: make LLVM_VERSION=14 CC=clang
       working-directory: .
     - name: bench-main
-      run: make LLVM_VERSION=14 bench
+      run: make LLVM_VERSION=14 CC=clang bench
       working-directory: .
     - name: test-multiplatform
-      run: make test-multiplatform
+      run: make test-multiplatform CC=clang
       working-directory: .
     - name: test-cpp-translation-unit
-      run: make LLVM_VERSION=14 test-cpp-translation-unit
+      run: make LLVM_VERSION=14 CC=clang CXX=clang++ test-cpp-translation-unit
       working-directory: .
     - uses: actions/upload-artifact@v3
       if: failure()

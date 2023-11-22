@@ -17,13 +17,14 @@
 
 #ifndef BUDDY_HEADER
 #include <limits.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
+#include <sys/types.h>
 #ifndef BUDDY_PRINTF
 #include <stdio.h>
 #endif
-#include <string.h>
-#include <sys/types.h>
 #endif
 
 #ifdef __cplusplus
@@ -92,11 +93,11 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size);
 void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size);
 
 /* Realloc semantics are a joke. See realloc. */
-void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size);
+void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size, bool ignore_data);
 
 /* Realloc-like behavior that checks for overflow. See reallocarray*/
 void *buddy_reallocarray(struct buddy *buddy, void *ptr,
-    size_t members_count, size_t member_size);
+    size_t members_count, size_t member_size, bool ignore_data);
 
 /* Use the specified buddy to free memory. See free. */
 void buddy_free(struct buddy *buddy, void *ptr);
@@ -338,7 +339,7 @@ static inline void bitset_set(unsigned char *bitset, size_t pos);
 
 static inline void bitset_clear(unsigned char *bitset, size_t pos);
 
-static inline unsigned int bitset_test(const unsigned char *bitset, size_t pos);
+static inline unsigned char bitset_test(const unsigned char *bitset, size_t pos);
 
 static void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by);
 
@@ -707,7 +708,7 @@ void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size
     return result;
 }
 
-void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
+void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size, bool ignore_data) {
     struct buddy_tree *tree;
     struct buddy_tree_pos origin, new_pos;
     size_t current_depth, target_depth;
@@ -758,26 +759,30 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
         return ptr;
     }
 
-    /* Copy the content */
-    source = address_for_position(buddy, origin);
     destination = address_for_position(buddy, new_pos);
-    memmove(destination, source, size_for_depth(buddy,
-        current_depth > target_depth ? current_depth : target_depth));
+
+    if (! ignore_data) {
+        /* Copy the content */
+        source = address_for_position(buddy, origin);
+        memmove(destination, source, size_for_depth(buddy,
+            current_depth > target_depth ? current_depth : target_depth));
+    }
+
     /* Allocate and return */
     buddy_tree_mark(tree, new_pos);
     return destination;
 }
 
 void *buddy_reallocarray(struct buddy *buddy, void *ptr,
-        size_t members_count, size_t member_size) {
+        size_t members_count, size_t member_size, bool ignore_data) {
     if (members_count == 0 || member_size == 0) {
-        return buddy_realloc(buddy, ptr, 0);
+        return buddy_realloc(buddy, ptr, 0, ignore_data);
     }
     /* Check for overflow */
     if ((members_count * member_size)/members_count != member_size) {
         return NULL;
     }
-    return buddy_realloc(buddy, ptr, members_count * member_size);
+    return buddy_realloc(buddy, ptr, members_count * member_size, ignore_data);
 }
 
 void buddy_free(struct buddy *buddy, void *ptr) {
@@ -1218,7 +1223,7 @@ static void buddy_tree_populate_size_for_order(struct buddy_tree *t);
 static inline size_t buddy_tree_size_for_order(struct buddy_tree *t, uint8_t to);
 static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value);
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos);
-static size_t compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value);
+static inline unsigned char compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value);
 
 static inline size_t size_for_order(uint8_t order, uint8_t to) {
     size_t result = 0;
@@ -1484,7 +1489,7 @@ static size_t read_from_internal_position(unsigned char *bitset, struct internal
     return bitset_count_range(bitset, pos.bitset_location, pos.bitset_location+pos.local_offset-1);
 }
 
-static size_t compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
+static inline unsigned char compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
     return bitset_test(bitset, pos.bitset_location+value-1);
 }
 
@@ -1602,6 +1607,7 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
     uint8_t target_status;
     size_t current_depth, right_status;
     struct internal_position left_internal, right_internal;
+    unsigned char *tree_bits;
 
     current_pos = buddy_tree_root();
     target_status = target_depth - 1;
@@ -1609,6 +1615,7 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
     if (buddy_tree_status(t, current_pos) > target_status) {
         return INVALID_POS; /* No position available down the tree */
     }
+    tree_bits = buddy_tree_bits(t);
     while (current_depth != target_depth) {
         /* Advance criteria */
         target_status -= 1;
@@ -1622,15 +1629,15 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
         right_internal = left_internal;
         right_internal.bitset_location += right_internal.local_offset; /* advance to the right */
 
-        if (compare_with_internal_position(buddy_tree_bits(t), left_internal, target_status+1)) { /* left branch is busy, pick right */
+        if (compare_with_internal_position(tree_bits, left_internal, target_status+1)) { /* left branch is busy, pick right */
             current_pos = right_pos;
-        } else if (compare_with_internal_position(buddy_tree_bits(t), right_internal, target_status+1)) { /* right branch is busy, pick left */
+        } else if (compare_with_internal_position(tree_bits, right_internal, target_status+1)) { /* right branch is busy, pick left */
             current_pos = left_pos;
         } else {
             /* One of the child nodes must be read in order to compare it to its sibling. */
-            right_status = read_from_internal_position(buddy_tree_bits(t), right_internal);
+            right_status = read_from_internal_position(tree_bits, right_internal);
             if (right_status) {
-                if (compare_with_internal_position(buddy_tree_bits(t), left_internal, right_status)) {
+                if (compare_with_internal_position(tree_bits, left_internal, right_status)) {
                     current_pos = left_pos; /* Left is equal or more busy than right, prefer left */
                 } else {
                     current_pos = right_pos;
@@ -1798,7 +1805,7 @@ static inline void bitset_clear(unsigned char *bitset, size_t pos) {
     bitset[bucket] &= ~bitset_index_mask[index];
 }
 
-static inline unsigned int bitset_test(const unsigned char *bitset, size_t pos) {
+static inline unsigned char bitset_test(const unsigned char *bitset, size_t pos) {
     size_t bucket = pos / CHAR_BIT;
     size_t index = pos % CHAR_BIT;
     return bitset[bucket] & bitset_index_mask[index];

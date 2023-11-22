@@ -14,27 +14,31 @@
 #include "buddy_alloc.h"
 #undef BUDDY_ALLOC_IMPLEMENTATION
 
-double test_malloc(size_t alloc_size);
+double test_malloc(struct buddy *buddy, size_t alloc_size);
 double test_malloc_firstfit(size_t alloc_size);
 void *freeing_callback(void *ctx, void *addr, size_t slot_size, size_t allocated);
 
 int main() {
 	setvbuf(stdout, NULL, _IONBF, 0);
 
+	size_t arena_size = 1 << 30;
+	unsigned char *buddy_buf = malloc(buddy_sizeof_alignment(arena_size, 64));
+	unsigned char *data_buf = malloc(arena_size);
+	struct buddy *buddy = buddy_init_alignment(buddy_buf, data_buf, arena_size, 64);
+
 	double total = 0;
 	for (size_t i = 0; i <= 6; i++) {
-		total += test_malloc(64 << i);
+		total += test_malloc(buddy, 64 << i);
+		total += test_malloc(buddy, 64 << i);
+		total += test_malloc(buddy, 64 << i);
 	}
 	printf("Total malloc runtime was %f seconds.\n\n", total);
+
+	free(data_buf);
+	free(buddy_buf);
 }
 
-double test_malloc(size_t alloc_size) {
-
-	size_t arena_size = 1 << 30;
-	unsigned char *buddy_buf = malloc(buddy_sizeof(arena_size));
-	unsigned char *data_buf = malloc(arena_size);
-	struct buddy *buddy = buddy_init(buddy_buf, data_buf, arena_size);
-
+double test_malloc(struct buddy *buddy, size_t alloc_size) {
 	printf("Starting test with alloc size [%zu].\n", alloc_size);
 	time_t start_time = time(NULL);
 
@@ -52,9 +56,6 @@ double test_malloc(size_t alloc_size) {
 	double delta = difftime(end_time, start_time);
 	printf("Test took %.f seconds in total. Allocation: %.f freeing: %.f\n", delta,
 		difftime(alloc_time, start_time), difftime(end_time, alloc_time));
-
-	free(data_buf);
-	free(buddy_buf);
 
 	return delta;
 }
