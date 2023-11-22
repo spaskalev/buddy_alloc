@@ -67,13 +67,13 @@ struct buddy *buddy_embed_alignment(unsigned char *main, size_t memory_size, siz
 struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size);
 
 /* Tests if the allocator can be shrunk in half */
-unsigned int buddy_can_shrink(struct buddy *buddy);
+bool buddy_can_shrink(struct buddy *buddy);
 
 /* Tests if the allocator is completely empty */
-unsigned int buddy_is_empty(struct buddy *buddy);
+bool buddy_is_empty(struct buddy *buddy);
 
 /* Tests if the allocator is completely full */
-unsigned int buddy_is_full(struct buddy *buddy);
+bool buddy_is_full(struct buddy *buddy);
 
 /* Reports the arena size */
 size_t buddy_arena_size(struct buddy *buddy);
@@ -234,7 +234,7 @@ static size_t buddy_tree_sizeof(uint8_t order);
 static struct buddy_tree *buddy_tree_init(unsigned char *at, uint8_t order);
 
 /* Indicates whether this is a valid position for the tree */
-static unsigned int buddy_tree_valid(struct buddy_tree *t, struct buddy_tree_pos pos);
+static bool buddy_tree_valid(struct buddy_tree *t, struct buddy_tree_pos pos);
 
 /* Returns the order of the specified buddy allocation tree */
 static uint8_t buddy_tree_order(struct buddy_tree *t);
@@ -278,7 +278,7 @@ static size_t buddy_tree_index(struct buddy_tree_pos pos);
 static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, struct buddy_tree_pos pos);
 
 /* Checks if one interval contains another */
-static unsigned int buddy_tree_interval_contains(struct buddy_tree_interval outer,
+static bool buddy_tree_interval_contains(struct buddy_tree_interval outer,
     struct buddy_tree_interval inner);
 
 /* Return a walk state structure starting from the root of a tree */
@@ -305,10 +305,10 @@ static void buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos);
 static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth);
 
 /* Tests if the indicated position is available for allocation */
-static unsigned int buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_pos pos);
+static bool buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_pos pos);
 
 /* Tests if the tree can be shrank in half */
-static unsigned int buddy_tree_can_shrink(struct buddy_tree *t);
+static bool buddy_tree_can_shrink(struct buddy_tree *t);
 
 /*
  * Debug functions
@@ -339,7 +339,7 @@ static inline void bitset_set(unsigned char *bitset, size_t pos);
 
 static inline void bitset_clear(unsigned char *bitset, size_t pos);
 
-static inline unsigned char bitset_test(const unsigned char *bitset, size_t pos);
+static inline bool bitset_test(const unsigned char *bitset, size_t pos);
 
 static void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by);
 
@@ -416,7 +416,7 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state);
 static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_t requested_size, unsigned int state);
 static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memory_size);
 static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memory_size);
-static unsigned int buddy_is_free(struct buddy *buddy, size_t from);
+static bool buddy_is_free(struct buddy *buddy, size_t from);
 static struct buddy_embed_check buddy_embed_offset(size_t memory_size, size_t alignment);
 static struct buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, size_t offset);
 
@@ -587,26 +587,26 @@ static struct buddy *buddy_resize_embedded(struct buddy *buddy, size_t new_memor
     return relocated;
 }
 
-unsigned int buddy_can_shrink(struct buddy *buddy) {
+bool buddy_can_shrink(struct buddy *buddy) {
     if (buddy == NULL) {
-        return 0;
+        return false;
     }
     return buddy_is_free(buddy, buddy->memory_size / 2);
 }
 
-unsigned int buddy_is_empty(struct buddy *buddy) {
+bool buddy_is_empty(struct buddy *buddy) {
     if (buddy == NULL) {
-        return 1;
+        return false;
     }
     return buddy_is_free(buddy, 0);
 }
 
-unsigned int buddy_is_full(struct buddy *buddy) {
+bool buddy_is_full(struct buddy *buddy) {
     struct buddy_tree *tree;
     struct buddy_tree_pos pos;
 
     if (buddy == NULL) {
-        return 0;
+        return false;
     }
     tree = buddy_tree(buddy);
     pos = buddy_tree_root();
@@ -1114,7 +1114,7 @@ static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_
  after the indicated relative memory index. Used to check if
  the arena can be downsized.
  The from argument is already adjusted for alignment by caller */
-static unsigned int buddy_is_free(struct buddy *buddy, size_t from) {
+static bool buddy_is_free(struct buddy *buddy, size_t from) {
     struct buddy_tree *tree;
     struct buddy_tree_interval query_range;
     struct buddy_tree_pos pos;
@@ -1142,12 +1142,12 @@ static unsigned int buddy_is_free(struct buddy *buddy, size_t from) {
         }
         /* pos is now tracking an overlapping segment */
         if (! buddy_tree_is_free(tree, pos)) {
-            return 0;
+            return false;
         }
         /* Advance check */
         pos = buddy_tree_right_adjacent(current_test_range.to);
     }
-    return 1;
+    return true;
 }
 
 static struct buddy_embed_check buddy_embed_offset(size_t memory_size, size_t alignment) {
@@ -1380,7 +1380,7 @@ static void buddy_tree_shrink(struct buddy_tree *t, uint8_t desired_order) {
     }
 }
 
-static unsigned int buddy_tree_valid(struct buddy_tree *t, struct buddy_tree_pos pos) {
+static bool buddy_tree_valid(struct buddy_tree *t, struct buddy_tree_pos pos) {
     return pos.index && (pos.index < t->upper_pos_bound);
 }
 
@@ -1508,7 +1508,7 @@ static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, stru
     return result;
 }
 
-static unsigned int buddy_tree_interval_contains(struct buddy_tree_interval outer,
+static bool buddy_tree_interval_contains(struct buddy_tree_interval outer,
         struct buddy_tree_interval inner) {
     return (inner.from.index >= outer.from.index)
         && (inner.from.index <= outer.to.index)
@@ -1650,9 +1650,9 @@ static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t 
     return current_pos;
 }
 
-static unsigned int buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_pos pos) {
+static bool buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_pos pos) {
     if (buddy_tree_status(t, pos)) {
-        return 0;
+        return false;
     }
     pos = buddy_tree_parent(pos);
     while(buddy_tree_valid(t, pos)) {
@@ -1663,22 +1663,22 @@ static unsigned int buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_p
         }
         pos = buddy_tree_parent(pos);
     }
-    return 1;
+    return true;
 }
 
-static unsigned int buddy_tree_can_shrink(struct buddy_tree *t) {
+static bool buddy_tree_can_shrink(struct buddy_tree *t) {
     struct internal_position root_internal;
     size_t root_value;
 
     if (buddy_tree_status(t, buddy_tree_right_child(buddy_tree_root())) != 0) {
-        return 0; /* Refusing to shrink with right subtree still used! */
+        return false; /* Refusing to shrink with right subtree still used! */
     }
     root_internal = buddy_tree_internal_position_tree(t, buddy_tree_root());
     root_value = read_from_internal_position(buddy_tree_bits(t), root_internal);
     if (root_value == root_internal.local_offset) {
-        return 0; /* Refusing to shrink with the root fully-allocated! */
+        return false; /* Refusing to shrink with the root fully-allocated! */
     }
-    return 1;
+    return true;
 }
 
 static void buddy_tree_debug(struct buddy_tree *t, struct buddy_tree_pos pos,
@@ -1805,7 +1805,7 @@ static inline void bitset_clear(unsigned char *bitset, size_t pos) {
     bitset[bucket] &= ~bitset_index_mask[index];
 }
 
-static inline unsigned char bitset_test(const unsigned char *bitset, size_t pos) {
+static inline bool bitset_test(const unsigned char *bitset, size_t pos) {
     size_t bucket = pos / CHAR_BIT;
     size_t index = pos % CHAR_BIT;
     return bitset[bucket] & bitset_index_mask[index];
