@@ -17,13 +17,14 @@
 
 #ifndef BUDDY_HEADER
 #include <limits.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
+#include <sys/types.h>
 #ifndef BUDDY_PRINTF
 #include <stdio.h>
 #endif
-#include <string.h>
-#include <sys/types.h>
 #endif
 
 #ifdef __cplusplus
@@ -92,11 +93,11 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size);
 void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size);
 
 /* Realloc semantics are a joke. See realloc. */
-void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size);
+void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size, bool ignore_data);
 
 /* Realloc-like behavior that checks for overflow. See reallocarray*/
 void *buddy_reallocarray(struct buddy *buddy, void *ptr,
-    size_t members_count, size_t member_size);
+    size_t members_count, size_t member_size, bool ignore_data);
 
 /* Use the specified buddy to free memory. See free. */
 void buddy_free(struct buddy *buddy, void *ptr);
@@ -707,7 +708,7 @@ void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size
     return result;
 }
 
-void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
+void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size, bool ignore_data) {
     struct buddy_tree *tree;
     struct buddy_tree_pos origin, new_pos;
     size_t current_depth, target_depth;
@@ -758,26 +759,30 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size) {
         return ptr;
     }
 
-    /* Copy the content */
-    source = address_for_position(buddy, origin);
     destination = address_for_position(buddy, new_pos);
-    memmove(destination, source, size_for_depth(buddy,
-        current_depth > target_depth ? current_depth : target_depth));
+
+    if (! ignore_data) {
+        /* Copy the content */
+        source = address_for_position(buddy, origin);
+        memmove(destination, source, size_for_depth(buddy,
+            current_depth > target_depth ? current_depth : target_depth));
+    }
+
     /* Allocate and return */
     buddy_tree_mark(tree, new_pos);
     return destination;
 }
 
 void *buddy_reallocarray(struct buddy *buddy, void *ptr,
-        size_t members_count, size_t member_size) {
+        size_t members_count, size_t member_size, bool ignore_data) {
     if (members_count == 0 || member_size == 0) {
-        return buddy_realloc(buddy, ptr, 0);
+        return buddy_realloc(buddy, ptr, 0, ignore_data);
     }
     /* Check for overflow */
     if ((members_count * member_size)/members_count != member_size) {
         return NULL;
     }
-    return buddy_realloc(buddy, ptr, members_count * member_size);
+    return buddy_realloc(buddy, ptr, members_count * member_size, ignore_data);
 }
 
 void buddy_free(struct buddy *buddy, void *ptr) {
