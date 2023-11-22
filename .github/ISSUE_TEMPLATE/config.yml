@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project discussions
+    url: https://github.com/spaskalev/buddy_alloc/discussions
+    about: Please ask and answer questions here.
+  - name: Contact the author
+    url: https://github.com/spaskalev
+    about: Use email or find me on discord (spaskalev)
