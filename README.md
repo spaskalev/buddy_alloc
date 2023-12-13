@@ -3,7 +3,7 @@ A buddy memory allocator for C
 
 # Status
 
-- [![cicd](https://github.com/spaskalev/buddy_alloc/workflows/cicd/badge.svg)](https://github.com/spaskalev/buddy_alloc/actions)
+- [![cicd](https://github.com/spaskalev/buddy_alloc/actions/workflows/main.yml/badge.svg)](https://github.com/spaskalev/buddy_alloc/actions/workflows/main.yml) [![CodeQL](https://github.com/spaskalev/buddy_alloc/actions/workflows/codeql.yml/badge.svg)](https://github.com/spaskalev/buddy_alloc/actions/workflows/codeql.yml)
 - [Latest release](https://github.com/spaskalev/buddy_alloc/releases/latest)
 - [Changes](CHANGES.md)
 
