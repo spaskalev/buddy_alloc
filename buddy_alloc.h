@@ -1752,8 +1752,8 @@ unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct buddy_tree_
  * Based on https://asawicki.info/news_1757_a_metric_for_memory_fragmentation
  */
 static unsigned char buddy_tree_fragmentation(struct buddy_tree *t) {
-    const size_t fractional_bits = 8;
-    const size_t fractional_mask = 255;
+    const unsigned char fractional_bits = 8;
+    const unsigned char fractional_mask = 255;
 
     uint8_t tree_order;
     size_t root_status, quality, total_free_size, virtual_size, quality_percent;
