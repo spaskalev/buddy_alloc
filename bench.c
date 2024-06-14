@@ -22,8 +22,8 @@ int main() {
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	size_t arena_size = 1 << 30;
-	unsigned char *buddy_buf = malloc(buddy_sizeof_alignment(arena_size, 64));
-	unsigned char *data_buf = malloc(arena_size);
+	unsigned char *buddy_buf = (unsigned char *) malloc(buddy_sizeof_alignment(arena_size, 64));
+	unsigned char *data_buf = (unsigned char *) malloc(arena_size);
 	struct buddy *buddy = buddy_init_alignment(buddy_buf, data_buf, arena_size, 64);
 
 	double total = 0;
