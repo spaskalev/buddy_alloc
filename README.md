@@ -22,7 +22,7 @@ This is a buddy memory allocator that might be suitable for use in applications 
 - 100% line and branch test coverage
 - Supports 32-bit and 64-bit platforms
 - Endian-agnostic, works on both LE and BE
-- Compiles with GCC, Clang and MSVC
+- Compiles with GCC, Clang, MSVC and Pelles C
 
 ## Usage
 
