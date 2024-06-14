@@ -1795,6 +1795,7 @@ void test_buddy_is_full(void) {
 void test_buddy_slot_alignment(void) {
 	size_t arena_size = 4096;
 	size_t max_alignment = 4096;
+	size_t slot_alignment;
 	void *arena, *alloc, *slot;
 	struct buddy *buddy;
 	start_test;
@@ -1805,7 +1806,8 @@ void test_buddy_slot_alignment(void) {
 
 		for(size_t i = 0; i < (arena_size/alignment); i++) {
 			slot = buddy_malloc(buddy, alignment);
-			assert((((uintptr_t) slot) % alignment) == 0);
+			slot_alignment = ((uintptr_t)slot) % alignment;
+			assert(slot_alignment == 0);
 		}
 
 		assert(buddy_arena_free_size(buddy) == 0);
