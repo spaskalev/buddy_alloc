@@ -187,6 +187,17 @@ typedef signed long ssize_t;
 #define _SSIZE_T_DEFINED
 #endif
 
+/* Support compiling with Pelles C */
+#if defined(__POCC__) && defined(__POCC_TARGET__)
+#if __POCC_TARGET__ == 3
+typedef signed long long ssize_t;
+#elif __POCC_TARGET__ == 1
+typedef signed long ssize_t;
+#else
+#error Uknown POCC target
+#endif
+#endif
+
 #ifndef BUDDY_PRINTF
 #define BUDDY_PRINTF printf
 #endif

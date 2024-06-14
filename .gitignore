@@ -59,3 +59,9 @@ dkms.conf
 
 # Perf
 bench
+
+# cmake output dir
+out/*
+
+# visual studio metadata
+.vs/*
