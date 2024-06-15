@@ -12,7 +12,7 @@ This project is licensed under the 0BSD license. See the LICENSE.md file for det
 
 ## Overview
 
-This is a buddy memory allocator that might be suitable for use in applications that require predictable allocation and deallocation behavior. The allocator's metadata is kept separate from the arena and its size is a function of the arena's size.
+This is a memory allocator suitable for use in applications that require predictable allocation and deallocation behavior. The allocator's metadata is kept separate from the arena and its size is a function of the arena and minimum allocations sizes.
 
 ## Features
 
@@ -26,7 +26,7 @@ This is a buddy memory allocator that might be suitable for use in applications 
 
 ## Usage
 
-Here is an example of initializing and using the buddy allocator with metadata external to the arena.
+Initializing and using the buddy allocator with metadata external to the arena is donw using the `buddy_init` function.
 
 ```c
 size_t arena_size = 65536;
@@ -44,7 +44,7 @@ free(buddy_metadata);
 free(buddy_arena);
 ```
 
-Here is an example of initializing and using the buddy allocator with metadata internal to the arena.
+Initializing and using the buddy allocator with metadata internal to the arena is done using the `buddy_embed` function.
 
 ```c
 size_t arena_size = 65536;
@@ -64,21 +64,21 @@ free(buddy_arena);
 
 The allocator was designed with the following requirements in mind.
 
-- Allocation and deallocation operations should behave in a similar and predictable way regardless of the state of the allocator
-- The allocator's metadata size should be predictable based on the arena's size and not dependent on the state of the allocator
-- The allocator's metadata location should be external to the arena
-- Returned memory should be aligned to size_t
+- Allocation and deallocation operations should behave in a similar and predictable way regardless of the state of the allocator.
+- The allocator's metadata size should be predictable based on the arena's size and not dependent on the state of the allocator.
+- The allocator's metadata location should be external to the arena.
+- Returned memory should be aligned to known and specified block size.
 
 The following were not design goals
 
-- multithreading use
-- malloc() replacement
+- To be used by multiple threads at the same time without additional locking.
+- To be a general purpose malloc() replacement.
 
 ## Rationale
 
 ### Why use a custom allocator (like buddy_alloc) ?
 
-A custom allocator is useful where there is no system allocator (e.g. bare-metal) or when the system allocator does not meet some particular requirements, usually in terms of performance or features. The buddy_alloc custom allocator has bounded performance and bounded storage overhead for its metadata. The bounded performance is important in time-sensitive systems that must perform some action in a given amount of time. The bounded storage overhead is important for ensuring system reliability and allows for upfront system resource planing.
+A custom allocator is useful where there is no system allocator (e.g. on bare-metal) or when the system allocator does not meet some particular requirements, usually in terms of performance or features. The buddy_alloc custom allocator has bounded performance and bounded storage overhead for its metadata. The bounded performance is important in time-sensitive systems that must perform some action in a given amount of time. The bounded storage overhead is important for ensuring system reliability and allows for upfront system resource planing.
 
 A common example of systems that require both bound performance and bounded storage overhead from their components are games and gaming consoles. Games are time-sensitive in multiple aspects - they have to render frames fast to ensure a smooth display and sample input regularly to account for player input. But just fast is not enough - if an allocator is fast on average but occasionally an operation happens to be an order of magnitude slower this will impact both the display of the game as well as the input and may frustrate the player. Games and game consoles are also sensitive to their storage requirements - game consoles usually ship with fixed hardware and game developers have to optimize their games to perform well on the given machines.
 
@@ -130,7 +130,7 @@ The allocator uses a bitset-backed perfect binary tree to track allocations. The
 
 ### Allocation and deallocation
 
-The binary tree nodes are labeled with the largest allocation slot available under them. This allows allocation to happen with a limited number of operations. Allocations that cannot be satisfied are fast to fail. Once a free node of the desired size is found it is marked as used and the nodes leading to root of the tree are updated to account for any difference in the largest available size. Deallocation works in a similar way - the smallest used block size for the given address is found, marked as a free and the same node update as with allocation is used to update the tree. 
+The binary tree nodes are labeled with the largest allocation slot available under them. This allows allocation to happen with a limited number of operations. Allocations that cannot be satisfied are fast to fail. Once a free node of the desired size is found it is marked as used and the nodes leading to root of the tree are updated to account for any difference in the largest available size. Deallocation works in a similar way - the allocated block size for the given address is found, marked as free and the same node update as with allocation is used to update the tree upwards. 
 
 #### Fragmentation
 
