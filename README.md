@@ -26,7 +26,7 @@ This is a memory allocator suitable for use in applications that require predict
 
 ## Usage
 
-Initializing and using the buddy allocator with metadata external to the arena is donw using the `buddy_init` function.
+Initializing and using the buddy allocator with metadata external to the arena is done using the `buddy_init` function.
 
 ```c
 size_t arena_size = 65536;
