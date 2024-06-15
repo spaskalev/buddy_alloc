@@ -60,6 +60,33 @@ buddy_free(buddy, data);
 free(buddy_arena);
 ```
 
+## Metadata sizing
+
+The following table documents the allocator metadata space requirements according to desired arena (8MB to 1024GB) and alignment/minimum allocation (64B to 8KB) sizes. The resulting values are rounded up to the nearest unit.
+
+```
+         |     64B |   128B |   256B |   512B |    1KB |    2KB |    4KB |    8KB |
+---------+---------+--------+--------+--------+--------+--------+--------+--------+
+    8 MB |    65KB |   33KB |   17KB |    9KB |    5KB |    3KB |    2KB |   678B |
+   16 MB |   129KB |   65KB |   33KB |   17KB |    9KB |    5KB |    3KB |    2KB |
+   32 MB |   257KB |  129KB |   65KB |   33KB |   17KB |    9KB |    5KB |    3KB |
+   64 MB |   513KB |  257KB |  129KB |   65KB |   33KB |   17KB |    9KB |    5KB |
+  128 MB |     2MB |  513KB |  257KB |  129KB |   65KB |   33KB |   17KB |    9KB |
+  256 MB |     3MB |    2MB |  513KB |  257KB |  129KB |   65KB |   33KB |   17KB |
+  512 MB |     5MB |    3MB |    2MB |  513KB |  257KB |  129KB |   65KB |   33KB |
+    1 GB |     9MB |    5MB |    3MB |    2MB |  513KB |  257KB |  129KB |   65KB |
+    2 GB |    17MB |    9MB |    5MB |    3MB |    2MB |  513KB |  257KB |  129KB |
+    4 GB |    33MB |   17MB |    9MB |    5MB |    3MB |    2MB |  513KB |  257KB |
+    8 GB |    65MB |   33MB |   17MB |    9MB |    5MB |    3MB |    2MB |  513KB |
+   16 GB |   129MB |   65MB |   33MB |   17MB |    9MB |    5MB |    3MB |    2MB |
+   32 GB |   257MB |  129MB |   65MB |   33MB |   17MB |    9MB |    5MB |    3MB |
+   64 GB |   513MB |  257MB |  129MB |   65MB |   33MB |   17MB |    9MB |    5MB |
+  128 GB |  1025MB |  513MB |  257MB |  129MB |   65MB |   33MB |   17MB |    9MB |
+  256 GB |  2049MB | 1025MB |  513MB |  257MB |  129MB |   65MB |   33MB |   17MB |
+  512 GB |  4097MB | 2049MB | 1025MB |  513MB |  257MB |  129MB |   65MB |   33MB |
+ 1024 GB |  8193MB | 4097MB | 2049MB | 1025MB |  513MB |  257MB |  129MB |   65MB |
+```
+
 ## Design
 
 The allocator was designed with the following requirements in mind.
