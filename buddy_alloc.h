@@ -57,11 +57,23 @@ struct buddy *buddy_init_alignment(unsigned char *at, unsigned char *main, size_
 struct buddy *buddy_embed(unsigned char *main, size_t memory_size);
 
 /*
+ * Returns the address of a previously-created buddy allocator at the arena.
+ * Use to get a new handle to the allocator when the arena is moved or copied.
+ */
+struct buddy *buddy_get_embed_at(unsigned char *main, size_t memory_size);
+
+/*
  * Initializes a binary buddy memory allocator embedded in the specified arena
  * using a non-default alignment.
  * The arena's capacity is reduced to account for the allocator metadata.
  */
 struct buddy *buddy_embed_alignment(unsigned char *main, size_t memory_size, size_t alignment);
+
+/*
+ * Returns the address of a previously-created buddy allocator at the arena.
+ * Use to get a new handle to the allocator when the arena is moved or copied.
+ */
+struct buddy *buddy_get_embed_at_alignment(unsigned char *main, size_t memory_size, size_t alignment);
 
 /* Resizes the arena and metadata to a new size. */
 struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size);
@@ -502,6 +514,10 @@ struct buddy *buddy_embed(unsigned char *main, size_t memory_size) {
     return buddy_embed_alignment(main, memory_size, BUDDY_ALLOC_ALIGN);
 }
 
+struct buddy *buddy_get_embed_at(unsigned char *main, size_t memory_size) {
+    return buddy_get_embed_at_alignment(main, memory_size, BUDDY_ALLOC_ALIGN);
+}
+
 struct buddy *buddy_embed_alignment(unsigned char *main, size_t memory_size, size_t alignment) {
     struct buddy_embed_check check_result;
     struct buddy *buddy;
@@ -525,6 +541,14 @@ struct buddy *buddy_embed_alignment(unsigned char *main, size_t memory_size, siz
     buddy->buddy_flags |= BUDDY_RELATIVE_MODE;
     buddy->arena.main_offset = (unsigned char *)buddy - main;
     return buddy;
+}
+
+struct buddy *buddy_get_embed_at_alignment(unsigned char *main, size_t memory_size, size_t alignment) {
+    struct buddy_embed_check check_result = buddy_embed_offset(memory_size, alignment);
+    if (!check_result.can_fit) {
+        return NULL;
+    }
+    return (struct buddy *)(main + check_result.offset);
 }
 
 struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size) {
