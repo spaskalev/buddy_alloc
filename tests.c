@@ -345,6 +345,7 @@ void test_buddy_resize_up_within_reserved(void) {
 	buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 896) == buddy);
+	assert(buddy_resize(buddy, 768) == buddy);
 	free(buddy_buf);
 }
 
@@ -356,6 +357,7 @@ void test_buddy_resize_up_at_reserved(void) {
 	buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 1024) == buddy);
+	assert(buddy_resize(buddy, 768) == buddy);
 	free(buddy_buf);
 }
 
@@ -367,6 +369,7 @@ void test_buddy_resize_up_after_reserved(void) {
 	buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 2048) == buddy);
+	assert(buddy_resize(buddy, 768) == buddy);
 	free(buddy_buf);
 }
 
@@ -378,6 +381,7 @@ void test_buddy_resize_down_to_virtual(void) {
 	buddy = buddy_init(buddy_buf, data_buf, 1024);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 832) == buddy);
+	assert(buddy_resize(buddy, 1024) == buddy);
 	free(buddy_buf);
 }
 
@@ -389,6 +393,7 @@ void test_buddy_resize_down_to_virtual_partial(void) {
 	buddy = buddy_init(buddy_buf, data_buf, 1024);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 832-1) == buddy);
+	assert(buddy_resize(buddy, 1024) == buddy);
 	free(buddy_buf);
 }
 
@@ -400,6 +405,7 @@ void test_buddy_resize_down_within_reserved(void) {
 	buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 640) == buddy);
+	assert(buddy_resize(buddy, 768) == buddy);
 	free(buddy_buf);
 }
 
@@ -428,6 +434,7 @@ void test_buddy_resize_down_at_reserved(void) {
 	buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 512) == buddy);
+	assert(buddy_resize(buddy, 768) == buddy);
 	free(buddy_buf);
 }
 
@@ -439,6 +446,7 @@ void test_buddy_resize_down_before_reserved(void) {
 	buddy = buddy_init(buddy_buf, data_buf, 768);
 	assert(buddy != NULL);
 	assert(buddy_resize(buddy, 448) == buddy);
+	assert(buddy_resize(buddy, 768) == buddy);
 	free(buddy_buf);
 }
 
@@ -883,11 +891,11 @@ void test_buddy_safe_free_coverage(void) {
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf+1024, 1024);
 	assert(buddy != NULL);
-	buddy_safe_free(NULL, NULL, 0);
-	buddy_safe_free(NULL, data_buf+1024, 0);
-	buddy_safe_free(buddy, NULL, 0);
-	buddy_safe_free(buddy, data_buf, 0);
-	buddy_safe_free(buddy, data_buf+2048, 0);
+	assert(buddy_safe_free(NULL, NULL, 0) == BUDDY_SAFE_FREE_BUDDY_IS_NULL);
+	assert(buddy_safe_free(buddy, NULL, 0) == BUDDY_SAFE_FREE_INVALID_ADDRESS);
+	assert(buddy_safe_free(buddy, data_buf, 0) == BUDDY_SAFE_FREE_INVALID_ADDRESS);
+	assert(buddy_safe_free(buddy, data_buf+2048, 0) == BUDDY_SAFE_FREE_INVALID_ADDRESS);
+	assert(buddy_safe_free(buddy, data_buf+1024, 1024) == BUDDY_SAFE_FREE_INVALID_ADDRESS);
 	free(buddy_buf);
 }
 
@@ -897,7 +905,7 @@ void test_buddy_safe_free_alignment(void) {
 	struct buddy *buddy;
 	start_test;
 	buddy = buddy_init(buddy_buf, data_buf, 4096);
-	buddy_safe_free(buddy, data_buf+1, 0);
+	assert(buddy_safe_free(buddy, data_buf+1, 0) == BUDDY_SAFE_FREE_INVALID_ADDRESS);
 	free(buddy_buf);
 }
 
@@ -915,11 +923,11 @@ void test_buddy_safe_free_invalid_free_01(void) {
 	r = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
 	assert(r != NULL);
 	assert(l != r);
-	buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN);
+	assert(buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN) == BUDDY_SAFE_FREE_SUCCESS);
 	memcpy(buddy_buf_control, buddy_buf, buddy_sizeof(size));
 	// double-free on a right node
 	// that will propagate to a partially-allocated parent
-	buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN);
+	assert(buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN) == BUDDY_SAFE_FREE_INVALID_ADDRESS);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
 	free(buddy_buf);
 	free(buddy_buf_control);
@@ -939,12 +947,12 @@ void test_buddy_safe_free_invalid_free_02(void) {
 	r = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
 	assert(r != NULL);
 	assert(l != r);
-	buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN);
-	buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN);
+	assert(buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN) == BUDDY_SAFE_FREE_SUCCESS);
+	assert(buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN) == BUDDY_SAFE_FREE_SUCCESS);
 	memcpy(buddy_buf_control, buddy_buf, buddy_sizeof(size));
 	// double-free on a right node
 	// that will propagate to a unallocated parent
-	buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN);
+	assert(buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN) == BUDDY_SAFE_FREE_INVALID_ADDRESS);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
 	free(buddy_buf);
 	free(buddy_buf_control);
@@ -964,14 +972,14 @@ void test_buddy_safe_free_invalid_free_03(void) {
 	r = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
 	assert(r != NULL);
 	assert(l != r);
-	buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN);
-	buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN);
+	assert(buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN) == BUDDY_SAFE_FREE_SUCCESS);
+	assert(buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN) == BUDDY_SAFE_FREE_SUCCESS);
 	m = buddy_malloc(buddy, size); // full allocation
 	assert(m == l); // at the start of the arena
 	memcpy(buddy_buf_control, buddy_buf, buddy_sizeof(size));
 	// double-free on a right node
 	// that will propagate to a fully-allocated parent
-	buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN);
+	assert(buddy_safe_free(buddy, r, BUDDY_ALLOC_ALIGN) == BUDDY_SAFE_FREE_INVALID_ADDRESS);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
 	free(buddy_buf);
 	free(buddy_buf_control);
@@ -991,12 +999,11 @@ void test_buddy_safe_free_invalid_free_04(void) {
 	r = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
 	assert(r != NULL);
 	assert(l != r);
-	buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN);
+	assert(buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN) == BUDDY_SAFE_FREE_SUCCESS);
 	memcpy(buddy_buf_control, buddy_buf, buddy_sizeof(size));
 	// double-free on a left node
 	// that will propagate to a partially-allocated parent
-	buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN);
-	/* the use check in buddy_tree_release handles this case */
+	assert(buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN*2) == BUDDY_SAFE_FREE_INVALID_ADDRESS);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
 	free(buddy_buf);
 	free(buddy_buf_control);
@@ -1014,7 +1021,7 @@ void test_buddy_safe_free_invalid_free_05(void) {
 	l = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN);
 	memcpy(buddy_buf_control, buddy_buf, buddy_sizeof(size));
 	// safe free with double size
-	buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN * 2);
+	assert(buddy_safe_free(buddy, l, BUDDY_ALLOC_ALIGN * 2) == BUDDY_SAFE_FREE_SIZE_MISMATCH);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
 	free(buddy_buf);
 	free(buddy_buf_control);
@@ -1032,7 +1039,7 @@ void test_buddy_safe_free_invalid_free_06(void) {
 	m = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN*2);
 	memcpy(buddy_buf_control, buddy_buf, buddy_sizeof(size));
 	// safe free with half size
-	buddy_safe_free(buddy, m, BUDDY_ALLOC_ALIGN);
+	assert(buddy_safe_free(buddy, m, BUDDY_ALLOC_ALIGN) == BUDDY_SAFE_FREE_SIZE_MISMATCH);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
 	free(buddy_buf);
 	free(buddy_buf_control);
@@ -1050,7 +1057,7 @@ void test_buddy_safe_free_invalid_free_07(void) {
 	m = buddy_malloc(buddy, BUDDY_ALLOC_ALIGN*2);
 	memcpy(buddy_buf_control, buddy_buf, buddy_sizeof(size));
 	// safe free with zero size
-	buddy_safe_free(buddy, m, 0);
+	assert(buddy_safe_free(buddy, m, 0) == BUDDY_SAFE_FREE_SIZE_MISMATCH);
 	assert(memcmp(buddy_buf_control, buddy_buf, buddy_sizeof(size)) == 0);
 	free(buddy_buf);
 	free(buddy_buf_control);
