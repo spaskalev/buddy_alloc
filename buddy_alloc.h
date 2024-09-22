@@ -114,8 +114,16 @@ void *buddy_reallocarray(struct buddy *buddy, void *ptr,
 /* Use the specified buddy to free memory. See free. */
 void buddy_free(struct buddy *buddy, void *ptr);
 
+enum buddy_safe_free_status {
+    BUDDY_SAFE_FREE_SUCCESS,
+    BUDDY_SAFE_FREE_BUDDY_IS_NULL,
+    BUDDY_SAFE_FREE_INVALID_ADDRESS,
+    BUDDY_SAFE_FREE_SIZE_MISMATCH,
+    BUDDY_SAFE_FREE_ALREADY_FREE,
+};
+
 /* A (safer) free with a size. Will not free unless the size fits the target span. */
-void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size);
+enum buddy_safe_free_status buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size);
 
 /*
  * Reservation functions
@@ -321,8 +329,13 @@ static size_t buddy_tree_status(struct buddy_tree *t, struct buddy_tree_pos pos)
 /* Marks the indicated position as allocated and propagates the change */
 static void buddy_tree_mark(struct buddy_tree *t, struct buddy_tree_pos pos);
 
+enum buddy_tree_release_status {
+    BUDDY_TREE_RELEASE_SUCCESS,
+    BUDDY_TREE_RELEASE_FAIL_PARTIALLY_USED,
+};
+
 /* Marks the indicated position as free and propagates the change */
-static void buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos);
+static enum buddy_tree_release_status buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos);
 
 /* Returns a free position at the specified depth or an invalid position */
 static struct buddy_tree_pos buddy_tree_find_free(struct buddy_tree *t, uint8_t depth);
@@ -849,30 +862,31 @@ void buddy_free(struct buddy *buddy, void *ptr) {
     buddy_tree_release(tree, pos);
 }
 
-void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size) {
-    unsigned char *dst, *main;
-    struct buddy_tree *tree;
+enum buddy_safe_free_status buddy_safe_free(struct buddy* buddy, void* ptr, size_t requested_size) {
+    unsigned char* dst, * main;
+    struct buddy_tree* tree;
     struct buddy_tree_pos pos;
     size_t allocated_size_for_depth;
+    enum buddy_tree_release_status status;
 
     if (buddy == NULL) {
-        return;
+        return BUDDY_SAFE_FREE_BUDDY_IS_NULL;
     }
     if (ptr == NULL) {
-        return;
+        return BUDDY_SAFE_FREE_INVALID_ADDRESS;
     }
-    dst = (unsigned char *)ptr;
+    dst = (unsigned char*)ptr;
     main = buddy_main(buddy);
     if ((dst < main) || (dst >= (main + buddy->memory_size))) {
-        return;
+        return BUDDY_SAFE_FREE_INVALID_ADDRESS;
     }
 
-    /* Find the position tracking this address */
+    /* Find an allocated position tracking this address */
     tree = buddy_tree(buddy);
     pos = position_for_address(buddy, dst);
 
-    if (! buddy_tree_valid(tree, pos)) {
-        return;
+    if (!buddy_tree_valid(tree, pos)) {
+        return BUDDY_SAFE_FREE_INVALID_ADDRESS;
     }
 
     allocated_size_for_depth = size_for_depth(buddy, pos.depth);
@@ -880,14 +894,23 @@ void buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size) {
         requested_size = buddy->alignment;
     }
     if (requested_size > allocated_size_for_depth) {
-        return;
+        return BUDDY_SAFE_FREE_SIZE_MISMATCH;
     }
     if (requested_size <= (allocated_size_for_depth / 2)) {
-        return;
+        return BUDDY_SAFE_FREE_SIZE_MISMATCH;
     }
 
     /* Release the position */
-    buddy_tree_release(tree, pos);
+    status = buddy_tree_release(tree, pos);
+
+    switch (status) {
+    case BUDDY_TREE_RELEASE_FAIL_PARTIALLY_USED:
+        return BUDDY_SAFE_FREE_INVALID_ADDRESS;
+    case BUDDY_TREE_RELEASE_SUCCESS:
+        break;
+    }
+
+    return BUDDY_SAFE_FREE_SUCCESS;
 }
 
 void buddy_reserve_range(struct buddy *buddy, void *ptr, size_t requested_size) {
@@ -1062,7 +1085,6 @@ static unsigned int buddy_relative_mode(struct buddy *buddy) {
 
 static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) {
     size_t delta, memory_size, effective_memory_size;
-    void (*toggle)(struct buddy_tree *, struct buddy_tree_pos);
     struct buddy_tree *tree;
     struct buddy_tree_pos pos;
 
@@ -1077,16 +1099,18 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) 
     /* Node memory size is already aligned to buddy->alignment */
     delta = effective_memory_size - memory_size;
 
-    /* Determine whether to mark or release */
-    toggle = state ? &buddy_tree_mark : &buddy_tree_release;
-
     tree = buddy_tree(buddy);
     pos = buddy_tree_right_child(buddy_tree_root());
     while (delta) {
         size_t current_pos_size = size_for_depth(buddy, buddy_tree_depth(pos));
         if (delta == current_pos_size) {
             /* toggle current pos */
-            (*toggle)(tree, pos);
+            if (state) {
+                buddy_tree_mark(tree, pos);
+            }
+            else {
+                buddy_tree_release(tree, pos);
+            }
             break;
         }
         if (delta <= (current_pos_size / 2)) {
@@ -1095,7 +1119,12 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) 
             continue;
         } else {
             /* toggle right child */
-            (*toggle)(tree, buddy_tree_right_child(pos));
+            if (state) {
+                buddy_tree_mark(tree, buddy_tree_right_child(pos));
+            }
+            else {
+                buddy_tree_release(tree, buddy_tree_right_child(pos));
+            }
             /* reduce delta */
             delta -= current_pos_size / 2;
             /* re-run for left child */
@@ -1107,7 +1136,6 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) 
 
 static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_t requested_size, unsigned int state) {
     unsigned char *dst, *main;
-    void (*toggle)(struct buddy_tree *, struct buddy_tree_pos);
     struct buddy_tree *tree;
     size_t offset;
     struct buddy_tree_pos pos;
@@ -1127,9 +1155,6 @@ static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_
         return;
     }
 
-    /* Determine whether to mark or release */
-    toggle = state ? &buddy_tree_mark : &buddy_tree_release;
-
     /* Find the deepest position tracking this address */
     tree = buddy_tree(buddy);
     offset = (size_t) (dst - main);
@@ -1137,7 +1162,12 @@ static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_
 
     /* Advance one position at a time and process */
     while (requested_size) {
-        (*toggle)(tree, pos);
+        if (state) {
+            buddy_tree_mark(tree, pos);
+        }
+        else {
+            buddy_tree_release(tree, pos);
+        }
         requested_size = (requested_size < buddy->alignment) ? 0 : (requested_size - buddy->alignment);
         pos.index++;
     }
@@ -1597,12 +1627,12 @@ static void buddy_tree_mark(struct buddy_tree *t, struct buddy_tree_pos pos) {
     update_parent_chain(t, pos, internal, internal.local_offset);
 }
 
-static void buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos) {
+static enum buddy_tree_release_status buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos) {
     /* Calling release on an unused or a partially-used position a bug in caller */
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
 
     if (read_from_internal_position(buddy_tree_bits(t), internal) != internal.local_offset) {
-        return;
+        return BUDDY_TREE_RELEASE_FAIL_PARTIALLY_USED;
     }
 
     /* Mark the node as unused */
@@ -1610,6 +1640,8 @@ static void buddy_tree_release(struct buddy_tree *t, struct buddy_tree_pos pos) 
 
     /* Update the tree upwards */
     update_parent_chain(t, pos, internal, 0);
+
+    return BUDDY_TREE_RELEASE_SUCCESS;
 }
 
 static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
