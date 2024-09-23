@@ -1853,6 +1853,7 @@ void test_buddy_invalid_slot_alignment(void) {
 	assert(buddy_embed_alignment(arena, 4096, 3) == NULL);
 }
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 struct buddy_change_tracker_context {
 	size_t total_length;
 	size_t total_calls;
@@ -1864,7 +1865,6 @@ void buddy_change_tracker_cb(void* context, unsigned char* addr, size_t length) 
 	tracker_context->total_calls++;
 }
 
-#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 void test_buddy_change_tracking() {
 	struct buddy_change_tracker_context context = {0};
 	unsigned char arena[4096] = {0};
