@@ -159,6 +159,24 @@ void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t s
  */
 unsigned char buddy_fragmentation(struct buddy *buddy);
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
+/*
+ * Enable change tracking for this allocator instance.
+ *
+ * This will store a header at the start of the arena that contains the function pointer (tracker) and
+ * a void* (context). The tracker will be called with the context, the start of changed memory and its length.
+ *
+ * This function MUST be called before any allocations are performed!
+ *
+ * Change tracking is in effect only for allocation functions, resizing functions are excluded from it.
+ *
+ * This is an experimental feature designed to facilitate integration with https://github.com/spaskalev/libpvl
+ *
+ * The API is not (yet) part of the allocator contract and its semantic versioning!
+ */
+void buddy_enable_change_tracking(struct buddy* buddy, void* context, void (*tracker) (void*, unsigned char*, size_t));
+#endif
+
 #ifdef __cplusplus
 #ifndef BUDDY_CPP_MANGLED
 }
@@ -229,6 +247,11 @@ typedef signed long ssize_t;
 /* Implementation defined */
 void buddy_debug(struct buddy *buddy);
 
+struct buddy_change_tracker {
+    void* context;
+    void (*tracker) (void*, unsigned char*, size_t);
+};
+
 struct buddy_tree;
 
 struct buddy_tree_pos {
@@ -270,9 +293,16 @@ static bool buddy_tree_valid(struct buddy_tree *t, struct buddy_tree_pos pos);
 /* Returns the order of the specified buddy allocation tree */
 static uint8_t buddy_tree_order(struct buddy_tree *t);
 
-/* Resize the tree to the new order. When downsizing the left subtree is picked. */
-/* Caller must ensure enough space for the new order. */
+/*
+ * Resize the tree to the new order. When downsizing the left subtree is picked.
+ * Caller must ensure enough space for the new order.
+ */
 static void buddy_tree_resize(struct buddy_tree *t, uint8_t desired_order);
+
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
+/* Enable change tracking state for this tree. */
+static void buddy_tree_enable_change_tracking(struct buddy_tree *t);
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
 
 /*
  * Navigation functions
@@ -347,6 +377,13 @@ static bool buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_pos pos);
 static bool buddy_tree_can_shrink(struct buddy_tree *t);
 
 /*
+ * Integration functions
+ */
+
+/* Get a pointer to the parent buddy struct */
+static struct buddy* buddy_tree_buddy(struct buddy_tree* t);
+
+/*
  * Debug functions
  */
 
@@ -365,11 +402,21 @@ static unsigned char buddy_tree_fragmentation(struct buddy_tree *t);
 
 static size_t bitset_sizeof(size_t elements);
 
-static void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_pos);
+struct bitset_range {
+    size_t from_bucket;
+    size_t to_bucket;
 
-static void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to_pos);
+    uint8_t from_index;
+    uint8_t to_index;
+};
 
-static size_t bitset_count_range(unsigned char *bitset, size_t from_pos, size_t to_pos);
+static inline struct bitset_range bitset_range(size_t from_pos, size_t to_pos);
+
+static void bitset_set_range(unsigned char *bitset, struct bitset_range range);
+
+static void bitset_clear_range(unsigned char *bitset, struct bitset_range range);
+
+static size_t bitset_count_range(unsigned char *bitset, struct bitset_range range);
 
 static inline void bitset_set(unsigned char *bitset, size_t pos);
 
@@ -992,6 +1039,24 @@ unsigned char buddy_fragmentation(struct buddy *buddy) {
     return buddy_tree_fragmentation(buddy_tree(buddy));
 }
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
+void buddy_enable_change_tracking(struct buddy* buddy, void* context, void (*tracker) (void*, unsigned char*, size_t)) {
+    struct buddy_tree *t = buddy_tree(buddy);
+    struct buddy_change_tracker *header = (struct buddy_change_tracker *) buddy_main(buddy);
+
+    /* Allocate memory for the change tracking header */
+    buddy_reserve_range(buddy, buddy_main(buddy), sizeof(struct buddy_change_tracker));
+
+    /* Fill in the change tracking header */
+    header->context = context;
+    header->tracker = tracker;
+
+    /* Indicate that the tree should perform change tracking */
+    buddy_tree_enable_change_tracking(t);
+}
+#endif
+
+
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
     size_t depth, effective_memory_size;
     if (requested_size < buddy->alignment) {
@@ -1265,6 +1330,15 @@ struct buddy_tree {
     size_t upper_pos_bound;
     size_t size_for_order_offset;
     uint8_t order;
+    uint8_t flags;
+    /*
+     * struct padding rules mean that there are
+     * 16/48 bits available until the next increment
+     */
+};
+
+enum buddy_tree_flags {
+    BUDDY_TREE_CHANGE_TRACKING = 1,
 };
 
 struct internal_position {
@@ -1286,9 +1360,13 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
 static inline unsigned char *buddy_tree_bits(struct buddy_tree *t);
 static void buddy_tree_populate_size_for_order(struct buddy_tree *t);
 static inline size_t buddy_tree_size_for_order(struct buddy_tree *t, uint8_t to);
-static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value);
+static void write_to_internal_position(struct buddy_tree* t, struct internal_position pos, size_t value);
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos);
 static inline unsigned char compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value);
+
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
+static inline void buddy_tree_track_change(struct buddy_tree* t, unsigned char* addr, size_t length);
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
 
 static inline size_t size_for_order(uint8_t order, uint8_t to) {
     size_t result = 0;
@@ -1349,6 +1427,12 @@ static struct buddy_tree *buddy_tree_init(unsigned char *at, uint8_t order) {
     return t;
 }
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
+static void buddy_tree_enable_change_tracking(struct buddy_tree* t) {
+    t->flags |= BUDDY_TREE_CHANGE_TRACKING;
+}
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
+
 static void buddy_tree_resize(struct buddy_tree *t, uint8_t desired_order) {
     if (t->order == desired_order) {
         return;
@@ -1386,8 +1470,8 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
 
             /* Clear right section */
             bitset_clear_range(buddy_tree_bits(t),
-                next_internal.bitset_location + (next_internal.local_offset * node_count),
-                next_internal.bitset_location + (next_internal.local_offset * node_count * 2) - 1);
+                bitset_range(next_internal.bitset_location + (next_internal.local_offset * node_count),
+                             next_internal.bitset_location + (next_internal.local_offset * node_count * 2) - 1));
 
             /* Handle the upper level */
             current_order -= 1u;
@@ -1538,20 +1622,26 @@ static inline size_t buddy_tree_size_for_order(struct buddy_tree *t,
     return *((size_t *)(((unsigned char *) t) + sizeof(*t)) + t->size_for_order_offset + to);
 }
 
-static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
-    bitset_clear_range(bitset, pos.bitset_location,
-        pos.bitset_location+pos.local_offset-1);
+static void write_to_internal_position(struct buddy_tree* t, struct internal_position pos, size_t value) {
+    unsigned char *bitset = buddy_tree_bits(t);
+    struct bitset_range clear_range = bitset_range(pos.bitset_location, pos.bitset_location + pos.local_offset - 1);
+
+    bitset_clear_range(bitset, clear_range);
     if (value) {
-        bitset_set_range(bitset, pos.bitset_location,
-            pos.bitset_location+value-1);
+        bitset_set_range(bitset, bitset_range(pos.bitset_location, pos.bitset_location+value-1));
     }
+
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
+    /* Ignore the same bucket condition - we don't care if we track one more byte here */
+    buddy_tree_track_change(t, bitset, clear_range.to_bucket - clear_range.from_bucket + 1);
+#endif
 }
 
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos) {
     if (! bitset_test(bitset, pos.bitset_location)) {
         return 0; /* Fast test without complete extraction */
     }
-    return bitset_count_range(bitset, pos.bitset_location, pos.bitset_location+pos.local_offset-1);
+    return bitset_count_range(bitset, bitset_range(pos.bitset_location, pos.bitset_location+pos.local_offset-1));
 }
 
 static inline unsigned char compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
@@ -1621,7 +1711,7 @@ static void buddy_tree_mark(struct buddy_tree *t, struct buddy_tree_pos pos) {
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
 
     /* Mark the node as used */
-    write_to_internal_position(buddy_tree_bits(t), internal, internal.local_offset);
+    write_to_internal_position(t, internal, internal.local_offset);
 
     /* Update the tree upwards */
     update_parent_chain(t, pos, internal, internal.local_offset);
@@ -1636,7 +1726,7 @@ static enum buddy_tree_release_status buddy_tree_release(struct buddy_tree *t, s
     }
 
     /* Mark the node as unused */
-    write_to_internal_position(buddy_tree_bits(t), internal, 0);
+    write_to_internal_position(t, internal, 0);
 
     /* Update the tree upwards */
     update_parent_chain(t, pos, internal, 0);
@@ -1664,7 +1754,7 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
             return;
         }
 
-        write_to_internal_position(bits, pos_internal, target_parent);
+        write_to_internal_position(t, pos_internal, target_parent);
         size_current = target_parent;
     };
 }
@@ -1746,6 +1836,10 @@ static bool buddy_tree_can_shrink(struct buddy_tree *t) {
         return false; /* Refusing to shrink with the root fully-allocated! */
     }
     return true;
+}
+
+static struct buddy* buddy_tree_buddy(struct buddy_tree* t) {
+    return (struct buddy*)(((unsigned char*)t) - sizeof(struct buddy));
 }
 
 static void buddy_tree_debug(struct buddy_tree *t, struct buddy_tree_pos pos,
@@ -1850,6 +1944,19 @@ static unsigned char buddy_tree_fragmentation(struct buddy_tree *t) {
     return fractional_mask - (quality_percent & fractional_mask);
 }
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
+static inline void buddy_tree_track_change(struct buddy_tree* t, unsigned char* addr, size_t length) {
+    struct buddy_change_tracker *header;
+
+    if (!(t->flags && BUDDY_TREE_CHANGE_TRACKING)) {
+        return;
+    }
+
+    header = (struct buddy_change_tracker *) buddy_main(buddy_tree_buddy(t));
+    header->tracker(header->context, addr, length);
+}
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
+
 /*
  * A char-backed bitset implementation
  */
@@ -1889,59 +1996,52 @@ static const uint8_t bitset_char_mask[8][8] = {
     {0, 0, 0,  0,  0,  0,   0, 128},
 };
 
-static void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
-    size_t from_bucket = from_pos / CHAR_BIT;
-    size_t to_bucket = to_pos / CHAR_BIT;
+static inline struct bitset_range bitset_range(size_t from_pos, size_t to_pos) {
+    struct bitset_range range = {0};
+    range.from_bucket = from_pos / CHAR_BIT;
+    range.to_bucket = to_pos / CHAR_BIT;
 
-    size_t from_index = from_pos % CHAR_BIT;
-    size_t to_index = to_pos % CHAR_BIT;
+    range.from_index = from_pos % CHAR_BIT;
+    range.to_index = to_pos % CHAR_BIT;
+    return range;
+}
 
-    if (from_bucket == to_bucket) {
-        bitset[from_bucket] &= ~bitset_char_mask[from_index][to_index];
+static void bitset_set_range(unsigned char *bitset, struct bitset_range range) {
+    if (range.from_bucket == range.to_bucket) {
+        bitset[range.from_bucket] |= bitset_char_mask[range.from_index][range.to_index];
     } else {
-        bitset[from_bucket] &= ~bitset_char_mask[from_index][7];
-        bitset[to_bucket] &= ~bitset_char_mask[0][to_index];
-        while(++from_bucket != to_bucket) {
-            bitset[from_bucket] = 0;
+        bitset[range.from_bucket] |= bitset_char_mask[range.from_index][7];
+        bitset[range.to_bucket] |= bitset_char_mask[0][range.to_index];
+        while(++range.from_bucket != range.to_bucket) {
+            bitset[range.from_bucket] = 255u;
         }
     }
 }
 
-static void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
-    size_t from_bucket = from_pos / CHAR_BIT;
-    size_t to_bucket = to_pos / CHAR_BIT;
-
-    size_t from_index = from_pos % CHAR_BIT;
-    size_t to_index = to_pos % CHAR_BIT;
-
-    if (from_bucket == to_bucket) {
-        bitset[from_bucket] |= bitset_char_mask[from_index][to_index];
-    } else {
-        bitset[from_bucket] |= bitset_char_mask[from_index][7];
-        bitset[to_bucket] |= bitset_char_mask[0][to_index];
-        while(++from_bucket != to_bucket) {
-            bitset[from_bucket] = 255u;
+static void bitset_clear_range(unsigned char* bitset, struct bitset_range range) {
+    if (range.from_bucket == range.to_bucket) {
+        bitset[range.from_bucket] &= ~bitset_char_mask[range.from_index][range.to_index];
+    }
+    else {
+        bitset[range.from_bucket] &= ~bitset_char_mask[range.from_index][7];
+        bitset[range.to_bucket] &= ~bitset_char_mask[0][range.to_index];
+        while (++range.from_bucket != range.to_bucket) {
+            bitset[range.from_bucket] = 0;
         }
     }
 }
 
-static size_t bitset_count_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
+static size_t bitset_count_range(unsigned char *bitset, struct bitset_range range) {
     size_t result;
 
-    size_t from_bucket = from_pos / CHAR_BIT;
-    size_t to_bucket = to_pos / CHAR_BIT;
-
-    size_t from_index = from_pos % CHAR_BIT;
-    size_t to_index = to_pos % CHAR_BIT;
-
-    if (from_bucket == to_bucket) {
-        return popcount_byte(bitset[from_bucket] & bitset_char_mask[from_index][to_index]);
+    if (range.from_bucket == range.to_bucket) {
+        return popcount_byte(bitset[range.from_bucket] & bitset_char_mask[range.from_index][range.to_index]);
     }
 
-    result = popcount_byte(bitset[from_bucket] & bitset_char_mask[from_index][7])
-        + popcount_byte(bitset[to_bucket]  & bitset_char_mask[0][to_index]);
-    while(++from_bucket != to_bucket) {
-        result += popcount_byte(bitset[from_bucket]);
+    result = popcount_byte(bitset[range.from_bucket] & bitset_char_mask[range.from_index][7])
+        + popcount_byte(bitset[range.to_bucket]  & bitset_char_mask[0][range.to_index]);
+    while(++range.from_bucket != range.to_bucket) {
+        result += popcount_byte(bitset[range.from_bucket]);
     }
     return result;
 }
@@ -1956,7 +2056,7 @@ static void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_
             bitset_clear(bitset, at-by);
         }
     }
-    bitset_clear_range(bitset, length, length+by-1);
+    bitset_clear_range(bitset, bitset_range(length, length+by-1));
 
 }
 
@@ -1971,7 +2071,7 @@ static void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to
         }
         length -= 1;
     }
-    bitset_clear_range(bitset, from_pos, from_pos+by-1);
+    bitset_clear_range(bitset, bitset_range(from_pos, from_pos+by-1));
 }
 
 void bitset_debug(unsigned char *bitset, size_t length) {

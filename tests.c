@@ -103,7 +103,7 @@ void test_bitset_range(void) {
 	for (size_t i = 0; i < bitset_length; i++) {
 		for (size_t j = 0; j <= i; j++) {
 			memset(buf, 0, 4);
-			bitset_set_range(buf, j, i);
+			bitset_set_range(buf, bitset_range(j, i));
 			for (size_t k = 0; k < bitset_length; k++) {
 				if ((k >= j) && (k <= i)) {
 					assert(bitset_test(buf, k));
@@ -111,7 +111,7 @@ void test_bitset_range(void) {
 					assert(!bitset_test(buf, k));
 				}
 			}
-			bitset_clear_range(buf, j, i);
+			bitset_clear_range(buf, bitset_range(j, i));
 			for (size_t k = j; k < i; k++) {
 				assert(!bitset_test(buf, k));
 			}
@@ -172,16 +172,16 @@ void test_bitset_shift(void) {
 void test_bitset_shift_invalid(void) {
 	unsigned char buf[4096] = {0};
 	start_test;
-	bitset_set_range(buf, 1, 0); /* no-op */
+	bitset_set_range(buf, bitset_range(1, 0)); /* no-op */
 	assert(!bitset_test(buf, 0));
 	assert(!bitset_test(buf, 1));
-	bitset_set_range(buf, 0, 1);
+	bitset_set_range(buf, bitset_range(0, 1));
 	assert(bitset_test(buf, 0));
 	assert(bitset_test(buf, 1));
-	bitset_clear_range(buf, 1, 0) /* no-op */;
+	bitset_clear_range(buf, bitset_range(1, 0)) /* no-op */;
 	assert(bitset_test(buf, 0));
 	assert(bitset_test(buf, 1));
-	bitset_clear_range(buf, 0, 1);
+	bitset_clear_range(buf, bitset_range(0, 1));
 	assert(!bitset_test(buf, 0));
 	assert(!bitset_test(buf, 1));
 }
@@ -1853,6 +1853,38 @@ void test_buddy_invalid_slot_alignment(void) {
 	assert(buddy_embed_alignment(arena, 4096, 3) == NULL);
 }
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
+struct buddy_change_tracker_context {
+	size_t total_length;
+	size_t total_calls;
+};
+
+void buddy_change_tracker_cb(void* context, unsigned char* addr, size_t length) {
+	struct buddy_change_tracker_context *tracker_context = (struct buddy_change_tracker_context *) context;
+	tracker_context->total_length += length;
+	tracker_context->total_calls++;
+}
+
+void test_buddy_change_tracking() {
+	struct buddy_change_tracker_context context = {0};
+	unsigned char arena[4096] = {0};
+	struct buddy *buddy = buddy_embed(arena, 4096);
+	void *slot;
+	start_test;
+	buddy_enable_change_tracking(buddy, &context, buddy_change_tracker_cb);
+	assert(context.total_length == 0);
+	assert(context.total_calls == 0);
+	slot = buddy_malloc(buddy, 512);
+	assert(context.total_length == 2);
+	assert(context.total_calls == 2);
+	buddy_free(buddy, slot);
+	assert(context.total_length == 4);
+	assert(context.total_calls == 4);
+}
+#else
+#define test_buddy_change_tracking()
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
+
 void test_buddy_tree_init(void) {
 	unsigned char buddy_tree_buf[4096];
 	start_test;
@@ -2076,7 +2108,7 @@ void test_buddy_tree_check_invariant_positive_01(void) {
 	start_test;
 	t = buddy_tree_init(buddy_tree_buf, 2);
 	root_internal = buddy_tree_internal_position_tree(t, buddy_tree_root());
-	write_to_internal_position(buddy_tree_bits(t), root_internal, 1);
+	write_to_internal_position(t, root_internal, 1);
 	assert(buddy_tree_check_invariant(t, buddy_tree_root()));
 }
 
@@ -2087,7 +2119,7 @@ void test_buddy_tree_check_invariant_positive_02(void) {
 	start_test;
 	t = buddy_tree_init(buddy_tree_buf, 2);
 	left_internal = buddy_tree_internal_position_tree(t, buddy_tree_left_child(buddy_tree_root()));
-	write_to_internal_position(buddy_tree_bits(t), left_internal, 1);
+	write_to_internal_position(t, left_internal, 1);
 	assert(buddy_tree_check_invariant(t, buddy_tree_root()));
 }
 
@@ -2313,6 +2345,16 @@ void test_buddy_tree_interval_contains(void) {
 	assert(buddy_tree_interval_contains(interval_low, interval_high) == 0);
 }
 
+void test_buddy_tree_buddy() {
+	unsigned char buf[4096] = {0};
+	struct buddy *buddy;
+	struct buddy_tree *tree;
+	start_test;
+	buddy = buddy_embed(buf, 4096);
+	tree = buddy_tree(buddy);
+	assert(buddy_tree_buddy(tree) == buddy);
+}
+
 void test_buddy_tree_fragmentation(void) {
 	unsigned char buddy_tree_buf[4096] = {0};
 	struct buddy_tree *t;
@@ -2482,6 +2524,8 @@ int main(void) {
 
 		test_buddy_slot_alignment();
 		test_buddy_invalid_slot_alignment();
+
+		test_buddy_change_tracking();
 	}
 
 	{
@@ -2522,7 +2566,7 @@ int main(void) {
 		test_buddy_tree_is_free_04();
 		test_buddy_tree_interval();
 		test_buddy_tree_interval_contains();
-
+		test_buddy_tree_buddy();
 		test_buddy_tree_fragmentation();
 	}
 	return 0;
