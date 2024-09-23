@@ -1853,6 +1853,34 @@ void test_buddy_invalid_slot_alignment(void) {
 	assert(buddy_embed_alignment(arena, 4096, 3) == NULL);
 }
 
+struct buddy_change_tracker_context {
+	size_t total_length;
+	size_t total_calls;
+};
+
+void buddy_change_tracker_cb(void* context, unsigned char* addr, size_t length) {
+	struct buddy_change_tracker_context *tracker_context = (struct buddy_change_tracker_context *) context;
+	tracker_context->total_length += length;
+	tracker_context->total_calls++;
+}
+
+void test_buddy_change_tracking() {
+	struct buddy_change_tracker_context context = {0};
+	unsigned char arena[4096] = {0};
+	struct buddy *buddy = buddy_embed(arena, 4096);
+	void *slot;
+	start_test;
+	buddy_enable_change_tracking(buddy, &context, buddy_change_tracker_cb);
+	assert(context.total_length == 0);
+	assert(context.total_calls == 0);
+	slot = buddy_malloc(buddy, 512);
+	assert(context.total_length == 2);
+	assert(context.total_calls == 2);
+	buddy_free(buddy, slot);
+	assert(context.total_length == 4);
+	assert(context.total_calls == 4);
+}
+
 void test_buddy_tree_init(void) {
 	unsigned char buddy_tree_buf[4096];
 	start_test;
@@ -2492,6 +2520,8 @@ int main(void) {
 
 		test_buddy_slot_alignment();
 		test_buddy_invalid_slot_alignment();
+
+		test_buddy_change_tracking();
 	}
 
 	{
