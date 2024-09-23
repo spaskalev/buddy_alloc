@@ -159,6 +159,7 @@ void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t s
  */
 unsigned char buddy_fragmentation(struct buddy *buddy);
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 /*
  * Enable change tracking for this allocator instance.
  *
@@ -174,6 +175,7 @@ unsigned char buddy_fragmentation(struct buddy *buddy);
  * The API is not (yet) part of the allocator contract and its semantic versioning!
  */
 void buddy_enable_change_tracking(struct buddy* buddy, void* context, void (*tracker) (void*, unsigned char*, size_t));
+#endif
 
 #ifdef __cplusplus
 #ifndef BUDDY_CPP_MANGLED
@@ -297,8 +299,10 @@ static uint8_t buddy_tree_order(struct buddy_tree *t);
  */
 static void buddy_tree_resize(struct buddy_tree *t, uint8_t desired_order);
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 /* Enable change tracking state for this tree. */
 static void buddy_tree_enable_change_tracking(struct buddy_tree *t);
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
 
 /*
  * Navigation functions
@@ -1035,6 +1039,7 @@ unsigned char buddy_fragmentation(struct buddy *buddy) {
     return buddy_tree_fragmentation(buddy_tree(buddy));
 }
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 void buddy_enable_change_tracking(struct buddy* buddy, void* context, void (*tracker) (void*, unsigned char*, size_t)) {
     struct buddy_tree *t = buddy_tree(buddy);
     struct buddy_change_tracker *header = (struct buddy_change_tracker *) buddy_main(buddy);
@@ -1049,6 +1054,7 @@ void buddy_enable_change_tracking(struct buddy* buddy, void* context, void (*tra
     /* Indicate that the tree should perform change tracking */
     buddy_tree_enable_change_tracking(t);
 }
+#endif
 
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
@@ -1357,7 +1363,10 @@ static inline size_t buddy_tree_size_for_order(struct buddy_tree *t, uint8_t to)
 static void write_to_internal_position(struct buddy_tree* t, struct internal_position pos, size_t value);
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos);
 static inline unsigned char compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value);
+
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 static inline void buddy_tree_track_change(struct buddy_tree* t, unsigned char* addr, size_t length);
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
 
 static inline size_t size_for_order(uint8_t order, uint8_t to) {
     size_t result = 0;
@@ -1418,9 +1427,11 @@ static struct buddy_tree *buddy_tree_init(unsigned char *at, uint8_t order) {
     return t;
 }
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 static void buddy_tree_enable_change_tracking(struct buddy_tree* t) {
     t->flags |= BUDDY_TREE_CHANGE_TRACKING;
 }
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
 
 static void buddy_tree_resize(struct buddy_tree *t, uint8_t desired_order) {
     if (t->order == desired_order) {
@@ -1620,8 +1631,10 @@ static void write_to_internal_position(struct buddy_tree* t, struct internal_pos
         bitset_set_range(bitset, bitset_range(pos.bitset_location, pos.bitset_location+value-1));
     }
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
     /* Ignore the same bucket condition - we don't care if we track one more byte here */
     buddy_tree_track_change(t, bitset, clear_range.to_bucket - clear_range.from_bucket + 1);
+#endif
 }
 
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos) {
@@ -1931,6 +1944,7 @@ static unsigned char buddy_tree_fragmentation(struct buddy_tree *t) {
     return fractional_mask - (quality_percent & fractional_mask);
 }
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 static inline void buddy_tree_track_change(struct buddy_tree* t, unsigned char* addr, size_t length) {
     struct buddy_change_tracker *header;
 
@@ -1941,6 +1955,7 @@ static inline void buddy_tree_track_change(struct buddy_tree* t, unsigned char* 
     header = (struct buddy_change_tracker *) buddy_main(buddy_tree_buddy(t));
     header->tracker(header->context, addr, length);
 }
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
 
 /*
  * A char-backed bitset implementation

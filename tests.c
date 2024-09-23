@@ -1864,6 +1864,7 @@ void buddy_change_tracker_cb(void* context, unsigned char* addr, size_t length) 
 	tracker_context->total_calls++;
 }
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 void test_buddy_change_tracking() {
 	struct buddy_change_tracker_context context = {0};
 	unsigned char arena[4096] = {0};
@@ -1880,6 +1881,9 @@ void test_buddy_change_tracking() {
 	assert(context.total_length == 4);
 	assert(context.total_calls == 4);
 }
+#else
+#define test_buddy_change_tracking()
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
 
 void test_buddy_tree_init(void) {
 	unsigned char buddy_tree_buf[4096];
