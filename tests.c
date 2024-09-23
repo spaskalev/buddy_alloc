@@ -2076,7 +2076,7 @@ void test_buddy_tree_check_invariant_positive_01(void) {
 	start_test;
 	t = buddy_tree_init(buddy_tree_buf, 2);
 	root_internal = buddy_tree_internal_position_tree(t, buddy_tree_root());
-	write_to_internal_position(buddy_tree_bits(t), root_internal, 1);
+	write_to_internal_position(t, root_internal, 1);
 	assert(buddy_tree_check_invariant(t, buddy_tree_root()));
 }
 
@@ -2087,7 +2087,7 @@ void test_buddy_tree_check_invariant_positive_02(void) {
 	start_test;
 	t = buddy_tree_init(buddy_tree_buf, 2);
 	left_internal = buddy_tree_internal_position_tree(t, buddy_tree_left_child(buddy_tree_root()));
-	write_to_internal_position(buddy_tree_bits(t), left_internal, 1);
+	write_to_internal_position(t, left_internal, 1);
 	assert(buddy_tree_check_invariant(t, buddy_tree_root()));
 }
 
@@ -2313,6 +2313,16 @@ void test_buddy_tree_interval_contains(void) {
 	assert(buddy_tree_interval_contains(interval_low, interval_high) == 0);
 }
 
+void test_buddy_tree_buddy() {
+	unsigned char buf[4096] = {0};
+	struct buddy *buddy;
+	struct buddy_tree *tree;
+	start_test;
+	buddy = buddy_embed(buf, 4096);
+	tree = buddy_tree(buddy);
+	assert(buddy_tree_buddy(tree) == buddy);
+}
+
 void test_buddy_tree_fragmentation(void) {
 	unsigned char buddy_tree_buf[4096] = {0};
 	struct buddy_tree *t;
@@ -2522,7 +2532,7 @@ int main(void) {
 		test_buddy_tree_is_free_04();
 		test_buddy_tree_interval();
 		test_buddy_tree_interval_contains();
-
+		test_buddy_tree_buddy();
 		test_buddy_tree_fragmentation();
 	}
 	return 0;

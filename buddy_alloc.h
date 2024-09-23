@@ -159,6 +159,11 @@ void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t s
  */
 unsigned char buddy_fragmentation(struct buddy *buddy);
 
+struct buddy_change_tracker {
+    void *context;
+    void (*tracker) (void *, unsigned char *, size_t);
+};
+
 #ifdef __cplusplus
 #ifndef BUDDY_CPP_MANGLED
 }
@@ -345,6 +350,13 @@ static bool buddy_tree_is_free(struct buddy_tree *t, struct buddy_tree_pos pos);
 
 /* Tests if the tree can be shrank in half */
 static bool buddy_tree_can_shrink(struct buddy_tree *t);
+
+/*
+ * Integration functions
+ */
+
+/* Get a pointer to the parent buddy struct */
+static struct buddy* buddy_tree_buddy(struct buddy_tree* t);
 
 /*
  * Debug functions
@@ -1265,6 +1277,15 @@ struct buddy_tree {
     size_t upper_pos_bound;
     size_t size_for_order_offset;
     uint8_t order;
+    uint8_t flags;
+    /*
+     * struct padding rules mean that there are
+     * 16/48 bits available until the next increment
+     */
+};
+
+enum buddy_tree_flags {
+    BUDDY_TREE_CHANGE_TRACKING = 1,
 };
 
 struct internal_position {
@@ -1286,9 +1307,10 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
 static inline unsigned char *buddy_tree_bits(struct buddy_tree *t);
 static void buddy_tree_populate_size_for_order(struct buddy_tree *t);
 static inline size_t buddy_tree_size_for_order(struct buddy_tree *t, uint8_t to);
-static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value);
+static void write_to_internal_position(struct buddy_tree* t, struct internal_position pos, size_t value);
 static size_t read_from_internal_position(unsigned char *bitset, struct internal_position pos);
 static inline unsigned char compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value);
+static inline void buddy_tree_track_change(struct buddy_tree* t, unsigned char* addr, size_t length);
 
 static inline size_t size_for_order(uint8_t order, uint8_t to) {
     size_t result = 0;
@@ -1538,7 +1560,11 @@ static inline size_t buddy_tree_size_for_order(struct buddy_tree *t,
     return *((size_t *)(((unsigned char *) t) + sizeof(*t)) + t->size_for_order_offset + to);
 }
 
-static void write_to_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
+static void write_to_internal_position(struct buddy_tree* t, struct internal_position pos, size_t value) {
+    unsigned char *bitset = buddy_tree_bits(t);
+    // introduce bitset_range function that populates a range struct
+    // pass that range to clear range and set range (and count range too)
+    // use the range struct to perform change tracking
     bitset_clear_range(bitset, pos.bitset_location,
         pos.bitset_location+pos.local_offset-1);
     if (value) {
@@ -1621,7 +1647,7 @@ static void buddy_tree_mark(struct buddy_tree *t, struct buddy_tree_pos pos) {
     struct internal_position internal = buddy_tree_internal_position_tree(t, pos);
 
     /* Mark the node as used */
-    write_to_internal_position(buddy_tree_bits(t), internal, internal.local_offset);
+    write_to_internal_position(t, internal, internal.local_offset);
 
     /* Update the tree upwards */
     update_parent_chain(t, pos, internal, internal.local_offset);
@@ -1636,7 +1662,7 @@ static enum buddy_tree_release_status buddy_tree_release(struct buddy_tree *t, s
     }
 
     /* Mark the node as unused */
-    write_to_internal_position(buddy_tree_bits(t), internal, 0);
+    write_to_internal_position(t, internal, 0);
 
     /* Update the tree upwards */
     update_parent_chain(t, pos, internal, 0);
@@ -1664,7 +1690,7 @@ static void update_parent_chain(struct buddy_tree *t, struct buddy_tree_pos pos,
             return;
         }
 
-        write_to_internal_position(bits, pos_internal, target_parent);
+        write_to_internal_position(t, pos_internal, target_parent);
         size_current = target_parent;
     };
 }
@@ -1746,6 +1772,10 @@ static bool buddy_tree_can_shrink(struct buddy_tree *t) {
         return false; /* Refusing to shrink with the root fully-allocated! */
     }
     return true;
+}
+
+static struct buddy* buddy_tree_buddy(struct buddy_tree* t) {
+    return (struct buddy*)(((unsigned char*)t) - sizeof(struct buddy));
 }
 
 static void buddy_tree_debug(struct buddy_tree *t, struct buddy_tree_pos pos,
@@ -1848,6 +1878,17 @@ static unsigned char buddy_tree_fragmentation(struct buddy_tree *t) {
     quality_percent *= quality_percent;
     quality_percent >>= fractional_bits;
     return fractional_mask - (quality_percent & fractional_mask);
+}
+
+static inline void buddy_tree_track_change(struct buddy_tree* t, unsigned char* addr, size_t length) {
+    struct buddy_change_tracker *header;
+
+    if (!(t->flags && BUDDY_TREE_CHANGE_TRACKING)) {
+        return;
+    }
+
+    header = (struct buddy_change_tracker *) buddy_main(buddy_tree_buddy(t));
+    header->tracker(header->context, addr, length);
 }
 
 /*
