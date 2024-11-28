@@ -33,7 +33,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        arch: [amd64, amd64_x86, amd64_arm, amd64_arm64]
+        arch: [amd64, amd64_x86, amd64_arm64]
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
