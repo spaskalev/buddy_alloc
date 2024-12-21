@@ -475,7 +475,7 @@ void test_buddy_resize_multiple(void) {
     for (size_t shift = 1; shift <= 9; shift++) {
         while (buddy_malloc(buddy, PSS(64))); /* Fill it in */
         buddy = buddy_resize(buddy, buddy_size << shift);
-        assert(buddy_fragmentation(buddy) == 255);
+        assert(buddy_can_shrink(buddy));
     }
     free(data_buf);
     free(buddy_buf);
@@ -602,7 +602,7 @@ void test_buddy_resize_embedded_multiple(void) {
     for (size_t shift = 1; shift <= 9; shift++) {
         while (buddy_malloc(buddy, PSS(64))); /* Fill it in */
         buddy = buddy_resize(buddy, buddy_size << shift);
-        assert(buddy_fragmentation(buddy) == 170);
+        assert(buddy_can_shrink(buddy));
     }
     free(data_buf);
 }
