@@ -60,6 +60,9 @@ dkms.conf
 # Perf
 bench
 
+# Test
+tests
+
 # cmake output dir
 out/*
 
