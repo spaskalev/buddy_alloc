@@ -2055,9 +2055,8 @@ static void bitset_shift_left(unsigned char *bitset, size_t from_pos, size_t to_
         } else {
             bitset_clear(bitset, at-by);
         }
+        bitset_clear(bitset, at);
     }
-    bitset_clear_range(bitset, bitset_range(length, length+by-1));
-
 }
 
 static void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to_pos, size_t by) {
@@ -2069,9 +2068,9 @@ static void bitset_shift_right(unsigned char *bitset, size_t from_pos, size_t to
         } else {
             bitset_clear(bitset, at+by);
         }
+        bitset_clear(bitset, at);
         length -= 1;
     }
-    bitset_clear_range(bitset, bitset_range(from_pos, from_pos+by-1));
 }
 
 void bitset_debug(unsigned char *bitset, size_t length) {
