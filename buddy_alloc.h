@@ -75,16 +75,29 @@ struct buddy *buddy_embed_alignment(unsigned char *main, size_t memory_size, siz
  */
 struct buddy *buddy_get_embed_at_alignment(unsigned char *main, size_t memory_size, size_t alignment);
 
-/* Resizes the arena and metadata to a new size. */
+/* 
+ * Resizes the arena and allocator metadata to a new size.
+ *
+ * Existing allocations are preserved. If an allocation is to fall outside
+ * of the arena after a downsizing the resize operation fails.
+ *
+ * Returns a pointer to allocator on successful resize. This will be
+ * the same pointer when the allocator is external to the arena. If the
+ * allocator is embedded in the arena the old pointer to the allocator
+ * must not be used after resizing!
+ *
+ * Returns NULL on failure. The allocations and allocator pointer
+ * are preserved.
+ */
 struct buddy *buddy_resize(struct buddy *buddy, size_t new_memory_size);
 
-/* Tests if the allocator can be shrunk in half */
+/* Tests if the arena can be shrunk in half */
 bool buddy_can_shrink(struct buddy *buddy);
 
-/* Tests if the allocator is completely empty */
+/* Tests if the arena is completely empty */
 bool buddy_is_empty(struct buddy *buddy);
 
-/* Tests if the allocator is completely full */
+/* Tests if the arena is completely full */
 bool buddy_is_full(struct buddy *buddy);
 
 /* Reports the arena size */
@@ -107,7 +120,7 @@ void *buddy_calloc(struct buddy *buddy, size_t members_count, size_t member_size
 /* Realloc semantics are a joke. See realloc. */
 void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size, bool ignore_data);
 
-/* Realloc-like behavior that checks for overflow. See reallocarray*/
+/* Realloc-like behavior that checks for overflow. See reallocarray */
 void *buddy_reallocarray(struct buddy *buddy, void *ptr,
     size_t members_count, size_t member_size, bool ignore_data);
 
