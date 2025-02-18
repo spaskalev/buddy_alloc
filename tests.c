@@ -122,9 +122,6 @@ void test_bitset_range(void) {
 void test_bitset_shift(void) {
     unsigned char *buf = malloc(bitset_sizeof(16));
     START_TEST;
-    for (size_t i = 0; i < bitset_sizeof(16); i++) {
-        buf[i] = 0;
-    }
     for (size_t i = 0; i < 16; i++) {
         bitset_clear(buf, i);
     }
@@ -166,6 +163,18 @@ void test_bitset_shift(void) {
     assert(!bitset_test(buf, 13));
     assert(!bitset_test(buf, 14));
     assert(!bitset_test(buf, 15));
+
+    for (size_t i = 0; i < 16; i++) {
+        bitset_set(buf, i);
+    }
+    bitset_shift_left(buf, 4, 5, 1);
+    for (size_t i = 0; i < 16; i++) {
+        if (i == 4) {
+            assert(!bitset_test(buf, i));
+        } else {
+            assert(bitset_test(buf, i));
+        }
+    }
     free(buf);
 }
 
