@@ -23,7 +23,7 @@ jobs:
     - name: test-cpp-translation-unit
       run: make LLVM_VERSION=14 CC=clang CXX=clang++ test-cpp-translation-unit
       working-directory: .
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: buddy_alloc.h.gcov
