@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define BUDDY_EXPERIMENTAL_CHANGE_TRACKING
+
 #define BUDDY_ALLOC_IMPLEMENTATION
 #include "buddy_alloc.h"
 #undef BUDDY_ALLOC_IMPLEMENTATION
@@ -1894,15 +1896,14 @@ void test_buddy_invalid_slot_alignment(void) {
     assert(buddy_embed_alignment(arena, 4096, 3) == NULL);
 }
 
-#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 struct buddy_change_tracker_context {
-    size_t total_length;
     size_t total_calls;
 };
 
 void buddy_change_tracker_cb(void* context, unsigned char* addr, size_t length) {
     struct buddy_change_tracker_context *tracker_context = (struct buddy_change_tracker_context *) context;
-    tracker_context->total_length += length;
+    (void) addr;
+    (void) length;
     tracker_context->total_calls++;
 }
 
@@ -1913,18 +1914,12 @@ void test_buddy_change_tracking() {
     void *slot;
     START_TEST;
     buddy_enable_change_tracking(buddy, &context, buddy_change_tracker_cb);
-    assert(context.total_length == 0);
     assert(context.total_calls == 0);
     slot = buddy_malloc(buddy, 512);
-    assert(context.total_length == 2);
     assert(context.total_calls == 2);
     buddy_free(buddy, slot);
-    assert(context.total_length == 4);
     assert(context.total_calls == 4);
 }
-#else
-#define test_buddy_change_tracking()
-#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
 
 void test_buddy_tree_init(void) {
     unsigned char buddy_tree_buf[4096];

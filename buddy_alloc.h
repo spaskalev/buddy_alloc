@@ -393,8 +393,10 @@ static bool buddy_tree_can_shrink(struct buddy_tree *t);
  * Integration functions
  */
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 /* Get a pointer to the parent buddy struct */
 static struct buddy* buddy_tree_buddy(struct buddy_tree* t);
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
 
 /*
  * Debug functions
@@ -1851,9 +1853,11 @@ static bool buddy_tree_can_shrink(struct buddy_tree *t) {
     return true;
 }
 
+#ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 static struct buddy* buddy_tree_buddy(struct buddy_tree* t) {
     return (struct buddy*)(((unsigned char*)t) - sizeof(struct buddy));
 }
+#endif /* BUDDY_EXPERIMENTAL_CHANGE_TRACKING */
 
 static void buddy_tree_debug(struct buddy_tree *t, struct buddy_tree_pos pos,
         size_t start_size) {
