@@ -10,7 +10,9 @@
 #include <time.h>
 
 #define BUDDY_ALLOC_ALIGN 64
+#ifndef BUDDY_ALLOC_IMPLEMENTATION
 #define BUDDY_ALLOC_IMPLEMENTATION
+#endif
 #include "buddy_alloc.h"
 #undef BUDDY_ALLOC_IMPLEMENTATION
 
