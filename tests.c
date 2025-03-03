@@ -7,14 +7,17 @@
 #define _POSIX_C_SOURCE 200112L
 
 #include <assert.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 #define BUDDY_EXPERIMENTAL_CHANGE_TRACKING
+#endif
 
+#ifndef BUDDY_ALLOC_IMPLEMENTATION
 #define BUDDY_ALLOC_IMPLEMENTATION
+#endif
 #include "buddy_alloc.h"
 #undef BUDDY_ALLOC_IMPLEMENTATION
 

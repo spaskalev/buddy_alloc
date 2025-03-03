@@ -1,6 +1,9 @@
 #include <assert.h>
 #include <stdlib.h>
+
+#ifndef BUDDY_ALLOC_IMPLEMENTATION
 #define BUDDY_ALLOC_IMPLEMENTATION
+#endif
 #include "buddy_alloc.h"
 
 int main(void)
