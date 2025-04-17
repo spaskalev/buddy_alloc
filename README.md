@@ -179,7 +179,7 @@ Resizing is available for both split and embedded allocator modes and supports b
 
 If you are using buddy_alloc in your project and you would like project to be featured here please send a PR or file an issue. If you like buddy_alloc please star it on GitHub so that more users can learn of it. Thanks!
 
-- Use in game development - [1](https://github.com/spaskalev/buddy_alloc/issues/13#issue-1088282333)
+- Use in game development - [1](https://github.com/spaskalev/buddy_alloc/issues/13#issue-1088282333), [2](https://github.com/fruityloops1/bf-multiplayer/commit/0c2599390566c7a3f174afc6f3c97b6b3efbeb2c)
 - Use in OS kernels - [1](https://github.com/Itay2805/pentagon/blob/1aa005a3f204f40b5869568bd78f4b3087e024a3/kernel/mem/phys.c#L28), [2](https://github.com/spaskalev/buddy_alloc/issues/76), [3](https://github.com/elydre/profanOS/commit/2d43930c36bdc4a5bead2312d7a629e36da4bd78)
 - Use in OS research - [1](https://repositories.lib.utexas.edu/server/api/core/bitstreams/ce9f9383-809a-4cc3-ba0b-e8a5e0428ef4/content), [2](https://www.cs.utexas.edu/~witchel/pubs/zhu24dimes-lupin.pdf), [3](https://upcommons.upc.edu/bitstream/handle/2117/411096/main.pdf;jsessionid=8D64ABBCE67117F7F2BB29A51B72CCCF)
 - Use in user-space software - [1](https://github.com/liulilittle/PPP-2/commit/6da093802ffa541ea4cf6f92b01ef783d493d706)
