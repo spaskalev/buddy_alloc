@@ -138,6 +138,11 @@ enum buddy_safe_free_status {
 /* A (safer) free with a size. Will not free unless the size fits the target span. */
 enum buddy_safe_free_status buddy_safe_free(struct buddy *buddy, void *ptr, size_t requested_size);
 
+/* Reports the allocation size. This could be bigger than the requested size,
+   it's the exact size that this allocation occupies in the arena.
+   Returns 0 on failure, and a non-zero value on success. */
+size_t buddy_alloc_size(struct buddy *buddy, void *ptr);
+
 /*
  * Reservation functions
  */
@@ -973,6 +978,34 @@ enum buddy_safe_free_status buddy_safe_free(struct buddy* buddy, void* ptr, size
     }
 
     return BUDDY_SAFE_FREE_SUCCESS;
+}
+
+size_t buddy_alloc_size(struct buddy *buddy, void *ptr) {
+    unsigned char* dst, * main;
+    struct buddy_tree* tree;
+    struct buddy_tree_pos pos;
+
+    if (buddy == NULL) {
+        return 0;
+    }
+    if (ptr == NULL) {
+        return 0;
+    }
+    dst = (unsigned char*)ptr;
+    main = buddy_main(buddy);
+    if ((dst < main) || (dst >= (main + buddy->memory_size))) {
+        return 0;
+    }
+
+    /* Find an allocated position tracking this address */
+    tree = buddy_tree(buddy);
+    pos = position_for_address(buddy, dst);
+
+    if (!buddy_tree_valid(tree, pos)) {
+        return 0;
+    }
+
+    return size_for_depth(buddy, pos.depth);
 }
 
 void buddy_reserve_range(struct buddy *buddy, void *ptr, size_t requested_size) {
