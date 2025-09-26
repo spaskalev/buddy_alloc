@@ -763,7 +763,7 @@ static unsigned int is_valid_alignment(size_t alignment) {
 }
 
 static size_t buddy_tree_order_for_memory(size_t memory_size, size_t alignment) {
-    // cppcheck-suppress divisionByZero
+    // cppcheck-suppress zerodiv
     size_t blocks = memory_size / alignment;
     return highest_bit_position(ceiling_power_of_two(blocks));
 }
