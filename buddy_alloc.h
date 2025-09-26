@@ -759,7 +759,7 @@ size_t buddy_arena_free_size(struct buddy *buddy) {
 }
 
 static unsigned int is_valid_alignment(size_t alignment) {
-    return ceiling_power_of_two(alignment) == alignment;
+    return (alignment > 0) && (ceiling_power_of_two(alignment) == alignment);
 }
 
 static size_t buddy_tree_order_for_memory(size_t memory_size, size_t alignment) {
@@ -2152,7 +2152,7 @@ static inline unsigned int popcount_byte(unsigned char b) {
 
 static unsigned char count_trailing_zeroes(size_t val) {
    /* Implementation from https://www.chessprogramming.org/BitScan */
-   static const unsigned char lookup67[67+1] = {
+   static const signed char lookup67[67+1] = {
       64,  0,  1, 39,  2, 15, 40, 23,
        3, 12, 16, 59, 41, 19, 24, 54,
        4, -1, 13, 10, 17, 62, 60, 28,
