@@ -462,6 +462,9 @@ void bitset_debug(unsigned char *bitset, size_t length);
 /* Returns the number of set bits in the given byte */
 static unsigned int popcount_byte(unsigned char b);
 
+/* Count the number of trailing zeroes in the given value */
+static unsigned char count_trailing_zeroes(size_t val);
+
 /* Returns the index of the highest bit set (1-based) */
 static size_t highest_bit_position(size_t value);
 
@@ -1106,16 +1109,16 @@ void buddy_enable_change_tracking(struct buddy* buddy, void* context, void (*tra
 
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
-    size_t depth, effective_memory_size;
+    size_t depth, effective_memory_size, p2_of_requested_size;
     if (requested_size < buddy->alignment) {
         requested_size = buddy->alignment;
     }
     depth = 1;
     effective_memory_size = buddy_effective_memory_size(buddy);
-    while ((effective_memory_size / requested_size) >> 1u) {
-        depth++;
-        effective_memory_size >>= 1u;
-    }
+
+    p2_of_requested_size = ceiling_power_of_two(requested_size);
+    depth = count_trailing_zeroes(effective_memory_size) + 1
+        - count_trailing_zeroes(p2_of_requested_size);
     return depth;
 }
 
@@ -2133,19 +2136,33 @@ void bitset_debug(unsigned char *bitset, size_t length) {
  Bits
 */
 
-static const unsigned char popcount_lookup[256] = {
-    0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
-    1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
-    1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
-    2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
-    1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
-    2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
-    2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
-    3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8
-};
-
 static inline unsigned int popcount_byte(unsigned char b) {
+    static const unsigned char popcount_lookup[256] = {
+        0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
+        1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+        1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+        2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+        1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+        2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+        2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+        3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8
+    };
     return popcount_lookup[b];
+}
+
+static unsigned char count_trailing_zeroes(size_t val) {
+   /* Implementation from https://www.chessprogramming.org/BitScan */
+   static const unsigned char lookup67[67+1] = {
+      64,  0,  1, 39,  2, 15, 40, 23,
+       3, 12, 16, 59, 41, 19, 24, 54,
+       4, -1, 13, 10, 17, 62, 60, 28,
+      42, 30, 20, 51, 25, 44, 55, 47,
+       5, 32, -1, 38, 14, 22, 11, 58,
+      18, 53, 63,  9, 61, 27, 29, 50,
+      43, 46, 31, 37, 21, 57, 52,  8,
+      26, 49, 45, 36, 56,  7, 48, 35,
+       6, 34, 33, -1 };
+   return lookup67[(val & -val) % 67];
 }
 
 /* Returns the highest set bit position for the given value. Returns zero for zero. */

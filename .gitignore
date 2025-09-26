@@ -71,3 +71,9 @@ out/*
 
 # visual studio cmake settings
 CMakeSettings.json
+
+# Pelles C project files
+# Pelles C is awesome by the way, check it out
+*.ppj
+*.ppx
+*.tag
