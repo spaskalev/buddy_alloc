@@ -2499,10 +2499,10 @@ void test_buddy_tree_interval(void) {
     START_TEST;
     t = buddy_tree_init(buddy_tree_buf, 3);
     pos = buddy_tree_leftmost_child(t);
-    interval = buddy_tree_interval(t, pos);
+    interval = to_buddy_tree_interval(t, pos);
     assert(interval.from.index == pos.index);
     assert(interval.to.index == pos.index);
-    interval = buddy_tree_interval(t, buddy_tree_parent(pos));
+    interval = to_buddy_tree_interval(t, buddy_tree_parent(pos));
     assert(interval.from.index == pos.index);
     assert(interval.to.index == buddy_tree_right_adjacent(pos).index);
 }
@@ -2515,8 +2515,8 @@ void test_buddy_tree_interval_contains(void) {
     START_TEST;
     t = buddy_tree_init(buddy_tree_buf, 3);
     pos = buddy_tree_leftmost_child(t);
-    interval_low = buddy_tree_interval(t, pos);
-    interval_high = buddy_tree_interval(t, buddy_tree_parent(pos));
+    interval_low = to_buddy_tree_interval(t, pos);
+    interval_high = to_buddy_tree_interval(t, buddy_tree_parent(pos));
     assert(buddy_tree_interval_contains(interval_low, interval_low) == 1);
     assert(buddy_tree_interval_contains(interval_high, interval_low) == 1);
     assert(buddy_tree_interval_contains(interval_high, interval_high) == 1);

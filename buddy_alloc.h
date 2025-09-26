@@ -354,7 +354,7 @@ static struct buddy_tree_pos buddy_tree_right_adjacent(struct buddy_tree_pos pos
 static size_t buddy_tree_index(struct buddy_tree_pos pos);
 
 /* Return the interval of the deepest positions spanning the indicated position */
-static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, struct buddy_tree_pos pos);
+static struct buddy_tree_interval to_buddy_tree_interval(struct buddy_tree *t, struct buddy_tree_pos pos);
 
 /* Checks if one interval contains another */
 static bool buddy_tree_interval_contains(struct buddy_tree_interval outer,
@@ -1314,13 +1314,13 @@ static bool buddy_is_free(struct buddy *buddy, size_t from) {
 
     pos = deepest_position_for_offset(buddy, from);
     while(buddy_tree_valid(tree, pos) && (pos.index < query_range.to.index)) {
-        struct buddy_tree_interval current_test_range = buddy_tree_interval(tree, pos);
+        struct buddy_tree_interval current_test_range = to_buddy_tree_interval(tree, pos);
         struct buddy_tree_interval parent_test_range =
-            buddy_tree_interval(tree, buddy_tree_parent(pos));
+            to_buddy_tree_interval(tree, buddy_tree_parent(pos));
         while(buddy_tree_interval_contains(query_range, parent_test_range)) {
             pos = buddy_tree_parent(pos);
             current_test_range = parent_test_range;
-            parent_test_range = buddy_tree_interval(tree, buddy_tree_parent(pos));
+            parent_test_range = to_buddy_tree_interval(tree, buddy_tree_parent(pos));
         }
         /* pos is now tracking an overlapping segment */
         if (! buddy_tree_is_free(tree, pos)) {
@@ -1700,7 +1700,7 @@ static inline unsigned char compare_with_internal_position(unsigned char *bitset
     return bitset_test(bitset, pos.bitset_location+value-1);
 }
 
-static struct buddy_tree_interval buddy_tree_interval(struct buddy_tree *t, struct buddy_tree_pos pos) {
+static struct buddy_tree_interval to_buddy_tree_interval(struct buddy_tree *t, struct buddy_tree_pos pos) {
     struct buddy_tree_interval result;
     size_t depth;
 
