@@ -108,7 +108,7 @@ void test_bitset_range(void) {
     for (size_t i = 0; i < bitset_length; i++) {
         for (size_t j = 0; j <= i; j++) {
             memset(buf, 0, 4);
-            bitset_set_range(buf, bitset_range(j, i));
+            bitset_set_range(buf, to_bitset_range(j, i));
             for (size_t k = 0; k < bitset_length; k++) {
                 if ((k >= j) && (k <= i)) {
                     assert(bitset_test(buf, k));
@@ -116,7 +116,7 @@ void test_bitset_range(void) {
                     assert(!bitset_test(buf, k));
                 }
             }
-            bitset_clear_range(buf, bitset_range(j, i));
+            bitset_clear_range(buf, to_bitset_range(j, i));
             for (size_t k = j; k < i; k++) {
                 assert(!bitset_test(buf, k));
             }
@@ -186,16 +186,16 @@ void test_bitset_shift(void) {
 void test_bitset_shift_invalid(void) {
     unsigned char buf[4096] = {0};
     START_TEST;
-    bitset_set_range(buf, bitset_range(1, 0)); /* no-op */
+    bitset_set_range(buf, to_bitset_range(1, 0)); /* no-op */
     assert(!bitset_test(buf, 0));
     assert(!bitset_test(buf, 1));
-    bitset_set_range(buf, bitset_range(0, 1));
+    bitset_set_range(buf, to_bitset_range(0, 1));
     assert(bitset_test(buf, 0));
     assert(bitset_test(buf, 1));
-    bitset_clear_range(buf, bitset_range(1, 0)) /* no-op */;
+    bitset_clear_range(buf, to_bitset_range(1, 0)) /* no-op */;
     assert(bitset_test(buf, 0));
     assert(bitset_test(buf, 1));
-    bitset_clear_range(buf, bitset_range(0, 1));
+    bitset_clear_range(buf, to_bitset_range(0, 1));
     assert(!bitset_test(buf, 0));
     assert(!bitset_test(buf, 1));
 }
@@ -2499,10 +2499,10 @@ void test_buddy_tree_interval(void) {
     START_TEST;
     t = buddy_tree_init(buddy_tree_buf, 3);
     pos = buddy_tree_leftmost_child(t);
-    interval = buddy_tree_interval(t, pos);
+    interval = to_buddy_tree_interval(t, pos);
     assert(interval.from.index == pos.index);
     assert(interval.to.index == pos.index);
-    interval = buddy_tree_interval(t, buddy_tree_parent(pos));
+    interval = to_buddy_tree_interval(t, buddy_tree_parent(pos));
     assert(interval.from.index == pos.index);
     assert(interval.to.index == buddy_tree_right_adjacent(pos).index);
 }
@@ -2515,8 +2515,8 @@ void test_buddy_tree_interval_contains(void) {
     START_TEST;
     t = buddy_tree_init(buddy_tree_buf, 3);
     pos = buddy_tree_leftmost_child(t);
-    interval_low = buddy_tree_interval(t, pos);
-    interval_high = buddy_tree_interval(t, buddy_tree_parent(pos));
+    interval_low = to_buddy_tree_interval(t, pos);
+    interval_high = to_buddy_tree_interval(t, buddy_tree_parent(pos));
     assert(buddy_tree_interval_contains(interval_low, interval_low) == 1);
     assert(buddy_tree_interval_contains(interval_high, interval_low) == 1);
     assert(buddy_tree_interval_contains(interval_high, interval_high) == 1);
@@ -2529,7 +2529,7 @@ void test_buddy_tree_buddy() {
     struct buddy_tree *tree;
     START_TEST;
     buddy = buddy_embed(buf, 4096);
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     assert(buddy_tree_buddy(tree) == buddy);
 }
 
