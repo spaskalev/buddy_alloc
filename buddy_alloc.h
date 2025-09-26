@@ -430,7 +430,7 @@ struct bitset_range {
     uint8_t to_index;
 };
 
-static inline struct bitset_range bitset_range(size_t from_pos, size_t to_pos);
+static inline struct bitset_range to_bitset_range(size_t from_pos, size_t to_pos);
 
 static void bitset_set_range(unsigned char *bitset, struct bitset_range range);
 
@@ -1522,8 +1522,8 @@ static void buddy_tree_grow(struct buddy_tree *t, uint8_t desired_order) {
 
             /* Clear right section */
             bitset_clear_range(buddy_tree_bits(t),
-                bitset_range(next_internal.bitset_location + (next_internal.local_offset * node_count),
-                             next_internal.bitset_location + (next_internal.local_offset * node_count * 2) - 1));
+                to_bitset_range(next_internal.bitset_location + (next_internal.local_offset * node_count),
+                                next_internal.bitset_location + (next_internal.local_offset * node_count * 2) - 1));
 
             /* Handle the upper level */
             current_order -= 1u;
@@ -1676,11 +1676,11 @@ static inline size_t buddy_tree_size_for_order(struct buddy_tree *t,
 
 static void write_to_internal_position(struct buddy_tree* t, struct internal_position pos, size_t value) {
     unsigned char *bitset = buddy_tree_bits(t);
-    struct bitset_range clear_range = bitset_range(pos.bitset_location, pos.bitset_location + pos.local_offset - 1);
+    struct bitset_range clear_range = to_bitset_range(pos.bitset_location, pos.bitset_location + pos.local_offset - 1);
 
     bitset_clear_range(bitset, clear_range);
     if (value) {
-        bitset_set_range(bitset, bitset_range(pos.bitset_location, pos.bitset_location+value-1));
+        bitset_set_range(bitset, to_bitset_range(pos.bitset_location, pos.bitset_location+value-1));
     }
 
 #ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
@@ -1693,7 +1693,7 @@ static size_t read_from_internal_position(unsigned char *bitset, struct internal
     if (! bitset_test(bitset, pos.bitset_location)) {
         return 0; /* Fast test without complete extraction */
     }
-    return bitset_count_range(bitset, bitset_range(pos.bitset_location, pos.bitset_location+pos.local_offset-1));
+    return bitset_count_range(bitset, to_bitset_range(pos.bitset_location, pos.bitset_location+pos.local_offset-1));
 }
 
 static inline unsigned char compare_with_internal_position(unsigned char *bitset, struct internal_position pos, size_t value) {
@@ -2050,7 +2050,7 @@ static const uint8_t bitset_char_mask[8][8] = {
     {0, 0, 0,  0,  0,  0,   0, 128},
 };
 
-static inline struct bitset_range bitset_range(size_t from_pos, size_t to_pos) {
+static inline struct bitset_range to_bitset_range(size_t from_pos, size_t to_pos) {
     struct bitset_range range = {0};
     range.from_bucket = from_pos / CHAR_BIT;
     range.to_bucket = to_pos / CHAR_BIT;

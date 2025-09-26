@@ -108,7 +108,7 @@ void test_bitset_range(void) {
     for (size_t i = 0; i < bitset_length; i++) {
         for (size_t j = 0; j <= i; j++) {
             memset(buf, 0, 4);
-            bitset_set_range(buf, bitset_range(j, i));
+            bitset_set_range(buf, to_bitset_range(j, i));
             for (size_t k = 0; k < bitset_length; k++) {
                 if ((k >= j) && (k <= i)) {
                     assert(bitset_test(buf, k));
@@ -116,7 +116,7 @@ void test_bitset_range(void) {
                     assert(!bitset_test(buf, k));
                 }
             }
-            bitset_clear_range(buf, bitset_range(j, i));
+            bitset_clear_range(buf, to_bitset_range(j, i));
             for (size_t k = j; k < i; k++) {
                 assert(!bitset_test(buf, k));
             }
@@ -186,16 +186,16 @@ void test_bitset_shift(void) {
 void test_bitset_shift_invalid(void) {
     unsigned char buf[4096] = {0};
     START_TEST;
-    bitset_set_range(buf, bitset_range(1, 0)); /* no-op */
+    bitset_set_range(buf, to_bitset_range(1, 0)); /* no-op */
     assert(!bitset_test(buf, 0));
     assert(!bitset_test(buf, 1));
-    bitset_set_range(buf, bitset_range(0, 1));
+    bitset_set_range(buf, to_bitset_range(0, 1));
     assert(bitset_test(buf, 0));
     assert(bitset_test(buf, 1));
-    bitset_clear_range(buf, bitset_range(1, 0)) /* no-op */;
+    bitset_clear_range(buf, to_bitset_range(1, 0)) /* no-op */;
     assert(bitset_test(buf, 0));
     assert(bitset_test(buf, 1));
-    bitset_clear_range(buf, bitset_range(0, 1));
+    bitset_clear_range(buf, to_bitset_range(0, 1));
     assert(!bitset_test(buf, 0));
     assert(!bitset_test(buf, 1));
 }
