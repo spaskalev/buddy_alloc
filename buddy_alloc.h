@@ -2163,7 +2163,7 @@ static unsigned char count_trailing_zeroes(size_t val) {
       43, 46, 31, 37, 21, 57, 52,  8,
       26, 49, 45, 36, 56,  7, 48, 35,
        6, 34, 33, -1 };
-   return lookup67[(val & -val) % 67];
+   return ((unsigned char) lookup67[(val & -val) % 67]);
 }
 
 /* Returns the highest set bit position for the given value. Returns zero for zero. */
