@@ -31,7 +31,7 @@ tests.out: $(TESTS_SRC) $(LIB_SRC) test-cppcheck check-recursion
 	$(CC) $(CFLAGS) $(TESTS_SRC) -o $@
 
 test-cppcheck: $(TESTS_SRC)
-	$(CPPCHECK) --error-exitcode=1 --quiet $^
+	$(CPPCHECK) --error-exitcode=1 --inline-suppr --quiet $^
 
 test-cpp-translation-unit: $(TESTCXX_SRC)
 	$(CXX) $(CXXFLAGS) $(TESTCXX_SRC) -o $@
