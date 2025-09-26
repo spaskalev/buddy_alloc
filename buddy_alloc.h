@@ -759,10 +759,11 @@ size_t buddy_arena_free_size(struct buddy *buddy) {
 }
 
 static unsigned int is_valid_alignment(size_t alignment) {
-    return (alignment > 0) && (ceiling_power_of_two(alignment) == alignment);
+    return ceiling_power_of_two(alignment) == alignment;
 }
 
 static size_t buddy_tree_order_for_memory(size_t memory_size, size_t alignment) {
+    // cppcheck-suppress divisionByZero
     size_t blocks = memory_size / alignment;
     return highest_bit_position(ceiling_power_of_two(blocks));
 }
