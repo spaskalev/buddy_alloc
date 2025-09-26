@@ -515,7 +515,7 @@ static unsigned char *address_for_position(struct buddy *buddy, struct buddy_tre
 static struct buddy_tree_pos position_for_address(struct buddy *buddy, const unsigned char *addr);
 static unsigned char *buddy_main(struct buddy *buddy);
 static unsigned int buddy_relative_mode(struct buddy *buddy);
-static struct buddy_tree *buddy_tree(struct buddy *buddy);
+static struct buddy_tree *buddy_tree_for(struct buddy *buddy);
 static size_t buddy_effective_memory_size(struct buddy *buddy);
 static size_t buddy_virtual_slots(struct buddy *buddy);
 static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state);
@@ -664,7 +664,7 @@ static struct buddy *buddy_resize_standard(struct buddy *buddy, size_t new_memor
 
     /* Calculate new tree order and resize it */
     new_buddy_tree_order = buddy_tree_order_for_memory(new_memory_size, buddy->alignment);
-    buddy_tree_resize(buddy_tree(buddy), (uint8_t) new_buddy_tree_order);
+    buddy_tree_resize(buddy_tree_for(buddy), (uint8_t) new_buddy_tree_order);
 
     /* Store the new memory size and reconstruct any virtual slots */
     buddy->memory_size = new_memory_size;
@@ -726,7 +726,7 @@ bool buddy_is_full(struct buddy *buddy) {
     if (buddy == NULL) {
         return false;
     }
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     pos = buddy_tree_root();
     return buddy_tree_status(tree, pos) == buddy_tree_order(tree);
 }
@@ -740,7 +740,7 @@ size_t buddy_arena_size(struct buddy *buddy) {
 
 size_t buddy_arena_free_size(struct buddy *buddy) {
     size_t result = 0;
-    struct buddy_tree *tree = buddy_tree(buddy);
+    struct buddy_tree *tree = buddy_tree_for(buddy);
     size_t tree_order = buddy_tree_order(tree);
 
     struct buddy_tree_walk_state state = buddy_tree_walk_state_root();
@@ -792,7 +792,7 @@ void *buddy_malloc(struct buddy *buddy, size_t requested_size) {
     }
 
     target_depth = depth_for_size(buddy, requested_size);
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     pos = buddy_tree_find_free(tree, (uint8_t) target_depth);
 
     if (! buddy_tree_valid(tree, pos)) {
@@ -854,7 +854,7 @@ void *buddy_realloc(struct buddy *buddy, void *ptr, size_t requested_size, bool 
     }
 
     /* Find the position tracking this address */
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     origin = position_for_address(buddy, (unsigned char *) ptr);
     if (! buddy_tree_valid(tree, origin)) {
         return NULL;
@@ -922,7 +922,7 @@ void buddy_free(struct buddy *buddy, void *ptr) {
     }
 
     /* Find the position tracking this address */
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     pos = position_for_address(buddy, dst);
 
     if (! buddy_tree_valid(tree, pos)) {
@@ -953,7 +953,7 @@ enum buddy_safe_free_status buddy_safe_free(struct buddy* buddy, void* ptr, size
     }
 
     /* Find an allocated position tracking this address */
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     pos = position_for_address(buddy, dst);
 
     if (!buddy_tree_valid(tree, pos)) {
@@ -1002,7 +1002,7 @@ size_t buddy_alloc_size(struct buddy *buddy, void *ptr) {
     }
 
     /* Find an allocated position tracking this address */
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     pos = position_for_address(buddy, dst);
 
     if (!buddy_tree_valid(tree, pos)) {
@@ -1039,7 +1039,7 @@ void *buddy_walk(struct buddy *buddy,
     }
     main = buddy_main(buddy);
     effective_memory_size = buddy_effective_memory_size(buddy);
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     tree_order = buddy_tree_order(tree);
 
     state = buddy_tree_walk_state_root();
@@ -1088,12 +1088,12 @@ unsigned char buddy_fragmentation(struct buddy *buddy) {
     if (buddy == NULL) {
         return 0;
     }
-    return buddy_tree_fragmentation(buddy_tree(buddy));
+    return buddy_tree_fragmentation(buddy_tree_for(buddy));
 }
 
 #ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
 void buddy_enable_change_tracking(struct buddy* buddy, void* context, void (*tracker) (void*, unsigned char*, size_t)) {
-    struct buddy_tree *t = buddy_tree(buddy);
+    struct buddy_tree *t = buddy_tree_for(buddy);
     struct buddy_change_tracker *header = (struct buddy_change_tracker *) buddy_main(buddy);
 
     /* Allocate memory for the change tracking header */
@@ -1127,7 +1127,7 @@ static inline size_t size_for_depth(struct buddy *buddy, size_t depth) {
     return ceiling_power_of_two(buddy->memory_size) >> (depth-1);
 }
 
-static struct buddy_tree *buddy_tree(struct buddy *buddy) {
+static struct buddy_tree *buddy_tree_for(struct buddy *buddy) {
     return (struct buddy_tree*) ((unsigned char *)buddy + sizeof(*buddy));
 }
 
@@ -1152,7 +1152,7 @@ static unsigned char *address_for_position(struct buddy *buddy, struct buddy_tre
 
 static struct buddy_tree_pos deepest_position_for_offset(struct buddy *buddy, size_t offset) {
     size_t index = offset / buddy->alignment;
-    struct buddy_tree_pos pos = buddy_tree_leftmost_child(buddy_tree(buddy));
+    struct buddy_tree_pos pos = buddy_tree_leftmost_child(buddy_tree_for(buddy));
     pos.index += index;
     return pos;
 }
@@ -1170,7 +1170,7 @@ static struct buddy_tree_pos position_for_address(struct buddy *buddy, const uns
         return INVALID_POS; /* invalid alignment */
     }
 
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     pos = deepest_position_for_offset(buddy, offset);
 
     /* Find the actual allocated position tracking this address */
@@ -1216,7 +1216,7 @@ static void buddy_toggle_virtual_slots(struct buddy *buddy, unsigned int state) 
     /* Node memory size is already aligned to buddy->alignment */
     delta = effective_memory_size - memory_size;
 
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     pos = buddy_tree_right_child(buddy_tree_root());
     while (delta) {
         size_t current_pos_size = size_for_depth(buddy, buddy_tree_depth(pos));
@@ -1273,7 +1273,7 @@ static void buddy_toggle_range_reservation(struct buddy *buddy, void *ptr, size_
     }
 
     /* Find the deepest position tracking this address */
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     offset = (size_t) (dst - main);
     pos = deepest_position_for_offset(buddy, offset);
 
@@ -1307,7 +1307,7 @@ static bool buddy_is_free(struct buddy *buddy, size_t from) {
     to = effective_memory_size -
         ((virtual_slots ? (virtual_slots + 1) : 1) * buddy->alignment);
 
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
 
     query_range.from = deepest_position_for_offset(buddy, from);
     query_range.to = deepest_position_for_offset(buddy, to);
@@ -1371,7 +1371,7 @@ void buddy_debug(struct buddy *buddy) {
     BUDDY_PRINTF("\n");
     BUDDY_PRINTF("virtual slots: %zu\n", buddy_virtual_slots(buddy));
     BUDDY_PRINTF("allocator tree follows:\n");
-    buddy_tree_debug(buddy_tree(buddy), buddy_tree_root(), buddy_effective_memory_size(buddy));
+    buddy_tree_debug(buddy_tree_for(buddy), buddy_tree_root(), buddy_effective_memory_size(buddy));
 }
 
 /*

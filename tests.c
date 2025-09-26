@@ -2529,7 +2529,7 @@ void test_buddy_tree_buddy() {
     struct buddy_tree *tree;
     START_TEST;
     buddy = buddy_embed(buf, 4096);
-    tree = buddy_tree(buddy);
+    tree = buddy_tree_for(buddy);
     assert(buddy_tree_buddy(tree) == buddy);
 }
 
