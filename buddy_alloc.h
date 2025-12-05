@@ -2066,8 +2066,11 @@ static void bitset_set_range(unsigned char *bitset, struct bitset_range range) {
     } else {
         bitset[range.from_bucket] |= bitset_char_mask[range.from_index][7];
         bitset[range.to_bucket] |= bitset_char_mask[0][range.to_index];
-        while(++range.from_bucket != range.to_bucket) {
-            bitset[range.from_bucket] = 255u;
+
+        range.from_bucket++;
+
+        if (range.to_bucket - range.from_bucket) {
+            memset(bitset + range.from_bucket, 255u, range.to_bucket - range.from_bucket);
         }
     }
 }
@@ -2079,8 +2082,11 @@ static void bitset_clear_range(unsigned char* bitset, struct bitset_range range)
     else {
         bitset[range.from_bucket] &= ~bitset_char_mask[range.from_index][7];
         bitset[range.to_bucket] &= ~bitset_char_mask[0][range.to_index];
-        while (++range.from_bucket != range.to_bucket) {
-            bitset[range.from_bucket] = 0;
+
+        range.from_bucket++;
+
+        if (range.to_bucket - range.from_bucket) {
+            memset(bitset + range.from_bucket, 0, range.to_bucket - range.from_bucket);
         }
     }
 }
