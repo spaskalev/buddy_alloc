@@ -1118,8 +1118,8 @@ static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
     effective_memory_size = buddy_effective_memory_size(buddy);
 
     p2_of_requested_size = ceiling_power_of_two(requested_size);
-    depth = count_trailing_zeroes(effective_memory_size) + 1
-        - count_trailing_zeroes(p2_of_requested_size);
+    depth = (size_t)(count_trailing_zeroes(effective_memory_size) + 1
+        - count_trailing_zeroes(p2_of_requested_size));
     return depth;
 }
 
@@ -1995,7 +1995,7 @@ static unsigned char buddy_tree_fragmentation(struct buddy_tree *t) {
     quality_percent = (integer_square_root(quality) << fractional_bits) / total_free_size;
     quality_percent *= quality_percent;
     quality_percent >>= fractional_bits;
-    return fractional_mask - (quality_percent & fractional_mask);
+    return (unsigned char)(fractional_mask - (quality_percent & fractional_mask));
 }
 
 #ifdef BUDDY_EXPERIMENTAL_CHANGE_TRACKING
