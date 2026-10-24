@@ -12,7 +12,7 @@ int main(void)
     void *allocs[255];
     unsigned char *meta = malloc(buddy_sizeof_alignment(16384, 64));
     struct buddy *b = buddy_init_alignment(meta, buffer, 16384, 64);
-    struct buddy_tree *tree = buddy_tree(b);
+    struct buddy_tree *tree = buddy_tree_for(b);
     for (;;) {
         int slot = getchar();
         if (slot == EOF) {
